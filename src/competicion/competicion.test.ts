@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Prueba } from '../prueba/prueba'
-import { almacenEnMemoria, crearCompeticion } from './competicion'
+import { almacenEnMemoria, crearCompeticion, type Almacen } from './competicion'
 
 const comunidadesUbicar: Prueba = { tipo: 'comunidades', modo: 'nombre-ubicar' }
 const provinciasUbicar: Prueba = { tipo: 'provincias', modo: 'nombre-ubicar' }
@@ -71,16 +71,33 @@ describe('Marca', () => {
 })
 
 describe('Resultado de registrar una partida', () => {
-  it('indica si hay nueva marca o a cuántos puntos de la marca se ha quedado', () => {
+  it('distingue nueva marca, puntos que faltan, empate a puntos con más tiempo, empate total y abandono', () => {
     const competicion = crearCompeticion(almacenEnMemoria())
     const jugar = (puntuacion: number, tiempo: number, abandonada = false) =>
       competicion.registrar({ prueba: comunidadesUbicar, puntuacion, tiempo, fecha: '2026-09-13T10:00:00.000Z', abandonada })
 
-    expect(jugar(1_800, 95_000)).toEqual({ nuevaMarca: true, puntosParaLaMarca: null })
-    expect(jugar(1_650, 80_000)).toEqual({ nuevaMarca: false, puntosParaLaMarca: 150 })
-    expect(jugar(1_800, 99_000)).toEqual({ nuevaMarca: false, puntosParaLaMarca: 0 })
-    expect(jugar(1_825, 99_000)).toEqual({ nuevaMarca: true, puntosParaLaMarca: null })
-    expect(jugar(2_000, 30_000, true)).toEqual({ nuevaMarca: false, puntosParaLaMarca: null })
+    expect(jugar(1_800, 95_000)).toEqual({ caso: 'nueva-marca' })
+    expect(jugar(1_650, 80_000)).toEqual({ caso: 'faltan-puntos', puntos: 150 })
+    expect(jugar(1_799, 80_000)).toEqual({ caso: 'faltan-puntos', puntos: 1 })
+    expect(jugar(1_800, 99_000)).toEqual({ caso: 'empate-a-puntos-con-mas-tiempo' })
+    expect(jugar(1_800, 95_000)).toEqual({ caso: 'empate-total' })
+    expect(jugar(1_825, 99_000)).toEqual({ caso: 'nueva-marca' })
+    expect(jugar(2_000, 30_000, true)).toEqual({ caso: 'abandonada' })
+  })
+
+  it('compara el tiempo en segundos enteros, como se muestra al alumno', () => {
+    const competicion = crearCompeticion(almacenEnMemoria())
+    const jugar = (tiempo: number, fecha: string) =>
+      competicion.registrar({ prueba: comunidadesUbicar, puntuacion: 1_800, tiempo, fecha, abandonada: false })
+
+    jugar(95_400, '2026-09-13T10:00:00.000Z')
+
+    expect(jugar(95_900, '2026-09-13T11:00:00.000Z')).toEqual({ caso: 'empate-total' })
+    expect(jugar(95_000, '2026-09-13T12:00:00.000Z')).toEqual({ caso: 'empate-total' })
+    expect(competicion.marca(comunidadesUbicar)).toEqual({ puntuacion: 1_800, tiempo: 95_400, fecha: '2026-09-13T10:00:00.000Z' })
+
+    expect(jugar(96_000, '2026-09-13T13:00:00.000Z')).toEqual({ caso: 'empate-a-puntos-con-mas-tiempo' })
+    expect(jugar(94_999, '2026-09-13T14:00:00.000Z')).toEqual({ caso: 'nueva-marca' })
   })
 })
 
@@ -103,20 +120,52 @@ describe('Almacén', () => {
     expect(competicion.historial()).toEqual([partida])
   })
 
-  it.each(['{no es json', '"texto"', 'null', '{"marcas":[],"historial":{}}'])(
+  function almacenConDatos(inicial: string): Almacen {
+    let guardado: string | null = null
+    return {
+      getItem: () => guardado ?? inicial,
+      setItem: (_clave, valor) => {
+        guardado = valor
+      },
+    }
+  }
+
+  it.each(['{no es json', '"texto"', 'null', '[]', '{}', '42'])(
     'con datos corruptos (%s) empieza sin marcas ni historial y vuelve a guardar',
     (corrupto) => {
-      const almacen = almacenEnMemoria()
-      almacen.setItem('ubicalo:competicion', corrupto)
-      const competicion = crearCompeticion(almacen)
+      const competicion = crearCompeticion(almacenConDatos(corrupto))
 
       expect(competicion.marca(comunidadesUbicar)).toBeNull()
       expect(competicion.historial()).toEqual([])
 
-      expect(competicion.registrar(partida)).toEqual({ nuevaMarca: true, puntosParaLaMarca: null })
+      expect(competicion.registrar(partida)).toEqual({ caso: 'nueva-marca' })
       expect(competicion.historial()).toEqual([partida])
     },
   )
+
+  it('descarta las marcas y partidas del historial guardadas incompletas, y esa marca se puede volver a fijar', () => {
+    let guardado = ''
+    const captura = crearCompeticion({
+      getItem: () => guardado || null,
+      setItem: (_clave, valor) => {
+        guardado = valor
+      },
+    })
+    captura.registrar(partida)
+    captura.registrar({ ...partida, prueba: provinciasUbicar, puntuacion: 500 })
+    const sinPuntuacionDe900 = JSON.stringify(
+      JSON.parse(guardado, (clave, valor) => (clave === 'puntuacion' && valor === 900 ? undefined : valor)),
+    )
+
+    const competicion = crearCompeticion(almacenConDatos(sinPuntuacionDe900))
+
+    expect(competicion.marca(comunidadesUbicar)).toBeNull()
+    expect(competicion.marca(provinciasUbicar)).toEqual({ puntuacion: 500, tiempo: 70_000, fecha: '2026-09-13T10:00:00.000Z' })
+    expect(competicion.historial()).toEqual([{ ...partida, prueba: provinciasUbicar, puntuacion: 500 }])
+
+    expect(competicion.registrar({ ...partida, puntuacion: 100 })).toEqual({ caso: 'nueva-marca' })
+    expect(competicion.marca(comunidadesUbicar)).toEqual({ puntuacion: 100, tiempo: 70_000, fecha: '2026-09-13T10:00:00.000Z' })
+  })
 
   it('si el almacén falla al leer y al escribir, registrar no rompe y no hay marcas', () => {
     const competicion = crearCompeticion({
@@ -128,7 +177,7 @@ describe('Almacén', () => {
       },
     })
 
-    expect(competicion.registrar(partida)).toEqual({ nuevaMarca: true, puntosParaLaMarca: null })
+    expect(competicion.registrar(partida)).toEqual({ caso: 'nueva-marca' })
     expect(competicion.marca(comunidadesUbicar)).toBeNull()
     expect(competicion.historial()).toEqual([])
   })

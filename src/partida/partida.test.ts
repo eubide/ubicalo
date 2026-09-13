@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { Elemento } from '../catalogo/catalogo'
-import { abandonar, iniciarPartida, responder, responderConTexto, tiempoJugado } from './partida'
+import { abandonar, iniciarPartida, responder, responderConTexto, resumirPartida, tiempoJugado } from './partida'
 
 const elementos: Elemento[] = [
   { id: 'a', nombre: 'Alfa', nombreMostrado: 'Alfa', alias: [] },
@@ -259,5 +259,38 @@ describe('Abandono', () => {
     expect(partida.puntuacion).toBe(150)
     expect(partida.pendientes).toBe(4)
     expect(tiempoJugado(partida, 60_000)).toBe(6_000)
+  })
+
+  it('resume una partida acabada con su prueba, puntuación, tiempo, fecha de fin y si fue abandonada', () => {
+    const prueba = { tipo: 'provincias', modo: 'ubicacion-nombre' } as const
+    ahora = 1_000
+    let partida = iniciarPartida(elementos, azarFijo, reloj)
+    expect(resumirPartida(partida, prueba)).toBeNull()
+
+    partida = responder(partida, partida.preguntado!.id)
+    ahora = 7_000
+    partida = abandonar(partida)
+
+    expect(resumirPartida(partida, prueba)).toEqual({
+      prueba: { tipo: 'provincias', modo: 'ubicacion-nombre' },
+      puntuacion: 150,
+      tiempo: 6_000,
+      fecha: '1970-01-01T00:00:07.000Z',
+      abandonada: true,
+    })
+  })
+
+  it('abandonar una partida ya terminada no la cambia', () => {
+    ahora = 1_000
+    let partida = iniciarPartida(elementos, azarFijo, reloj)
+    ahora = 4_000
+    while (!partida.terminada) partida = responder(partida, partida.preguntado!.id)
+
+    ahora = 9_000
+    const tras = abandonar(partida)
+
+    expect(tras.abandonada).toBe(false)
+    expect(tras.terminada).toBe(true)
+    expect(tiempoJugado(tras, 60_000)).toBe(3_000)
   })
 })

@@ -1,4 +1,5 @@
 import type { Elemento } from '../catalogo/catalogo'
+import type { Prueba } from '../prueba/prueba'
 
 export type Azar = () => number
 
@@ -144,9 +145,29 @@ function resolver(partida: Partida, acierto: boolean): Partida {
 }
 
 export function abandonar(partida: Partida): Partida {
+  if (partida.terminada) return partida
   return { ...partida, fin: partida.reloj(), preguntado: null, terminada: true, abandonada: true }
 }
 
 export function tiempoJugado(partida: Partida, ahora: number): number {
   return (partida.fin ?? ahora) - partida.inicio
+}
+
+export interface PartidaJugada {
+  prueba: Prueba
+  puntuacion: number
+  tiempo: number
+  fecha: string
+  abandonada: boolean
+}
+
+export function resumirPartida(partida: Partida, prueba: Prueba): PartidaJugada | null {
+  if (partida.fin === null) return null
+  return {
+    prueba,
+    puntuacion: partida.puntuacion,
+    tiempo: tiempoJugado(partida, partida.fin),
+    fecha: new Date(partida.fin).toISOString(),
+    abandonada: partida.abandonada,
+  }
 }

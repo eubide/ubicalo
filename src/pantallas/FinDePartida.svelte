@@ -18,16 +18,18 @@
 
 <section class="fin">
   <p class="titulo">{abandonada ? 'Partida abandonada' : '¡Partida terminada!'}</p>
-  {#if abandonada}
+  {#if resultado?.caso === 'abandonada'}
     <p class="marca">Una partida abandonada no cuenta para la marca.</p>
-  {:else if resultado?.nuevaMarca}
+  {:else if resultado?.caso === 'nueva-marca'}
     <p class="marca nueva">¡Nueva marca!</p>
-  {:else if resultado?.puntosParaLaMarca === 0}
+  {:else if resultado?.caso === 'empate-a-puntos-con-mas-tiempo'}
     <p class="marca">Empatas a puntos con tu marca, pero con más tiempo.</p>
-  {:else if resultado?.puntosParaLaMarca}
+  {:else if resultado?.caso === 'empate-total'}
+    <p class="marca">Igualas tu marca en puntos y tiempo.</p>
+  {:else if resultado?.caso === 'faltan-puntos'}
     <p class="marca">
-      Te has quedado a {resultado.puntosParaLaMarca}
-      {resultado.puntosParaLaMarca === 1 ? 'punto' : 'puntos'} de tu marca.
+      Te has quedado a {resultado.puntos}
+      {resultado.puntos === 1 ? 'punto' : 'puntos'} de tu marca.
     </p>
   {/if}
   <dl>

@@ -6,7 +6,15 @@
   import FinDePartida from './pantallas/FinDePartida.svelte'
   import PuntuacionYTiempo from './pantallas/PuntuacionYTiempo.svelte'
   import { almacenEnMemoria, crearCompeticion, type Almacen, type ResultadoDeRegistro } from './competicion/competicion'
-  import { abandonar, iniciarPartida, responder, responderConTexto, tiempoJugado, type Partida } from './partida/partida'
+  import {
+    abandonar,
+    iniciarPartida,
+    responder,
+    responderConTexto,
+    resumirPartida,
+    tiempoJugado,
+    type Partida,
+  } from './partida/partida'
   import type { Prueba } from './prueba/prueba'
   import SeleccionPrueba from './seleccion/SeleccionPrueba.svelte'
 
@@ -97,14 +105,8 @@
   }
 
   function registrar(acabada: Partida) {
-    if (!prueba || acabada.fin === null) return
-    resultado = competicion.registrar({
-      prueba,
-      puntuacion: acabada.puntuacion,
-      tiempo: tiempoJugado(acabada, acabada.fin),
-      fecha: new Date(acabada.fin).toISOString(),
-      abandonada: acabada.abandonada,
-    })
+    const jugada = prueba && resumirPartida(acabada, prueba)
+    if (jugada) resultado = competicion.registrar(jugada)
   }
 
   function enviarTexto(evento: SubmitEvent) {
