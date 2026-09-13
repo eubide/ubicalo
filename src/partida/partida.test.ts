@@ -101,6 +101,18 @@ describe('Partida en Ubicación → nombre', () => {
     expect(acierta(soria, 'Sori')).toBe(false)
   })
 
+  it('no admite como errata el nombre o alias de otro elemento del tipo', () => {
+    const palencia: Elemento = { id: 'pa', nombre: 'Palencia', nombreMostrado: 'Palencia', alias: [] }
+    const valencia: Elemento = { id: 'va', nombre: 'València', nombreMostrado: 'Valencia', alias: ['Valencia'] }
+    const partida = iniciarPartida([palencia, valencia], azarFijo, reloj)
+    expect(partida.preguntado).toEqual(palencia)
+
+    expect(responderConTexto(partida, 'valencia').ultimaRespuesta?.acierto).toBe(false)
+    expect(responderConTexto(partida, 'València').ultimaRespuesta?.acierto).toBe(false)
+    expect(responderConTexto(partida, 'Palencio').ultimaRespuesta?.acierto).toBe(true)
+    expect(responderConTexto(partida, 'palencia').ultimaRespuesta?.acierto).toBe(true)
+  })
+
   it('un texto incorrecto es un fallo: resta 25, desvela el correcto y el elemento sigue pendiente', () => {
     let partida = iniciarPartida(elementos, azarFijo, reloj)
     partida = responderConTexto(partida, partida.preguntado!.nombre)

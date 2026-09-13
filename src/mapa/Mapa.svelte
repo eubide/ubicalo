@@ -11,7 +11,6 @@
     resaltado: string | null
     preguntado: string | null
     iluminado?: string | null
-    respondePulsando?: boolean
     fallados?: string[]
     alElegir: (id: string) => void
     nombreDe: (id: string) => string
@@ -24,7 +23,6 @@
     resaltado,
     preguntado,
     iluminado = null,
-    respondePulsando = true,
     fallados = [],
     alElegir,
     nombreDe,
@@ -154,7 +152,7 @@
   }
 
   function pulsarElemento(id: string) {
-    if (!respondePulsando) return
+    if (iluminado !== null) return
     if (tipoDePuntero !== 'touch') {
       seleccionado = null
       alElegir(id)

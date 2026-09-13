@@ -10,6 +10,7 @@ export interface Respuesta {
 }
 
 export interface Partida {
+  elementos: Elemento[]
   reloj: Reloj
   inicio: number
   fin: number | null
@@ -59,6 +60,7 @@ export function iniciarPartida(elementos: Elemento[], azar: Azar, reloj: Reloj):
   const ahora = reloj()
   return construir(
     {
+      elementos,
       reloj,
       inicio: ahora,
       puntuacion: 0,
@@ -96,20 +98,26 @@ function distanciaDeEdicion(a: string, b: string): number {
   return anterior[b.length]
 }
 
-function coincide(respuesta: string, aceptado: string): boolean {
-  if (respuesta === aceptado) return true
+function nombresAceptados({ nombre, alias }: Elemento): string[] {
+  return [nombre, ...alias].map(normalizar)
+}
+
+function admiteErrata(respuesta: string, aceptado: string): boolean {
   const letras = aceptado.match(/\p{L}/gu)?.length ?? 0
   return letras >= LETRAS_MINIMAS_PARA_ERRATA && distanciaDeEdicion(respuesta, aceptado) === 1
 }
 
 export function responderConTexto(partida: Partida, texto: string): Partida {
-  const { nombre, alias } = partida.cola[0]
+  const preguntado = partida.cola[0]
   const respuesta = normalizar(texto)
   if (respuesta === '') return partida
-  return resolver(
-    partida,
-    [nombre, ...alias].some((aceptado) => coincide(respuesta, normalizar(aceptado))),
-  )
+  const aceptados = nombresAceptados(preguntado)
+  const esNombreDeOtro = partida.elementos
+    .filter((elemento) => elemento.id !== preguntado.id)
+    .some((elemento) => nombresAceptados(elemento).includes(respuesta))
+  const acierto =
+    aceptados.includes(respuesta) || (!esNombreDeOtro && aceptados.some((aceptado) => admiteErrata(respuesta, aceptado)))
+  return resolver(partida, acierto)
 }
 
 function resolver(partida: Partida, acierto: boolean): Partida {

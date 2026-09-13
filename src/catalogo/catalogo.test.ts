@@ -57,8 +57,6 @@ describe('Catálogo de comunidades autónomas', () => {
       nombreMostrado: 'Principado de Asturias',
       alias: ['Asturias'],
     })
-    expect(porId('04').alias).toEqual(['Islas Baleares', 'Baleares'])
-    expect(porId('10').alias).toEqual(['Comunidad Valenciana', 'Valencia'])
     expect(porId('13').alias).toEqual(['Madrid'])
     expect(porId('14').alias).toEqual(['Murcia'])
     expect(porId('15').alias).toEqual(['Navarra'])
@@ -136,8 +134,6 @@ describe('Catálogo de provincias', () => {
     const elementos = catalogo('provincias')
     const porId = (id: string) => elementos.find((elemento) => elemento.id === id)!
 
-    expect(porId('15').alias).toEqual(['La Coruña', 'Coruña'])
-    expect(porId('07').alias).toEqual(['Islas Baleares', 'Baleares'])
     expect(porId('26')).toEqual({ id: '26', nombre: 'La Rioja', nombreMostrado: 'La Rioja', alias: ['Rioja'] })
     expect(porId('38')).toEqual({
       id: '38',

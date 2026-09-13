@@ -32,7 +32,7 @@
 
   const escribeNombre = $derived(prueba?.modo === 'ubicacion-nombre')
   const respuesta = $derived(partida?.ultimaRespuesta)
-  const desvelaPreguntado = $derived(!escribeNombre && respuesta?.correcto.id === partida?.preguntado?.id)
+  const desvelaPreguntado = $derived(respuesta?.correcto.id === partida?.preguntado?.id)
   const resaltado = $derived(respuesta && !respuesta.acierto && !desvelaPreguntado ? respuesta.correcto.id : null)
 
   function empezar(elegida: Prueba) {
@@ -60,6 +60,7 @@
     if (!partida || partida.terminada) return
     partida = responderConTexto(partida, texto)
     texto = ''
+    campoDeTexto?.focus()
   }
 </script>
 
@@ -115,9 +116,7 @@
       acertados={partida.acertados}
       {resaltado}
       preguntado={partida.preguntado?.id ?? null}
-      iluminado={escribeNombre ? (partida.preguntado?.id ?? null) : null}
-      respondePulsando={!escribeNombre}
-      fallados={partida.terminada ? partida.fallados.map((elemento) => elemento.id) : []}
+      iluminado={escribeNombre ? (partida.preguntado?.id ?? null) : null}      fallados={partida.terminada ? partida.fallados.map((elemento) => elemento.id) : []}
       alElegir={elegir}
       {nombreDe}
     />
