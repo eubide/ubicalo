@@ -6,6 +6,8 @@
 
   interface Props {
     puntuacion: number
+    aciertosALaPrimera: number
+    totalElementos: number
     tiempo: number
     fallos: number
     pistasUsadas: number
@@ -17,7 +19,7 @@
     alElegirOtraPrueba: () => void
   }
 
-  let { puntuacion, tiempo, fallos, pistasUsadas, fallados, abandonada, resultado, reto, retoSuperado, alElegirOtraPrueba }: Props = $props()
+  let { puntuacion, aciertosALaPrimera, totalElementos, tiempo, fallos, pistasUsadas, fallados, abandonada, resultado, reto, retoSuperado, alElegirOtraPrueba }: Props = $props()
 </script>
 
 <section class="fin">
@@ -44,6 +46,8 @@
   <dl>
     <dt>Puntuación</dt>
     <dd>{puntuacion}</dd>
+    <dt>A la primera</dt>
+    <dd>{aciertosALaPrimera} / {totalElementos} ({Math.round((aciertosALaPrimera / totalElementos) * 100)} %)</dd>
     <dt>Tiempo</dt>
     <dd>{formatearTiempo(tiempo)}</dd>
     <dt>Fallos</dt>
