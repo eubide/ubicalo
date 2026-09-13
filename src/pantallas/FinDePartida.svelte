@@ -26,7 +26,7 @@
     <p>Para repasar:</p>
     <ul>
       {#each fallados as elemento (elemento.id)}
-        <li>{elemento.nombre}</li>
+        <li>{elemento.nombreMostrado}</li>
       {/each}
     </ul>
   {/if}
