@@ -30,6 +30,15 @@ export const DURACION_CORRECCION_TRAS_FALLO = 3_000
 
 export const DURACION_CORRECCION_CON_PISTA = 2_000
 
+export interface Repaso {
+  elementos: Elemento[]
+  marcados: string[]
+}
+
+const FALLOS_PARA_REPASO = 3
+
+export const DURACION_REPASO_UBICACION_NOMBRE = 4_000
+
 export interface Partida {
   elementos: Elemento[]
   azar: Azar
@@ -46,6 +55,8 @@ export interface Partida {
   pista: Pista | null
   pistasUsadas: number
   correccion: Correccion | null
+  rachaDeFallos: Elemento[]
+  repaso: Repaso | null
   cola: Elemento[]
   siguienteVuelta: Elemento[]
   acertados: string[]
@@ -102,6 +113,8 @@ export function iniciarPartida(elementos: Elemento[], azar: Azar, reloj: Reloj):
       pista: null,
       pistasUsadas: 0,
       correccion: null,
+      rachaDeFallos: [],
+      repaso: null,
       cola: barajar(elementos, azar),
       siguienteVuelta: [],
       acertados: [],
@@ -112,8 +125,12 @@ export function iniciarPartida(elementos: Elemento[], azar: Azar, reloj: Reloj):
   )
 }
 
+function esperandoRespuesta(partida: Partida): boolean {
+  return !partida.pista && !partida.correccion && !partida.repaso
+}
+
 export function responder(partida: Partida, idElegido: string): Partida {
-  if (partida.pista || partida.correccion) return partida
+  if (!esperandoRespuesta(partida)) return partida
   const correcto = partida.cola[0]
   if (idElegido === correcto.id) return resolver(partida, true)
   const elegido = partida.elementos.find((elemento) => elemento.id === idElegido)
@@ -122,13 +139,39 @@ export function responder(partida: Partida, idElegido: string): Partida {
 }
 
 function abrirCorreccion(partida: Partida, elegido: Elemento, correcto: Elemento): Partida {
-  const duracion = elegido.id !== correcto.id ? DURACION_CORRECCION_TRAS_FALLO : DURACION_CORRECCION_CON_PISTA
-  return { ...partida, correccion: { elegido, correcto, duracion }, pausadaDesde: partida.mostradoEn }
+  const correccion = {
+    elegido,
+    correcto,
+    duracion: elegido.id !== correcto.id ? DURACION_CORRECCION_TRAS_FALLO : DURACION_CORRECCION_CON_PISTA,
+  }
+  const rachaDeFallos = correccionTrasFallo(correccion) ? [...partida.rachaDeFallos, correcto] : partida.rachaDeFallos
+  return { ...partida, correccion, rachaDeFallos, pausadaDesde: partida.mostradoEn }
 }
 
 export function cerrarCorreccion(partida: Partida): Partida {
   if (!partida.correccion) return partida
+  if (partida.rachaDeFallos.length >= FALLOS_PARA_REPASO) {
+    const elementos = partida.rachaDeFallos.filter(
+      (elemento, i, racha) => racha.findIndex((otro) => otro.id === elemento.id) === i,
+    )
+    return { ...partida, correccion: null, rachaDeFallos: [], repaso: { elementos, marcados: [] } }
+  }
   return { ...reanudar(partida, partida.reloj()), correccion: null }
+}
+
+export function marcarEnRepaso(partida: Partida, id: string): Partida {
+  const { repaso } = partida
+  if (!repaso || repaso.marcados.includes(id) || !repaso.elementos.some((elemento) => elemento.id === id)) {
+    return partida
+  }
+  const marcados = [...repaso.marcados, id]
+  if (marcados.length === repaso.elementos.length) return cerrarRepaso(partida)
+  return { ...partida, repaso: { ...repaso, marcados } }
+}
+
+export function cerrarRepaso(partida: Partida): Partida {
+  if (!partida.repaso) return partida
+  return { ...reanudar(partida, partida.reloj()), repaso: null }
 }
 
 function reanudar(partida: Partida, ahora: number): Partida {
@@ -170,7 +213,7 @@ function admiteErrata(respuesta: string, aceptado: string): boolean {
 }
 
 export function responderConTexto(partida: Partida, texto: string): Partida {
-  if (partida.pista || partida.correccion) return partida
+  if (!esperandoRespuesta(partida)) return partida
   const preguntado = partida.cola[0]
   const respuesta = normalizar(texto)
   if (respuesta === '') return pedirPista(partida)
@@ -224,7 +267,7 @@ function abrirPista(partida: Partida, escrito: string | null): Partida {
 }
 
 export function pedirPista(partida: Partida): Partida {
-  if (partida.pista || partida.correccion) return partida
+  if (!esperandoRespuesta(partida)) return partida
   return abrirPista(partida, null)
 }
 
@@ -255,6 +298,7 @@ function resolver(partida: Partida, acierto: boolean): Partida {
     {
       ...partida,
       puntuacion: partida.puntuacion + puntos,
+      rachaDeFallos: [],
       aciertosALaPrimera: partida.aciertosALaPrimera + (aLaPrimera ? 1 : 0),
     },
     { acierto, conPista: false, correcto },
@@ -288,6 +332,7 @@ export function abandonar(partida: Partida): Partida {
     preguntado: null,
     pista: null,
     correccion: null,
+    repaso: null,
     terminada: true,
     abandonada: true,
   }
