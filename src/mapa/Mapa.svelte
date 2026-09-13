@@ -8,7 +8,6 @@
     contornos: Feature<Geometry>[]
     contexto: FeatureCollection
     acertados: string[]
-    resaltado: string | null
     tocado?: string | null
     correcto?: string | null
     preguntado: string | null
@@ -22,7 +21,6 @@
     contornos,
     contexto,
     acertados,
-    resaltado,
     tocado = null,
     correcto = null,
     preguntado,
@@ -211,7 +209,6 @@
           <path
             d={trazado(contorno)}
             class:acertado={acertados.includes(id)}
-            class:resaltado={resaltado === id}
             class:fallado={fallados.includes(id)}
             class:seleccionado={seleccionado === id}
             class:iluminado={iluminado === id}
@@ -230,7 +227,6 @@
       elementos={ceutaYMelilla}
       {contexto}
       {acertados}
-      {resaltado}
       {tocado}
       {correcto}
       {iluminado}
@@ -298,7 +294,6 @@
     fill: #cfe8d6;
   }
 
-  .elementos path.resaltado,
   .elementos path.fallado {
     fill: #f4c7a1;
   }
