@@ -73,6 +73,7 @@
       {contexto}
       {acertados}
       {resaltado}
+      {fallados}
       {alElegir}
       x={ancho - anchoRecuadro}
       y={alto - altoRecuadro}
