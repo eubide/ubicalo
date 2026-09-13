@@ -25,6 +25,8 @@
 
   let prueba = $state<Prueba | null>(null)
   let resultado = $state<ResultadoDeRegistro | null>(null)
+  const ESPERA_CONFIRMAR_ABANDONO = 3_000
+  let confirmandoAbandono = $state(false)
   let partida = $state<Partida | null>(null)
   let elementosDelTipo = $state.raw<Elemento[]>([])
   let totalElementos = $state(0)
@@ -64,10 +66,27 @@
     if (partida.terminada) registrar(partida)
   }
 
-  function abandonarPartida() {
+  $effect(() => {
+    if (!confirmandoAbandono) return
+    const espera = setTimeout(() => (confirmandoAbandono = false), ESPERA_CONFIRMAR_ABANDONO)
+    return () => clearTimeout(espera)
+  })
+
+  function pulsarAbandonar() {
     if (!partida || partida.terminada) return
+    if (!confirmandoAbandono) {
+      confirmandoAbandono = true
+      return
+    }
+    confirmandoAbandono = false
     partida = abandonar(partida)
     registrar(partida)
+  }
+
+  function elegirOtraPrueba() {
+    partida = null
+    prueba = null
+    resultado = null
   }
 
   function registrar(acabada: Partida) {
@@ -95,12 +114,15 @@
           fallados={partida.fallados}
           abandonada={partida.abandonada}
           {resultado}
+          alElegirOtraPrueba={elegirOtraPrueba}
         />
       {:else}
         <p class="pregunta">{partida.preguntado?.nombreMostrado}</p>
         <PuntuacionYTiempo puntuacion={partida.puntuacion} tiempo={tiempoJugado(partida, ahora)} />
         <p class="pendientes">{partida.pendientes} / {totalElementos}</p>
-        <button type="button" class="abandonar" onclick={abandonarPartida}>Abandonar</button>
+        <button type="button" class="abandonar" class:confirmando={confirmandoAbandono} onclick={pulsarAbandonar}>
+          {confirmandoAbandono ? '¿Seguro? Abandonar' : 'Abandonar'}
+        </button>
       {/if}
     </header>
 
@@ -163,6 +185,11 @@
     background: #fff;
     color: #6b7280;
     cursor: pointer;
+  }
+
+  .abandonar.confirmando {
+    border-color: #b45309;
+    color: #b45309;
   }
 
   .respuesta {

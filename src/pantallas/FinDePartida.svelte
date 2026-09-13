@@ -10,9 +10,10 @@
     fallados: Elemento[]
     abandonada: boolean
     resultado: ResultadoDeRegistro | null
+    alElegirOtraPrueba: () => void
   }
 
-  let { puntuacion, tiempo, fallos, fallados, abandonada, resultado }: Props = $props()
+  let { puntuacion, tiempo, fallos, fallados, abandonada, resultado, alElegirOtraPrueba }: Props = $props()
 </script>
 
 <section class="fin">
@@ -45,6 +46,7 @@
       {/each}
     </ul>
   {/if}
+  <button type="button" onclick={alElegirOtraPrueba}>Elegir otra prueba</button>
 </section>
 
 <style>
@@ -74,6 +76,20 @@
 
   dt {
     color: #6b7280;
+  }
+
+  button {
+    font: inherit;
+    margin-top: 0.75rem;
+    padding: 0.5rem 1rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.5rem;
+    background: #fff;
+    cursor: pointer;
+  }
+
+  button:hover {
+    border-color: #2f7a4a;
   }
 
   dd {
