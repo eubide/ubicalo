@@ -3,13 +3,21 @@
   import { catalogo, contornos } from './catalogo/catalogo'
   import contextoGeografico from './datos/contexto-geografico.json'
   import Mapa from './mapa/Mapa.svelte'
+  import FinDePartida from './pantallas/FinDePartida.svelte'
+  import Marcador from './pantallas/Marcador.svelte'
   import { iniciarPartida, responder } from './partida/partida'
 
   const elementos = catalogo()
   const contornosDelTipo = contornos()
   const contexto = contextoGeografico as FeatureCollection
 
-  let partida = $state(iniciarPartida(elementos, Math.random))
+  let partida = $state(iniciarPartida(elementos, Math.random, Date.now))
+  let ahora = $state(Date.now())
+
+  $effect(() => {
+    const intervalo = setInterval(() => (ahora = Date.now()), 250)
+    return () => clearInterval(intervalo)
+  })
 
   const respuesta = $derived(partida.ultimaRespuesta)
   const desvelaPreguntado = $derived(respuesta?.correcto.id === partida.preguntado?.id)
@@ -24,9 +32,15 @@
 <main>
   <header>
     {#if partida.terminada}
-      <p class="pregunta">¡Partida terminada!</p>
+      <FinDePartida
+        puntuacion={partida.puntuacion}
+        tiempo={partida.fin! - partida.inicio}
+        fallos={partida.fallos}
+        fallados={partida.fallados}
+      />
     {:else}
       <p class="pregunta">{partida.preguntado?.nombre}</p>
+      <Marcador puntuacion={partida.puntuacion} tiempo={ahora - partida.inicio} />
       <p class="pendientes">{partida.pendientes} / {elementos.length}</p>
     {/if}
   </header>
@@ -43,7 +57,14 @@
     </p>
   {/if}
 
-  <Mapa contornos={contornosDelTipo} {contexto} acertados={partida.acertados} {resaltado} alElegir={elegir} />
+  <Mapa
+    contornos={contornosDelTipo}
+    {contexto}
+    acertados={partida.acertados}
+    {resaltado}
+    fallados={partida.terminada ? partida.fallados.map((elemento) => elemento.id) : []}
+    alElegir={elegir}
+  />
 </main>
 
 <style>
