@@ -8,10 +8,11 @@
     contexto: FeatureCollection
     acertados: string[]
     resaltado: string | null
+    fallados?: string[]
     alElegir: (id: string) => void
   }
 
-  let { contornos, contexto, acertados, resaltado, alElegir }: Props = $props()
+  let { contornos, contexto, acertados, resaltado, fallados = [], alElegir }: Props = $props()
 
   const ancho = 960
   const alto = 620
@@ -45,6 +46,7 @@
           d={trazado(contorno)}
           class:acertado={acertados.includes(id)}
           class:resaltado={resaltado === id}
+          class:fallado={fallados.includes(id)}
           onclick={() => alElegir(id)}
         />
       {/each}
@@ -84,7 +86,8 @@
     fill: #cfe8d6;
   }
 
-  .elementos path.resaltado {
+  .elementos path.resaltado,
+  .elementos path.fallado {
     fill: #f4c7a1;
   }
 
