@@ -2,7 +2,7 @@
   import type { Feature, FeatureCollection, Geometry } from 'geojson'
   import { geoCentroid, geoPath } from 'd3-geo'
   import { geoConicConformalSpain } from 'd3-composite-projections'
-  import RecuadroCeutaMelilla from './RecuadroCeutaMelilla.svelte'
+  import RecuadroCeutaMelilla, { esCeutaOMelilla } from './RecuadroCeutaMelilla.svelte'
 
   interface Props {
     contornos: Feature<Geometry>[]
@@ -28,15 +28,15 @@
     ),
   )
   const trazado = $derived(geoPath(proyeccion))
+  const anchoRecuadro = 232
+  const altoRecuadro = 150
+  const radioDiana = 10
 
-  // Se reconocen por su posición porque su id cambia según el tipo.
-  const ciudadesAfricanas = $derived(
-    contornos.filter((contorno) => {
-      const [longitud, latitud] = geoCentroid(contorno)
-      return latitud < 36 && longitud > -10
-    }),
+  const ceutaYMelilla = $derived(
+    contornos
+      .map((contorno) => ({ contorno, centro: geoCentroid(contorno) }))
+      .filter(({ centro }) => esCeutaOMelilla(centro)),
   )
-  const recuadro = { x: ancho - 232, y: alto - 150, ancho: 232, alto: 150 }
 </script>
 
 <figure class="mapa">
@@ -49,9 +49,11 @@
     <!-- El MVP se juega con ratón o dedo; jugar con teclado no está en la spec. -->
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
     <g class="elementos">
-      {#each ciudadesAfricanas as ciudad (ciudad.id)}
-        {@const [cx, cy] = proyeccion(geoCentroid(ciudad)) ?? [0, 0]}
-        <circle class="zona" {cx} {cy} r="10" onclick={() => alElegir(String(ciudad.id))} />
+      {#each ceutaYMelilla as { contorno, centro } (contorno.id)}
+        {@const punto = proyeccion(centro)}
+        {#if punto}
+          <circle class="diana" cx={punto[0]} cy={punto[1]} r={radioDiana} onclick={() => alElegir(String(contorno.id))} />
+        {/if}
       {/each}
       {#each contornos as contorno (contorno.id)}
         {@const id = String(contorno.id)}
@@ -64,7 +66,17 @@
       {/each}
     </g>
     <path class="marcos" d={proyeccion.getCompositionBorders()} />
-    <RecuadroCeutaMelilla ciudades={ciudadesAfricanas} {contexto} {acertados} {resaltado} {alElegir} {...recuadro} />
+    <RecuadroCeutaMelilla
+      elementos={ceutaYMelilla}
+      {contexto}
+      {acertados}
+      {resaltado}
+      {alElegir}
+      x={ancho - anchoRecuadro}
+      y={alto - altoRecuadro}
+      ancho={anchoRecuadro}
+      alto={altoRecuadro}
+    />
   </svg>
   <figcaption>
     Obra derivada de las líneas límite del IGN · CC-BY 4.0 scne.es
@@ -95,7 +107,7 @@
     cursor: pointer;
   }
 
-  .elementos .zona {
+  .elementos .diana {
     fill: transparent;
     cursor: pointer;
   }
