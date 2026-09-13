@@ -24,6 +24,7 @@ export interface Partida {
   preguntado: Elemento | null
   pendientes: number
   terminada: boolean
+  abandonada: boolean
   ultimaRespuesta?: Respuesta
 }
 
@@ -68,6 +69,7 @@ export function iniciarPartida(elementos: Elemento[], azar: Azar, reloj: Reloj):
       siguienteVuelta: [],
       acertados: [],
       vuelta: 1,
+      abandonada: false,
     },
     ahora,
   )
@@ -93,6 +95,10 @@ export function responder(partida: Partida, idElegido: string): Partida {
     },
     ahora,
   )
+}
+
+export function abandonar(partida: Partida): Partida {
+  return { ...partida, fin: partida.reloj(), preguntado: null, terminada: true, abandonada: true }
 }
 
 export function tiempoJugado(partida: Partida, ahora: number): number {

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { Elemento } from '../catalogo/catalogo'
-import { iniciarPartida, responder, tiempoJugado } from './partida'
+import { abandonar, iniciarPartida, responder, tiempoJugado } from './partida'
 
 const elementos: Elemento[] = [
   { id: 'a', nombre: 'Alfa', nombreMostrado: 'Alfa', alias: [] },
@@ -165,5 +165,23 @@ describe('Fin de partida', () => {
     expect(partida.fallos).toBe(2)
     expect(partida.fallados).toEqual([fallado])
     expect(tiempoJugado(partida, 60_000)).toBe(9_000)
+  })
+})
+
+describe('Abandono', () => {
+  it('abandonar termina la partida con pendientes, conserva la puntuación y la marca como abandonada', () => {
+    ahora = 1_000
+    let partida = iniciarPartida(elementos, azarFijo, reloj)
+    partida = responder(partida, partida.preguntado!.id)
+    expect(partida.abandonada).toBe(false)
+
+    ahora = 7_000
+    partida = abandonar(partida)
+
+    expect(partida.terminada).toBe(true)
+    expect(partida.abandonada).toBe(true)
+    expect(partida.puntuacion).toBe(150)
+    expect(partida.pendientes).toBe(4)
+    expect(tiempoJugado(partida, 60_000)).toBe(6_000)
   })
 })
