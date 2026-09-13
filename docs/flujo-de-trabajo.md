@@ -1,0 +1,98 @@
+# Flujo de trabajo con las skills de Matt Pocock
+
+Guía para construir Ubícalo con el plugin `mattpocock-skills` (versión 1.2.3). En Claude Code los comandos llevan el prefijo del plugin: `/mattpocock-skills:<nombre>`.
+
+## La cadena principal
+
+```txt
+grill → to-spec → to-tickets → implement → code-review
+```
+
+| Paso | Comando | Qué produce | Estado en Ubícalo |
+| --- | --- | --- | --- |
+| 0 | `git init` y `/mattpocock-skills:setup-matt-pocock-skills` | `CLAUDE.md` y `docs/agents/*.md` | [x] Hecho (2026-09-13) |
+| 1 | `/mattpocock-skills:grill-with-docs` | Decisiones, `CONTEXT.md` y ADRs en `docs/adr/` | [x] Hecho (2026-09-13) |
+| 2 | `/mattpocock-skills:to-spec` | Un issue de GitHub con la spec | [x] Hecho: #1 (2026-09-13) |
+| 3 | `/mattpocock-skills:to-tickets` | Un issue de GitHub por ticket, con sus dependencias | [x] Hecho: #2–#10 (2026-09-13) |
+| 4 | `/mattpocock-skills:implement` | Código con TDD, revisión y commit, un ticket por sesión | [ ] Pendiente |
+| 5 | `/mattpocock-skills:code-review <punto fijo>` | Informe de estándares y de fidelidad a la spec | Lo lanza `implement` al terminar |
+
+## Paso 0: preparar el repositorio (hecho)
+
+- **Repositorio**: `eubide/ubicalo`, privado, enlazado como `origin`.
+- **Issue tracker**: GitHub Issues con el CLI `gh` (`docs/agents/issue-tracker.md`).
+- **Triage labels**: los cinco nombres por defecto, ya creados en GitHub (`docs/agents/triage-labels.md`).
+- **Domain docs**: single-context, `CONTEXT.md` y `docs/adr/` en la raíz (`docs/agents/domain.md`).
+- **Instrucciones del agente**: bloque `## Agent skills` en `CLAUDE.md`.
+
+Solo hace falta volver a lanzar el setup para cambiar de tracker o empezar de cero; lo demás se edita a mano en `docs/agents/`.
+
+## Paso 1: decidir (hecho)
+
+`grill-with-docs` es `grilling` más `domain-modeling`: entrevista por rondas y escribe el glosario y las decisiones difíciles mientras tanto.
+
+Qué quedó escrito:
+
+- `CONTEXT.md`: solo glosario. Nada de detalles de implementación.
+- `docs/adr/`: una decisión solo entra si cumple las tres condiciones: difícil de revertir, sorprendente sin contexto y fruto de una disyuntiva real.
+- `DEFINITION.md`: la idea original. Desde la spec deja de ser la fuente de verdad.
+
+## Paso 2: spec
+
+`to-spec` no pregunta: resume lo ya decidido. Antes de escribir te propone las **seams** (fronteras públicas donde se prueban los tests) y espera tu confirmación. Esa es la parte que más merece tu atención.
+
+- Lánzalo **en la misma sesión que el grilling**, sin `/clear` ni `/compact`: necesita la conversación original.
+- Publica la spec como issue de GitHub con la etiqueta `ready-for-agent`.
+- Plantilla: problema, solución, historias de usuario, decisiones de implementación, decisiones de pruebas, fuera de alcance y notas.
+- Revisa sobre todo **Fuera de alcance**. Todo lo que diga la spec y no hayas decidido tú es un defecto.
+- La spec es una foto del momento. Lo que aprendas implementando va a `CONTEXT.md` o a un ADR, no a la spec.
+
+## Paso 3: tickets
+
+`to-tickets` corta la spec en **tracer bullets**: rebanadas verticales que se pueden demostrar solas y caben en una sesión nueva.
+
+1. Lánzalo en la misma ventana que `to-spec`, pasándole el issue de la spec (`#<número>`).
+2. Te enseña la lista con título, **Blocked by** y qué entrega cada ticket.
+3. Ajusta la granularidad y las dependencias hasta aprobarla.
+4. Publica un issue por ticket, bloqueantes primero, con las dependencias nativas de GitHub, la etiqueta `ready-for-agent` y criterios de aceptación.
+
+## Paso 4: implementar, un ticket cada vez
+
+1. Elige un ticket de la **frontera**: los que tienen todos sus bloqueantes cerrados.
+2. Abre una sesión nueva y ejecuta `/mattpocock-skills:implement #<número>`.
+3. `implement` usa `tdd` solo en las seams acordadas, pasa typecheck y tests, ejecuta `code-review` y **hace commit en la rama actual**. Lanzarlo equivale a autorizar ese commit.
+4. El push a GitHub no lo hace ningún skill: lo pides aparte.
+5. Cierra el issue del ticket y pasa al siguiente.
+
+## Entre fases: seguir, limpiar o traspasar
+
+En cada frontera entre fases, recorre las preguntas en orden y quédate con el primer sí:
+
+1. ¿La fase siguiente necesita esta conversación tal cual, o queda contexto de sobra? → **Seguir** en la misma sesión.
+2. ¿Todo lo de esta sesión sobra? → **`/clear`**.
+3. ¿Cambias de herramienta, de directorio o se lo pasas a otra persona? → **`/mattpocock-skills:handoff`**.
+4. ¿La tarea puede hacerse sin ti delante? → **Subagente**.
+5. Si no → **`/compact`** con una instrucción ("vamos a implementar el ticket #3").
+
+Nunca compactes a mitad de una fase.
+
+## Fuera de la cadena
+
+| Situación en Ubícalo | Comando |
+| --- | --- |
+| ¿Cómo debe verse el mapa mudo minimalista? Hablar no lo resuelve | `/mattpocock-skills:prototype` |
+| Falta un dato externo (una licencia, qué ríos entran en ESO) | `/mattpocock-skills:research` |
+| Un bug difícil o algo lento en móvil | `/mattpocock-skills:diagnosing-bugs` |
+| Ríos, montañas, cabos y golfos (aplazados) | `/mattpocock-skills:grill-with-docs`; `/mattpocock-skills:wayfinder` si no cabe en una sesión |
+| Un mensaje del agente no se entiende | `/mattpocock-skills:wait-what` |
+| No sabes qué skill toca | `/mattpocock-skills:ask-matt` |
+| Cada pocos días, para vigilar el diseño del código | `/mattpocock-skills:improve-codebase-architecture` |
+
+## Próximo paso
+
+- [x] `git init`
+- [x] `/mattpocock-skills:setup-matt-pocock-skills`
+- [x] `/mattpocock-skills:to-spec` → #1
+- [x] Resolver los cuatro puntos "Sin decidir" de #1
+- [x] `/mattpocock-skills:to-tickets #1` → #2–#10
+- [ ] Abrir una sesión nueva y lanzar `/mattpocock-skills:implement #2`
