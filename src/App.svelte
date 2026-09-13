@@ -18,6 +18,7 @@
   } from './competicion/competicion'
   import {
     abandonar,
+    cerrarCorreccion,
     elegirOpcion,
     iniciarPartida,
     responder,
@@ -76,11 +77,26 @@
   const respuesta = $derived(partida?.ultimaRespuesta)
   const desvelaPreguntado = $derived(respuesta?.correcto.id === partida?.preguntado?.id)
   const pista = $derived(partida?.pista ?? null)
+  const correccion = $derived(partida?.correccion ?? null)
   const resaltado = $derived(
-    respuesta && !respuesta.acierto && !respuesta.conPista && !desvelaPreguntado && !pista && !partida?.terminada
+    escribeNombre &&
+      respuesta &&
+      !respuesta.acierto &&
+      !respuesta.conPista &&
+      !desvelaPreguntado &&
+      !pista &&
+      !partida?.terminada
       ? respuesta.correcto.id
       : null,
   )
+
+  $effect(() => {
+    if (!correccion) return
+    const espera = setTimeout(() => {
+      if (partida) partida = cerrarCorreccion(partida)
+    }, correccion.duracion)
+    return () => clearTimeout(espera)
+  })
 
   function empezar(elegida: Prueba) {
     const elementos = catalogo(elegida.tipo)
@@ -115,7 +131,7 @@
   })
 
   function pulsarAbandonar() {
-    if (!partida || partida.terminada) return
+    if (!partida || partida.terminada || partida.correccion) return
     if (!confirmandoAbandono) {
       confirmandoAbandono = true
       return
@@ -208,7 +224,9 @@
             <button type="submit">Responder</button>
           </form>
         {:else}
-          <p class="pregunta">{partida.preguntado?.nombreMostrado}</p>
+          <p class="pregunta">
+            {#if !correccion}{partida.preguntado?.nombreMostrado}{/if}
+          </p>
         {/if}
         <PuntuacionYTiempo puntuacion={partida.puntuacion} tiempo={tiempoJugado(partida, ahora)} {aBatir} />
         <p class="pendientes">{partida.pendientes} / {totalElementos}</p>
@@ -218,7 +236,7 @@
       {/if}
     </header>
 
-    {#if respuesta && !partida.terminada && !pista}
+    {#if respuesta && !partida.terminada && !pista && (escribeNombre || respuesta.acierto)}
       <p class="respuesta" class:fallo={!respuesta.acierto && !respuesta.conPista}>
         {#if respuesta.conPista}
           Con pista{desvelaPreguntado ? '' : `: ${respuesta.correcto.nombreMostrado}`}
@@ -237,11 +255,22 @@
       {contexto}
       acertados={partida.acertados}
       {resaltado}
-      preguntado={partida.preguntado?.id ?? null}
+      tocado={correccion?.elegido.id ?? null}
+      correcto={correccion?.correcto.id ?? null}
+      preguntado={correccion ? null : (partida.preguntado?.id ?? null)}
       iluminado={escribeNombre ? (partida.preguntado?.id ?? null) : null}      fallados={partida.terminada ? partida.fallados.map((elemento) => elemento.id) : []}
       alElegir={elegir}
       {nombreDe}
     />
+
+    {#if correccion}
+      <div class="correccion" role="status">
+        <p>
+          Tocaste {correccion.elegido.nombreMostrado} · {correccion.correcto.nombreMostrado} está aquí
+        </p>
+        <div class="barra" style:animation-duration="{correccion.duracion}ms"></div>
+      </div>
+    {/if}
   {/if}
 </main>
 
@@ -264,6 +293,10 @@
     font-size: 1.5rem;
     font-weight: 600;
     margin: 0;
+  }
+
+  p.pregunta {
+    min-height: 1lh;
   }
 
   form.pregunta {
@@ -334,5 +367,38 @@
 
   .respuesta.fallo {
     color: #b45309;
+  }
+
+  .correccion {
+    position: sticky;
+    bottom: 0;
+    padding: 0.5rem;
+    border-top: 1px solid #d1d5db;
+    background: #f7f7f5;
+  }
+
+  .correccion p {
+    margin: 0 0 0.5rem;
+    font-size: 1.125rem;
+    color: #b45309;
+  }
+
+  .barra {
+    height: 0.375rem;
+    border-radius: 0.1875rem;
+    background: #b45309;
+    transform-origin: left;
+    animation-name: vaciar;
+    animation-timing-function: linear;
+    animation-fill-mode: forwards;
+  }
+
+  @keyframes vaciar {
+    from {
+      transform: scaleX(1);
+    }
+    to {
+      transform: scaleX(0);
+    }
   }
 </style>

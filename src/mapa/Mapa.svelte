@@ -9,6 +9,8 @@
     contexto: FeatureCollection
     acertados: string[]
     resaltado: string | null
+    tocado?: string | null
+    correcto?: string | null
     preguntado: string | null
     iluminado?: string | null
     fallados?: string[]
@@ -21,6 +23,8 @@
     contexto,
     acertados,
     resaltado,
+    tocado = null,
+    correcto = null,
     preguntado,
     iluminado = null,
     fallados = [],
@@ -42,6 +46,7 @@
     ),
   )
   const trazado = $derived(geoPath(proyeccion))
+  const contornoCorrecto = $derived(contornos.find((contorno) => String(contorno.id) === correcto))
   const anchoRecuadro = 232
   const altoRecuadro = 150
   const radioDiana = 10
@@ -193,6 +198,7 @@
           {#if punto}
             <circle
               class="diana"
+              class:correcto={correcto === String(contorno.id)}
               cx={punto[0]}
               cy={punto[1]}
               r={radioDiana}
@@ -209,10 +215,15 @@
             class:fallado={fallados.includes(id)}
             class:seleccionado={seleccionado === id}
             class:iluminado={iluminado === id}
+            class:tocado={tocado === id}
             onclick={() => pulsarElemento(id)}
           />
         {/each}
       </g>
+      {#if contornoCorrecto}
+        <!-- Encima de todos los elementos para que los vecinos no tapen el contorno grueso. -->
+        <path class="correcto" d={trazado(contornoCorrecto)} />
+      {/if}
       <path class="marcos" d={proyeccion.getCompositionBorders()} />
     </g>
     <RecuadroCeutaMelilla
@@ -220,6 +231,8 @@
       {contexto}
       {acertados}
       {resaltado}
+      {tocado}
+      {correcto}
       {iluminado}
       {fallados}
       {seleccionado}
@@ -275,6 +288,12 @@
     cursor: pointer;
   }
 
+  .elementos .diana.correcto {
+    stroke: #14532d;
+    stroke-width: 3;
+    vector-effect: non-scaling-stroke;
+  }
+
   .elementos path.acertado {
     fill: #cfe8d6;
   }
@@ -292,6 +311,18 @@
     fill: #f6d365;
     stroke: #8a6d1f;
     stroke-width: 1.6;
+  }
+
+  .elementos path.tocado {
+    fill: #dc2626;
+  }
+
+  path.correcto {
+    fill: none;
+    stroke: #14532d;
+    stroke-width: 4;
+    stroke-linejoin: round;
+    pointer-events: none;
   }
 
   .marcos {
