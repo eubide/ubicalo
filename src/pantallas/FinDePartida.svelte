@@ -13,10 +13,11 @@
     abandonada: boolean
     resultado: ResultadoDeRegistro | null
     reto: Reto | null
+    retoSuperado: boolean | null
     alElegirOtraPrueba: () => void
   }
 
-  let { puntuacion, tiempo, fallos, pistasUsadas, fallados, abandonada, resultado, reto, alElegirOtraPrueba }: Props = $props()
+  let { puntuacion, tiempo, fallos, pistasUsadas, fallados, abandonada, resultado, reto, retoSuperado, alElegirOtraPrueba }: Props = $props()
 </script>
 
 <section class="fin">
@@ -34,6 +35,11 @@
       Te has quedado a {resultado.puntos}
       {resultado.puntos === 1 ? 'punto' : 'puntos'} de tu marca.
     </p>
+  {/if}
+  {#if retoSuperado === true}
+    <p class="marca nueva">¡Reto superado!</p>
+  {:else if retoSuperado === false}
+    <p class="marca">Reto no superado.</p>
   {/if}
   <dl>
     <dt>Puntuación</dt>

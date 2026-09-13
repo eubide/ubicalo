@@ -16,14 +16,18 @@
   )
   const enlace = $derived(enlaceDeReto(reto, `${location.origin}${location.pathname}`))
   let aviso = $state<'copiado' | 'sin-copiar' | null>(null)
+  let espera: ReturnType<typeof setTimeout> | undefined
 
-  $effect(() => {
-    if (aviso !== 'copiado') return
-    const espera = setTimeout(() => (aviso = null), DURACION_AVISO)
-    return () => clearTimeout(espera)
-  })
+  $effect(() => () => clearTimeout(espera))
+
+  function avisarCopiado() {
+    aviso = 'copiado'
+    clearTimeout(espera)
+    espera = setTimeout(() => (aviso = null), DURACION_AVISO)
+  }
 
   async function compartir() {
+    aviso = null
     if (navigator.share) {
       try {
         await navigator.share({ text: texto, url: enlace })
@@ -34,7 +38,7 @@
     }
     try {
       await navigator.clipboard.writeText(`${texto} ${enlace}`)
-      aviso = 'copiado'
+      avisarCopiado()
     } catch {
       aviso = 'sin-copiar'
     }
@@ -43,12 +47,12 @@
 
 <div class="reto">
   <p>{texto}</p>
-  <input readonly value={enlace} aria-label="Enlace del reto" onfocus={(evento) => evento.currentTarget.select()} />
   <button type="button" onclick={compartir}>Compartir reto</button>
   {#if aviso === 'copiado'}
     <span class="aviso" role="status">Copiado</span>
   {:else if aviso === 'sin-copiar'}
-    <span class="aviso" role="status">No se ha podido copiar; copia el enlace de arriba.</span>
+    <span class="aviso" role="status">No se ha podido copiar; copia este enlace:</span>
+    <input readonly value={enlace} aria-label="Enlace del reto" onfocus={(evento) => evento.currentTarget.select()} />
   {/if}
 </div>
 

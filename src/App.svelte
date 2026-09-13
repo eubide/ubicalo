@@ -8,8 +8,10 @@
   import {
     almacenEnMemoria,
     crearCompeticion,
+    enlaceSinReto,
     retoDe,
     retoDeEnlace,
+    superaReto,
     type Almacen,
     type ResultadoDeRegistro,
     type Reto,
@@ -38,8 +40,10 @@
   }
 
   const competicion = crearCompeticion(almacenDelNavegador())
-  const retoRecibido = retoDeEnlace(location.href)
 
+  let retoRecibido = $state<Reto | null>(retoDeEnlace(location.href))
+  let aBatir = $state<Reto | null>(null)
+  let retoSuperado = $state<boolean | null>(null)
   let resultado = $state<ResultadoDeRegistro | null>(null)
   let reto = $state<Reto | null>(null)
   const ESPERA_CONFIRMAR_ABANDONO = 3_000
@@ -83,6 +87,9 @@
     prueba = elegida
     resultado = null
     reto = null
+    retoSuperado = null
+    aBatir =
+      retoRecibido?.prueba.tipo === elegida.tipo && retoRecibido.prueba.modo === elegida.modo ? retoRecibido : null
     elementosDelTipo = elementos
     totalElementos = elementos.length
     contornosDelTipo = contornos(elegida.tipo)
@@ -122,6 +129,7 @@
     partida = null
     prueba = null
     resultado = null
+    retoSuperado = null
   }
 
   function registrar(acabada: Partida) {
@@ -129,6 +137,12 @@
     if (!jugada) return
     resultado = competicion.registrar(jugada)
     reto = retoDe(jugada)
+    if (aBatir) {
+      retoSuperado = superaReto(jugada, aBatir)
+      aBatir = null
+      retoRecibido = null
+      history.replaceState(history.state, '', enlaceSinReto(location.href))
+    }
   }
 
   function enviarTexto(evento: SubmitEvent) {
@@ -161,6 +175,7 @@
           abandonada={partida.abandonada}
           {resultado}
           {reto}
+          {retoSuperado}
           alElegirOtraPrueba={elegirOtraPrueba}
         />
       {:else}
@@ -193,7 +208,7 @@
         {:else}
           <p class="pregunta">{partida.preguntado?.nombreMostrado}</p>
         {/if}
-        <PuntuacionYTiempo puntuacion={partida.puntuacion} tiempo={tiempoJugado(partida, ahora)} />
+        <PuntuacionYTiempo puntuacion={partida.puntuacion} tiempo={tiempoJugado(partida, ahora)} {aBatir} />
         <p class="pendientes">{partida.pendientes} / {totalElementos}</p>
         <button type="button" class="abandonar" class:confirmando={confirmandoAbandono} onclick={pulsarAbandonar}>
           {confirmandoAbandono ? '¿Seguro? Abandonar' : 'Abandonar'}
