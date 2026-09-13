@@ -2,26 +2,43 @@
   import type { Tipo } from '../catalogo/catalogo'
   import type { Marca } from '../competicion/competicion'
   import { formatearTiempo } from '../pantallas/tiempo'
+  import type { Modo, Prueba } from '../prueba/prueba'
 
   interface Props {
-    alElegir: (tipo: Tipo) => void
-    marcaDe: (tipo: Tipo) => Marca | null
+    alElegir: (prueba: Prueba) => void
+    marcaDe: (prueba: Prueba) => Marca | null
   }
 
   let { alElegir, marcaDe }: Props = $props()
+
+  const modos: { modo: Modo; etiqueta: string }[] = [
+    { modo: 'nombre-ubicar', etiqueta: 'Nombre → ubicar' },
+    { modo: 'ubicacion-nombre', etiqueta: 'Ubicación → nombre' },
+  ]
 
   const tipos: { tipo: Tipo; etiqueta: string }[] = [
     { tipo: 'comunidades', etiqueta: 'Comunidades autónomas' },
     { tipo: 'provincias', etiqueta: 'Provincias' },
   ]
+
+  let modoElegido = $state<Modo>('nombre-ubicar')
 </script>
 
 <section>
   <h1>¿Qué quieres repasar?</h1>
+  <fieldset class="modos">
+    <legend>Modo</legend>
+    {#each modos as { modo, etiqueta } (modo)}
+      <label>
+        <input type="radio" name="modo" value={modo} bind:group={modoElegido} />
+        {etiqueta}
+      </label>
+    {/each}
+  </fieldset>
   <div class="tipos">
     {#each tipos as { tipo, etiqueta } (tipo)}
-      {@const marca = marcaDe(tipo)}
-      <button type="button" onclick={() => alElegir(tipo)}>
+      {@const marca = marcaDe({ tipo, modo: modoElegido })}
+      <button type="button" onclick={() => alElegir({ tipo, modo: modoElegido })}>
         {etiqueta}
         <span class="marca">
           {marca ? `Marca: ${marca.puntuacion} puntos en ${formatearTiempo(marca.tiempo)}` : 'Sin marca'}
@@ -35,6 +52,25 @@
   h1 {
     font-size: 1.5rem;
     margin: 0 0 1rem;
+  }
+
+  .modos {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    border: none;
+    padding: 0;
+    margin: 0 0 1rem;
+  }
+
+  legend {
+    color: #6b7280;
+    margin-bottom: 0.5rem;
+  }
+
+  label {
+    font-size: 1.125rem;
+    cursor: pointer;
   }
 
   .tipos {

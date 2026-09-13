@@ -10,12 +10,23 @@
     acertados: string[]
     resaltado: string | null
     preguntado: string | null
+    iluminado?: string | null
     fallados?: string[]
     alElegir: (id: string) => void
     nombreDe: (id: string) => string
   }
 
-  let { contornos, contexto, acertados, resaltado, preguntado, fallados = [], alElegir, nombreDe }: Props = $props()
+  let {
+    contornos,
+    contexto,
+    acertados,
+    resaltado,
+    preguntado,
+    iluminado = null,
+    fallados = [],
+    alElegir,
+    nombreDe,
+  }: Props = $props()
 
   const ancho = 960
   const alto = 620
@@ -141,6 +152,7 @@
   }
 
   function pulsarElemento(id: string) {
+    if (iluminado !== null) return
     if (tipoDePuntero !== 'touch') {
       seleccionado = null
       alElegir(id)
@@ -196,6 +208,7 @@
             class:resaltado={resaltado === id}
             class:fallado={fallados.includes(id)}
             class:seleccionado={seleccionado === id}
+            class:iluminado={iluminado === id}
             onclick={() => pulsarElemento(id)}
           />
         {/each}
@@ -207,6 +220,7 @@
       {contexto}
       {acertados}
       {resaltado}
+      {iluminado}
       {fallados}
       {seleccionado}
       alElegir={pulsarElemento}
@@ -272,6 +286,12 @@
 
   .elementos path.seleccionado {
     fill: #c9dcf2;
+  }
+
+  .elementos path.iluminado {
+    fill: #f6d365;
+    stroke: #8a6d1f;
+    stroke-width: 1.6;
   }
 
   .marcos {
