@@ -1,13 +1,23 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { Elemento } from '../catalogo/catalogo'
-import { abandonar, iniciarPartida, responder, responderConTexto, resumirPartida, tiempoJugado } from './partida'
+import {
+  abandonar,
+  elegirOpcion,
+  iniciarPartida,
+  pedirPista,
+  responder,
+  responderConTexto,
+  resumirPartida,
+  tiempoJugado,
+  type Partida,
+} from './partida'
 
 const elementos: Elemento[] = [
-  { id: 'a', nombre: 'Alfa', nombreMostrado: 'Alfa', alias: [] },
-  { id: 'b', nombre: 'Beta', nombreMostrado: 'Beta', alias: [] },
-  { id: 'c', nombre: 'Gamma', nombreMostrado: 'Gamma', alias: [] },
-  { id: 'd', nombre: 'Delta', nombreMostrado: 'Delta', alias: [] },
-  { id: 'e', nombre: 'Épsilon', nombreMostrado: 'Épsilon', alias: [] },
+  { id: 'a', nombre: 'Alfa', nombreMostrado: 'Alfa', alias: [], vecinos: [] },
+  { id: 'b', nombre: 'Beta', nombreMostrado: 'Beta', alias: [], vecinos: [] },
+  { id: 'c', nombre: 'Gamma', nombreMostrado: 'Gamma', alias: [], vecinos: [] },
+  { id: 'd', nombre: 'Delta', nombreMostrado: 'Delta', alias: [], vecinos: [] },
+  { id: 'e', nombre: 'Épsilon', nombreMostrado: 'Épsilon', alias: [], vecinos: [] },
 ]
 
 const azarFijo = () => 0.5
@@ -41,7 +51,7 @@ describe('Partida en Nombre → ubicar', () => {
 
     partida = responder(partida, otro.id)
 
-    expect(partida.ultimaRespuesta).toEqual({ acierto: false, correcto: fallado })
+    expect(partida.ultimaRespuesta).toEqual({ acierto: false, conPista: false, correcto: fallado })
     expect(partida.acertados).toEqual([])
     expect(partida.pendientes).toBe(5)
     expect(partida.vuelta).toBe(1)
@@ -58,13 +68,13 @@ describe('Partida en Nombre → ubicar', () => {
 
     partida = responder(partida, fallado.id)
 
-    expect(partida.ultimaRespuesta).toEqual({ acierto: true, correcto: fallado })
+    expect(partida.ultimaRespuesta).toEqual({ acierto: true, conPista: false, correcto: fallado })
     expect(partida.terminada).toBe(true)
   })
 })
 
 describe('Partida en Ubicación → nombre', () => {
-  const cadiz: Elemento = { id: 'ca', nombre: 'Cádiz', nombreMostrado: 'Cádiz', alias: [] }
+  const cadiz: Elemento = { id: 'ca', nombre: 'Cádiz', nombreMostrado: 'Cádiz', alias: [], vecinos: [] }
 
   function partidaPreguntando(elemento: Elemento) {
     return iniciarPartida([elemento], azarFijo, reloj)
@@ -73,25 +83,29 @@ describe('Partida en Ubicación → nombre', () => {
   it('da igual mayúsculas y tildes: "cadiz" vale por "Cádiz"', () => {
     const partida = responderConTexto(partidaPreguntando(cadiz), 'cadiz')
 
-    expect(partida.ultimaRespuesta).toEqual({ acierto: true, correcto: cadiz })
+    expect(partida.ultimaRespuesta).toEqual({ acierto: true, conPista: false, correcto: cadiz })
     expect(partida.acertados).toEqual(['ca'])
     expect(partida.terminada).toBe(true)
   })
 
   it('vale cualquier alias: "Gerona" por "Girona" y "Alacant" por "Alicante"', () => {
-    const girona: Elemento = { id: 'gi', nombre: 'Girona', nombreMostrado: 'Girona (Gerona)', alias: ['Gerona'] }
-    const alicante: Elemento = { id: 'al', nombre: 'Alicante', nombreMostrado: 'Alicante', alias: ['Alacant'] }
+    const girona: Elemento = { id: 'gi', nombre: 'Girona', nombreMostrado: 'Girona (Gerona)', alias: ['Gerona'], vecinos: [] }
+    const alicante: Elemento = { id: 'al', nombre: 'Alicante', nombreMostrado: 'Alicante', alias: ['Alacant'], vecinos: [] }
 
     expect(responderConTexto(partidaPreguntando(girona), 'Gerona').ultimaRespuesta?.acierto).toBe(true)
     expect(responderConTexto(partidaPreguntando(alicante), 'alacant').ultimaRespuesta?.acierto).toBe(true)
   })
 
   it('admite una errata en nombres de seis letras o más y la rechaza en los más cortos', () => {
-    const valladolid: Elemento = { id: 'va', nombre: 'Valladolid', nombreMostrado: 'Valladolid', alias: [] }
-    const huelva: Elemento = { id: 'h', nombre: 'Huelva', nombreMostrado: 'Huelva', alias: [] }
-    const soria: Elemento = { id: 'so', nombre: 'Soria', nombreMostrado: 'Soria', alias: [] }
-    const acierta = (elemento: Elemento, texto: string) =>
-      responderConTexto(partidaPreguntando(elemento), texto).ultimaRespuesta?.acierto
+    const valladolid: Elemento = { id: 'va', nombre: 'Valladolid', nombreMostrado: 'Valladolid', alias: [], vecinos: [] }
+    const huelva: Elemento = { id: 'h', nombre: 'Huelva', nombreMostrado: 'Huelva', alias: [], vecinos: [] }
+    const soria: Elemento = { id: 'so', nombre: 'Soria', nombreMostrado: 'Soria', alias: [], vecinos: [] }
+    const acierta = (elemento: Elemento, texto: string) => {
+      const partida = responderConTexto(partidaPreguntando(elemento), texto)
+      if (partida.pista?.trasFallo) return false
+      expect(partida.ultimaRespuesta).toBeDefined()
+      return partida.ultimaRespuesta!.acierto
+    }
 
     expect(acierta(valladolid, 'Valladoliz')).toBe(true)
     expect(acierta(valladolid, 'Valladoloz')).toBe(false)
@@ -102,40 +116,193 @@ describe('Partida en Ubicación → nombre', () => {
   })
 
   it('no admite como errata el nombre o alias de otro elemento del tipo', () => {
-    const palencia: Elemento = { id: 'pa', nombre: 'Palencia', nombreMostrado: 'Palencia', alias: [] }
-    const valencia: Elemento = { id: 'va', nombre: 'València', nombreMostrado: 'Valencia', alias: ['Valencia'] }
+    const palencia: Elemento = { id: 'pa', nombre: 'Palencia', nombreMostrado: 'Palencia', alias: [], vecinos: [] }
+    const valencia: Elemento = { id: 'va', nombre: 'València', nombreMostrado: 'Valencia', alias: ['Valencia'], vecinos: [] }
     const partida = iniciarPartida([palencia, valencia], azarFijo, reloj)
     expect(partida.preguntado).toEqual(palencia)
 
-    expect(responderConTexto(partida, 'valencia').ultimaRespuesta?.acierto).toBe(false)
-    expect(responderConTexto(partida, 'València').ultimaRespuesta?.acierto).toBe(false)
+    expect(responderConTexto(partida, 'valencia').fallos).toBe(1)
+    expect(responderConTexto(partida, 'València').fallos).toBe(1)
     expect(responderConTexto(partida, 'Palencio').ultimaRespuesta?.acierto).toBe(true)
     expect(responderConTexto(partida, 'palencia').ultimaRespuesta?.acierto).toBe(true)
   })
 
-  it('un texto incorrecto es un fallo: resta 25, desvela el correcto y el elemento sigue pendiente', () => {
+  it('un texto incorrecto es un fallo: resta 25 y abre la pista sin desvelar el correcto ni pasar al siguiente', () => {
     let partida = iniciarPartida(elementos, azarFijo, reloj)
     partida = responderConTexto(partida, partida.preguntado!.nombre)
     expect(partida.puntuacion).toBe(150)
 
     const fallado = partida.preguntado!
+    const acertadoAntes = partida.ultimaRespuesta
     partida = responderConTexto(partida, 'Zeta')
 
-    expect(partida.ultimaRespuesta).toEqual({ acierto: false, correcto: fallado })
+    expect(partida.pista?.trasFallo).toBe(true)
+    expect(partida.pista?.opciones).toContainEqual(fallado)
+    expect(partida.pistasUsadas).toBe(0)
+    expect(partida.preguntado).toEqual(fallado)
+    expect(partida.ultimaRespuesta).toEqual(acertadoAntes)
     expect(partida.puntuacion).toBe(125)
     expect(partida.fallos).toBe(1)
+    expect(partida.fallados).toEqual([fallado])
     expect(partida.pendientes).toBe(4)
     expect(partida.acertados).not.toContain(fallado.id)
   })
 
-  it('un texto vacío no cuenta como fallo ni pasa al siguiente elemento', () => {
+  it('un texto vacío pide pista: no cuenta como fallo ni pasa al siguiente elemento', () => {
     const inicial = iniciarPartida(elementos, azarFijo, reloj)
 
     const partida = responderConTexto(inicial, '   ')
 
+    expect(partida.pista?.trasFallo).toBe(false)
+    expect(partida.pista?.opciones).toHaveLength(4)
+    expect(partida.pista?.opciones).toContainEqual(inicial.preguntado)
+    expect(partida.pistasUsadas).toBe(0)
     expect(partida.fallos).toBe(0)
+    expect(partida.puntuacion).toBe(0)
     expect(partida.preguntado).toEqual(inicial.preguntado)
     expect(partida.ultimaRespuesta).toBeUndefined()
+  })
+})
+
+describe('Pista', () => {
+  const azarSinBarajar = () => 0.99
+
+  function catalogoConVecinos(vecinosDe: Record<string, string[]>): Elemento[] {
+    return ['a', 'b', 'c', 'd', 'e', 'f', 'g'].map((id) => ({
+      id,
+      nombre: id.toUpperCase(),
+      nombreMostrado: id.toUpperCase(),
+      alias: [],
+      vecinos: vecinosDe[id] ?? [],
+    }))
+  }
+
+  function pistaSobreC(vecinosDeC: string[]) {
+    let partida = iniciarPartida(catalogoConVecinos({ c: vecinosDeC }), azarSinBarajar, reloj)
+    partida = responder(partida, 'a')
+    partida = responder(partida, 'b')
+    expect(partida.preguntado?.id).toBe('c')
+    return pedirPista(partida)
+  }
+
+  function distractores(partida: Partida): string[] {
+    const opciones = partida.pista!.opciones.map((opcion) => opcion.id)
+    expect(opciones).toHaveLength(4)
+    expect(opciones.filter((id) => id === 'c')).toHaveLength(1)
+    return opciones.filter((id) => id !== 'c').sort()
+  }
+
+  it('prefiere como distractores los vecinos aún no preguntados', () => {
+    const partida = pistaSobreC(['a', 'd', 'f', 'g'])
+
+    expect(distractores(partida)).toEqual(['d', 'f', 'g'])
+  })
+
+  it('a falta de vecinos aún no preguntados, completa con vecinos ya preguntados antes que con otros elementos', () => {
+    const partida = pistaSobreC(['a', 'b', 'e'])
+
+    expect(distractores(partida)).toEqual(['a', 'b', 'e'])
+  })
+
+  it('a falta de vecinos, completa con cualquier otro elemento del tipo', () => {
+    const partida = pistaSobreC(['g'])
+    const elegidos = distractores(partida)
+
+    expect(elegidos).toHaveLength(3)
+    expect(elegidos).toContain('g')
+    expect(new Set(elegidos).size).toBe(3)
+  })
+
+  it('en una vuelta posterior todos los vecinos ya se preguntaron y se eligen igualmente antes que otros elementos', () => {
+    let partida = iniciarPartida(catalogoConVecinos({ c: ['e'], a: ['d', 'e'] }), azarSinBarajar, reloj)
+    partida = responder(partida, 'b')
+    for (let i = 0; i < 6; i++) partida = responder(partida, partida.preguntado!.id)
+    expect(partida.vuelta).toBe(2)
+    expect(partida.preguntado?.id).toBe('a')
+
+    partida = pedirPista(partida)
+
+    expect(partida.pista!.opciones.map((opcion) => opcion.id)).toEqual(expect.arrayContaining(['a', 'd', 'e']))
+  })
+
+  it('elegir la opción correcta da 0 puntos, no es fallo y el elemento vuelve en la vuelta siguiente', () => {
+    let partida = iniciarPartida(elementos, azarFijo, reloj)
+    partida = responder(partida, partida.preguntado!.id)
+    const resuelto = partida.preguntado!
+    partida = responderConTexto(partida, '')
+
+    partida = elegirOpcion(partida, resuelto.id)
+
+    expect(partida.ultimaRespuesta).toEqual({ acierto: false, conPista: true, correcto: resuelto })
+    expect(partida.pista).toBeNull()
+    expect(partida.puntuacion).toBe(150)
+    expect(partida.fallos).toBe(0)
+    expect(partida.fallados).toEqual([])
+    expect(partida.acertados).not.toContain(resuelto.id)
+    expect(partida.pendientes).toBe(4)
+    expect(partida.preguntado).not.toEqual(resuelto)
+
+    for (let i = 0; i < 3; i++) partida = responder(partida, partida.preguntado!.id)
+    expect(partida.vuelta).toBe(2)
+    expect(partida.preguntado).toEqual(resuelto)
+    expect(partida.puntuacion).toBe(600)
+
+    partida = responder(partida, resuelto.id)
+    expect(partida.puntuacion).toBe(625)
+    expect(partida.terminada).toBe(true)
+    expect(partida.pistasUsadas).toBe(1)
+  })
+
+  it('elegir una opción incorrecta es otro fallo, desvela el correcto y el elemento sigue pendiente', () => {
+    let partida = iniciarPartida(elementos, azarFijo, reloj)
+    partida = responder(partida, partida.preguntado!.id)
+    const fallado = partida.preguntado!
+    partida = responderConTexto(partida, 'Zeta')
+    const distractor = partida.pista!.opciones.find((opcion) => opcion.id !== fallado.id)!
+
+    partida = elegirOpcion(partida, distractor.id)
+
+    expect(partida.ultimaRespuesta).toEqual({ acierto: false, conPista: false, correcto: fallado })
+    expect(partida.pista).toBeNull()
+    expect(partida.puntuacion).toBe(100)
+    expect(partida.fallos).toBe(2)
+    expect(partida.fallados).toEqual([fallado])
+    expect(partida.acertados).not.toContain(fallado.id)
+    expect(partida.pendientes).toBe(4)
+    expect(partida.preguntado).not.toEqual(fallado)
+
+    for (let i = 0; i < 3; i++) partida = responder(partida, partida.preguntado!.id)
+    expect(partida.vuelta).toBe(2)
+    expect(partida.preguntado).toEqual(fallado)
+  })
+
+  it('elegir una opción sin pista abierta no cambia la partida', () => {
+    const partida = iniciarPartida(elementos, azarFijo, reloj)
+
+    expect(elegirOpcion(partida, partida.preguntado!.id)).toBe(partida)
+  })
+
+  it('con una pista abierta, responder con texto o señalando y volver a pedir pista no cambian la partida', () => {
+    const partida = pedirPista(iniciarPartida(elementos, azarFijo, reloj))
+    const preguntado = partida.preguntado!
+
+    expect(responderConTexto(partida, preguntado.nombre)).toBe(partida)
+    expect(responderConTexto(partida, '')).toBe(partida)
+    expect(responder(partida, preguntado.id)).toBe(partida)
+    expect(pedirPista(partida)).toBe(partida)
+  })
+
+  it('recuenta las pistas usadas en la partida', () => {
+    let partida = iniciarPartida(elementos, azarFijo, reloj)
+
+    partida = responderConTexto(partida, '')
+    partida = elegirOpcion(partida, partida.preguntado!.id)
+    expect(partida.pistasUsadas).toBe(1)
+    partida = responderConTexto(partida, 'Zeta')
+    expect(partida.pistasUsadas).toBe(1)
+    partida = elegirOpcion(partida, partida.preguntado!.id)
+
+    expect(partida.pistasUsadas).toBe(2)
   })
 })
 
@@ -278,6 +445,18 @@ describe('Abandono', () => {
       fecha: '1970-01-01T00:00:07.000Z',
       abandonada: true,
     })
+  })
+
+  it('abandonar con una pista abierta la cierra sin contarla como pista usada ni como fallo', () => {
+    let partida = iniciarPartida(elementos, azarFijo, reloj)
+    partida = responderConTexto(partida, '')
+
+    partida = abandonar(partida)
+
+    expect(partida.pista).toBeNull()
+    expect(partida.pistasUsadas).toBe(0)
+    expect(partida.fallos).toBe(0)
+    expect(partida.abandonada).toBe(true)
   })
 
   it('abandonar una partida ya terminada no la cambia', () => {

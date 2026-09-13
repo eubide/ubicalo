@@ -8,6 +8,7 @@
     puntuacion: number
     tiempo: number
     fallos: number
+    pistasUsadas: number
     fallados: Elemento[]
     abandonada: boolean
     resultado: ResultadoDeRegistro | null
@@ -15,7 +16,7 @@
     alElegirOtraPrueba: () => void
   }
 
-  let { puntuacion, tiempo, fallos, fallados, abandonada, resultado, reto, alElegirOtraPrueba }: Props = $props()
+  let { puntuacion, tiempo, fallos, pistasUsadas, fallados, abandonada, resultado, reto, alElegirOtraPrueba }: Props = $props()
 </script>
 
 <section class="fin">
@@ -41,6 +42,8 @@
     <dd>{formatearTiempo(tiempo)}</dd>
     <dt>Fallos</dt>
     <dd>{fallos}</dd>
+    <dt>Pistas</dt>
+    <dd>{pistasUsadas}</dd>
   </dl>
   {#if fallados.length > 0}
     <p>Para repasar:</p>
