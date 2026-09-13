@@ -14,9 +14,12 @@ export interface Elemento {
   alias: string[]
   vecinos: string[]
   comunidad?: string
+  ciudadAutonoma?: true
 }
 
-type Nombres = Omit<Elemento, 'id' | 'vecinos' | 'comunidad'>
+type Nombres = Omit<Elemento, 'id' | 'vecinos' | 'comunidad' | 'ciudadAutonoma'>
+
+const CIUDADES_AUTONOMAS = ['Ceuta', 'Melilla', 'Ciudad Autónoma de Ceuta', 'Ciudad Autónoma de Melilla']
 
 const GIBRALTAR_COMUNIDADES = '20'
 const GIBRALTAR_PROVINCIAS = '54'
@@ -108,12 +111,16 @@ export function catalogo(tipo: Tipo): Elemento[] {
   const vecinosPorIndice = neighbors(geometries)
   const provincias = tipo === 'provincias' ? contornos('provincias') : []
   const comunidades = tipo === 'provincias' ? contornos('comunidades') : []
-  return geometries.map((geometria, indice) => ({
-    id: String(geometria.id),
-    ...nombresDelElemento((geometria.properties as { name: string }).name),
-    vecinos: vecinosPorIndice[indice].map((vecino) => String(geometries[vecino].id)),
-    ...(tipo === 'provincias' && { comunidad: comunidadQueContiene(provincias[indice], comunidades) }),
-  }))
+  return geometries.map((geometria, indice) => {
+    const { name } = geometria.properties as { name: string }
+    return {
+      id: String(geometria.id),
+      ...nombresDelElemento(name),
+      vecinos: vecinosPorIndice[indice].map((vecino) => String(geometries[vecino].id)),
+      ...(tipo === 'provincias' && { comunidad: comunidadQueContiene(provincias[indice], comunidades) }),
+      ...(CIUDADES_AUTONOMAS.includes(name) && { ciudadAutonoma: true as const }),
+    }
+  })
 }
 
 const contornosPorTipo: Partial<Record<Tipo, Feature<Geometry>[]>> = {}

@@ -738,6 +738,15 @@ describe('Pista de área', () => {
     expect(trasElRepaso(catalogoDePrueba({ vecinos: [] }), comunidadesNombreUbicar).pistaDeArea).toEqual(['e'])
   })
 
+  it('Ceuta o Melilla iluminan las dos ciudades autónomas, en provincias y en comunidades', () => {
+    const catalogo = catalogoDePrueba({ ciudadAutonoma: true }).map((elemento) =>
+      elemento.id === 'b' ? { ...elemento, ciudadAutonoma: true as const } : elemento,
+    )
+
+    expect(trasElRepaso(catalogo).pistaDeArea).toEqual(['b', 'e'])
+    expect(trasElRepaso(catalogo, comunidadesNombreUbicar).pistaDeArea).toEqual(['b', 'e'])
+  })
+
   it('sin nada que iluminar no hay Pista de área y acertar puntúa como siempre', () => {
     let partida = trasElRepaso(catalogoDePrueba({ comunidad: undefined }))
     expect(partida.pistaDeArea).toBeNull()

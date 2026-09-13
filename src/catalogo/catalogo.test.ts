@@ -184,6 +184,16 @@ describe('Catálogo de provincias', () => {
     expect(comunidadDe('Alicante')).toBe('Comunitat Valenciana')
   })
 
+  it('solo Ceuta y Melilla son ciudades autónomas, como provincias y como comunidades', () => {
+    const ciudadesAutonomas = (tipo: Tipo) =>
+      catalogo(tipo)
+        .filter((elemento) => elemento.ciudadAutonoma)
+        .map((elemento) => elemento.nombre)
+
+    expect(ciudadesAutonomas('provincias')).toEqual(['Ceuta', 'Melilla'])
+    expect(ciudadesAutonomas('comunidades')).toEqual(['Ciudad Autónoma de Ceuta', 'Ciudad Autónoma de Melilla'])
+  })
+
   it('las 52 provincias pertenecen a alguna de las 19 comunidades y todas las comunidades tienen provincia', () => {
     const idsDeComunidades = catalogo('comunidades').map((elemento) => elemento.id)
     const comunidadesDeProvincias = catalogo('provincias').map((elemento) => elemento.comunidad)
