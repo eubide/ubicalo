@@ -38,12 +38,32 @@ const FORMAS_CASTELLANAS: Record<string, string> = {
   Ourense: 'Orense',
 }
 
-function nombresDelElemento(nombreEnAtlas: string): Nombres {
+const FORMAS_CORTAS: Record<string, string> = {
+  'Principado de Asturias': 'Asturias',
+  'Illes Balears': 'Baleares',
+  'Comunitat Valenciana': 'Valencia',
+  'Comunidad de Madrid': 'Madrid',
+  'Región de Murcia': 'Murcia',
+  'Comunidad Foral de Navarra': 'Navarra',
+  'La Rioja': 'Rioja',
+  'Ciudad Autónoma de Ceuta': 'Ceuta',
+  'Ciudad Autónoma de Melilla': 'Melilla',
+  'A Coruña': 'Coruña',
+  'Santa Cruz de Tenerife': 'Tenerife',
+}
+
+function nombresOficialYCastellano(nombreEnAtlas: string): Nombres {
   const doble = NOMBRES_DOBLES[nombreEnAtlas]
   if (doble) return { nombre: doble.castellano, nombreMostrado: doble.castellano, alias: [doble.otraForma] }
   const castellano = FORMAS_CASTELLANAS[nombreEnAtlas]
   if (castellano) return { nombre: nombreEnAtlas, nombreMostrado: `${nombreEnAtlas} (${castellano})`, alias: [castellano] }
   return { nombre: nombreEnAtlas, nombreMostrado: nombreEnAtlas, alias: [] }
+}
+
+function nombresDelElemento(nombreEnAtlas: string): Nombres {
+  const nombres = nombresOficialYCastellano(nombreEnAtlas)
+  const formaCorta = FORMAS_CORTAS[nombreEnAtlas]
+  return formaCorta ? { ...nombres, alias: [...nombres.alias, formaCorta] } : nombres
 }
 
 type Geometrias = GeometryCollection<{ name: string }>

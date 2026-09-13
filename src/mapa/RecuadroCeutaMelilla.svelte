@@ -24,6 +24,7 @@
     contexto: FeatureCollection
     acertados: string[]
     resaltado: string | null
+    iluminado: string | null
     fallados: string[]
     seleccionado: string | null
     alElegir: (id: string) => void
@@ -33,8 +34,20 @@
     alto: number
   }
 
-  let { elementos, contexto, acertados, resaltado, fallados, seleccionado, alElegir, x, y, ancho, alto }: Props =
-    $props()
+  let {
+    elementos,
+    contexto,
+    acertados,
+    resaltado,
+    iluminado,
+    fallados,
+    seleccionado,
+    alElegir,
+    x,
+    y,
+    ancho,
+    alto,
+  }: Props = $props()
 
   const prefijo = $props.id()
   const radioEnGrados = 0.12
@@ -86,6 +99,7 @@
       class:resaltado={resaltado === celda.id}
       class:fallado={fallados.includes(celda.id)}
       class:seleccionado={seleccionado === celda.id}
+      class:iluminado={iluminado === celda.id}
       onclick={() => alElegir(celda.id)}
     >
       <rect class="diana" x={celda.x0} {y} width={anchoCelda} height={alto} />
@@ -127,6 +141,12 @@
 
   .elemento.seleccionado path {
     fill: #c9dcf2;
+  }
+
+  .elemento.iluminado path {
+    fill: #f6d365;
+    stroke: #8a6d1f;
+    stroke-width: 1.6;
   }
 
   .marcos {
