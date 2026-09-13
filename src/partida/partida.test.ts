@@ -3,11 +3,11 @@ import type { Elemento } from '../catalogo/catalogo'
 import { iniciarPartida, responder } from './partida'
 
 const elementos: Elemento[] = [
-  { id: 'a', nombre: 'Alfa', alias: [] },
-  { id: 'b', nombre: 'Beta', alias: [] },
-  { id: 'c', nombre: 'Gamma', alias: [] },
-  { id: 'd', nombre: 'Delta', alias: [] },
-  { id: 'e', nombre: 'Épsilon', alias: [] },
+  { id: 'a', nombre: 'Alfa', nombreMostrado: 'Alfa', alias: [] },
+  { id: 'b', nombre: 'Beta', nombreMostrado: 'Beta', alias: [] },
+  { id: 'c', nombre: 'Gamma', nombreMostrado: 'Gamma', alias: [] },
+  { id: 'd', nombre: 'Delta', nombreMostrado: 'Delta', alias: [] },
+  { id: 'e', nombre: 'Épsilon', nombreMostrado: 'Épsilon', alias: [] },
 ]
 
 const azarFijo = () => 0.5

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { FeatureCollection } from 'geojson'
+  import type { Feature, FeatureCollection, Geometry } from 'geojson'
   import { catalogo, contornos, type Tipo } from './catalogo/catalogo'
   import contextoGeografico from './datos/contexto-geografico.json'
   import Mapa from './mapa/Mapa.svelte'
@@ -8,19 +8,19 @@
 
   const contexto = contextoGeografico as FeatureCollection
 
-  let tipo = $state<Tipo | null>(null)
   let partida = $state<Partida | null>(null)
-
-  const elementos = $derived(tipo ? catalogo(tipo) : [])
-  const contornosDelTipo = $derived(tipo ? contornos(tipo) : [])
+  let totalElementos = $state(0)
+  let contornosDelTipo = $state.raw<Feature<Geometry>[]>([])
 
   const respuesta = $derived(partida?.ultimaRespuesta)
   const desvelaPreguntado = $derived(respuesta?.correcto.id === partida?.preguntado?.id)
   const resaltado = $derived(respuesta && !respuesta.acierto && !desvelaPreguntado ? respuesta.correcto.id : null)
 
-  function empezar(tipoElegido: Tipo) {
-    tipo = tipoElegido
-    partida = iniciarPartida(catalogo(tipoElegido), Math.random)
+  function empezar(tipo: Tipo) {
+    const elementos = catalogo(tipo)
+    totalElementos = elementos.length
+    contornosDelTipo = contornos(tipo)
+    partida = iniciarPartida(elementos, Math.random)
   }
 
   function elegir(id: string) {
@@ -37,19 +37,19 @@
       {#if partida.terminada}
         <p class="pregunta">¡Partida terminada!</p>
       {:else}
-        <p class="pregunta">{partida.preguntado?.nombre}</p>
-        <p class="pendientes">{partida.pendientes} / {elementos.length}</p>
+        <p class="pregunta">{partida.preguntado?.nombreMostrado}</p>
+        <p class="pendientes">{partida.pendientes} / {totalElementos}</p>
       {/if}
     </header>
 
     {#if respuesta}
       <p class="respuesta" class:fallo={!respuesta.acierto}>
         {#if respuesta.acierto}
-          Correcto: {respuesta.correcto.nombre}
+          Correcto: {respuesta.correcto.nombreMostrado}
         {:else if desvelaPreguntado}
           Incorrecto
         {:else}
-          Incorrecto. Era {respuesta.correcto.nombre}
+          Incorrecto. Era {respuesta.correcto.nombreMostrado}
         {/if}
       </p>
     {/if}

@@ -9,16 +9,22 @@ export type Tipo = 'comunidades' | 'provincias'
 export interface Elemento {
   id: string
   nombre: string
+  nombreMostrado: string
   alias: string[]
 }
 
-const NOMBRES_DOBLES: Record<string, Pick<Elemento, 'nombre' | 'alias'>> = {
-  'Cataluña/Catalunya': { nombre: 'Cataluña', alias: ['Catalunya'] },
-  'País Vasco/Euskadi': { nombre: 'País Vasco', alias: ['Euskadi'] },
-  'Alacant/Alicante': { nombre: 'Alicante', alias: ['Alacant'] },
-  'Castelló/Castellón': { nombre: 'Castellón', alias: ['Castelló'] },
-  'València/Valencia': { nombre: 'Valencia', alias: ['València'] },
-  'Araba/Álava': { nombre: 'Álava', alias: ['Araba'] },
+type Nombres = Omit<Elemento, 'id'>
+
+const GIBRALTAR_COMUNIDADES = '20'
+const GIBRALTAR_PROVINCIAS = '54'
+
+const NOMBRES_DOBLES: Record<string, { castellano: string; otraForma: string }> = {
+  'Cataluña/Catalunya': { castellano: 'Cataluña', otraForma: 'Catalunya' },
+  'País Vasco/Euskadi': { castellano: 'País Vasco', otraForma: 'Euskadi' },
+  'Alacant/Alicante': { castellano: 'Alicante', otraForma: 'Alacant' },
+  'Castelló/Castellón': { castellano: 'Castellón', otraForma: 'Castelló' },
+  'València/Valencia': { castellano: 'Valencia', otraForma: 'València' },
+  'Araba/Álava': { castellano: 'Álava', otraForma: 'Araba' },
 }
 
 const FORMAS_CASTELLANAS: Record<string, string> = {
@@ -32,15 +38,17 @@ const FORMAS_CASTELLANAS: Record<string, string> = {
   Ourense: 'Orense',
 }
 
-function nombres(nombreOficial: string): Pick<Elemento, 'nombre' | 'alias'> {
-  const castellano = FORMAS_CASTELLANAS[nombreOficial]
-  if (castellano) return { nombre: `${nombreOficial} (${castellano})`, alias: [castellano] }
-  return NOMBRES_DOBLES[nombreOficial] ?? { nombre: nombreOficial, alias: [] }
+function nombresDelElemento(nombreEnAtlas: string): Nombres {
+  const doble = NOMBRES_DOBLES[nombreEnAtlas]
+  if (doble) return { nombre: doble.castellano, nombreMostrado: doble.castellano, alias: [doble.otraForma] }
+  const castellano = FORMAS_CASTELLANAS[nombreEnAtlas]
+  if (castellano) return { nombre: nombreEnAtlas, nombreMostrado: `${nombreEnAtlas} (${castellano})`, alias: [castellano] }
+  return { nombre: nombreEnAtlas, nombreMostrado: nombreEnAtlas, alias: [] }
 }
 
 type Geometrias = GeometryCollection<{ name: string }>
 
-function sinGibraltar(topologia: Topology, objeto: string, gibraltar: string) {
+function geometriasSinGibraltar(topologia: Topology, objeto: string, gibraltar: string) {
   const geometrias = topologia.objects[objeto] as Geometrias
   return {
     topologia,
@@ -49,14 +57,18 @@ function sinGibraltar(topologia: Topology, objeto: string, gibraltar: string) {
 }
 
 const tipos = {
-  comunidades: sinGibraltar(comunidadesTopo as unknown as Topology, 'autonomous_regions', '20'),
-  provincias: sinGibraltar(provinciasTopo as unknown as Topology, 'provinces', '54'),
+  comunidades: geometriasSinGibraltar(
+    comunidadesTopo as unknown as Topology,
+    'autonomous_regions',
+    GIBRALTAR_COMUNIDADES,
+  ),
+  provincias: geometriasSinGibraltar(provinciasTopo as unknown as Topology, 'provinces', GIBRALTAR_PROVINCIAS),
 }
 
 export function catalogo(tipo: Tipo): Elemento[] {
   return tipos[tipo].geometrias.geometries.map((geometria) => ({
     id: String(geometria.id),
-    ...nombres((geometria.properties as { name: string }).name),
+    ...nombresDelElemento((geometria.properties as { name: string }).name),
   }))
 }
 
