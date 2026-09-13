@@ -100,8 +100,12 @@ describe('Partida en Ubicación → nombre', () => {
     const valladolid: Elemento = { id: 'va', nombre: 'Valladolid', nombreMostrado: 'Valladolid', alias: [], vecinos: [] }
     const huelva: Elemento = { id: 'h', nombre: 'Huelva', nombreMostrado: 'Huelva', alias: [], vecinos: [] }
     const soria: Elemento = { id: 'so', nombre: 'Soria', nombreMostrado: 'Soria', alias: [], vecinos: [] }
-    const acierta = (elemento: Elemento, texto: string) =>
-      responderConTexto(partidaPreguntando(elemento), texto).ultimaRespuesta?.acierto === true
+    const acierta = (elemento: Elemento, texto: string) => {
+      const partida = responderConTexto(partidaPreguntando(elemento), texto)
+      if (partida.pista?.trasFallo) return false
+      expect(partida.ultimaRespuesta).toBeDefined()
+      return partida.ultimaRespuesta!.acierto
+    }
 
     expect(acierta(valladolid, 'Valladoliz')).toBe(true)
     expect(acierta(valladolid, 'Valladoloz')).toBe(false)
@@ -182,7 +186,10 @@ describe('Pista', () => {
   }
 
   function distractores(partida: Partida): string[] {
-    return partida.pista!.opciones.map((opcion) => opcion.id).filter((id) => id !== 'c').sort()
+    const opciones = partida.pista!.opciones.map((opcion) => opcion.id)
+    expect(opciones).toHaveLength(4)
+    expect(opciones.filter((id) => id === 'c')).toHaveLength(1)
+    return opciones.filter((id) => id !== 'c').sort()
   }
 
   it('prefiere como distractores los vecinos aún no preguntados', () => {
