@@ -134,7 +134,7 @@ describe('Partida en Ubicación → nombre', () => {
 
     expect(partida.pista?.trasFallo).toBe(true)
     expect(partida.pista?.opciones).toContainEqual(fallado)
-    expect(partida.pistas).toBe(0)
+    expect(partida.pistasUsadas).toBe(0)
     expect(partida.preguntado).toEqual(fallado)
     expect(partida.ultimaRespuesta).toEqual(acertadoAntes)
     expect(partida.puntuacion).toBe(125)
@@ -152,7 +152,7 @@ describe('Partida en Ubicación → nombre', () => {
     expect(partida.pista?.trasFallo).toBe(false)
     expect(partida.pista?.opciones).toHaveLength(4)
     expect(partida.pista?.opciones).toContainEqual(inicial.preguntado)
-    expect(partida.pistas).toBe(0)
+    expect(partida.pistasUsadas).toBe(0)
     expect(partida.fallos).toBe(0)
     expect(partida.puntuacion).toBe(0)
     expect(partida.preguntado).toEqual(inicial.preguntado)
@@ -243,7 +243,7 @@ describe('Pista', () => {
     partida = responder(partida, resuelto.id)
     expect(partida.puntuacion).toBe(625)
     expect(partida.terminada).toBe(true)
-    expect(partida.pistas).toBe(1)
+    expect(partida.pistasUsadas).toBe(1)
   })
 
   it('elegir una opción incorrecta es otro fallo, desvela el correcto y el elemento sigue pendiente', () => {
@@ -290,12 +290,12 @@ describe('Pista', () => {
 
     partida = responderConTexto(partida, '')
     partida = elegirOpcion(partida, partida.preguntado!.id)
-    expect(partida.pistas).toBe(1)
+    expect(partida.pistasUsadas).toBe(1)
     partida = responderConTexto(partida, 'Zeta')
-    expect(partida.pistas).toBe(1)
+    expect(partida.pistasUsadas).toBe(1)
     partida = elegirOpcion(partida, partida.preguntado!.id)
 
-    expect(partida.pistas).toBe(2)
+    expect(partida.pistasUsadas).toBe(2)
   })
 })
 
@@ -447,7 +447,7 @@ describe('Abandono', () => {
     partida = abandonar(partida)
 
     expect(partida.pista).toBeNull()
-    expect(partida.pistas).toBe(0)
+    expect(partida.pistasUsadas).toBe(0)
     expect(partida.fallos).toBe(0)
     expect(partida.abandonada).toBe(true)
   })

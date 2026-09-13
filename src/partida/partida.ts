@@ -27,7 +27,7 @@ export interface Partida {
   fallos: number
   fallados: Elemento[]
   pista: Pista | null
-  pistas: number
+  pistasUsadas: number
   cola: Elemento[]
   siguienteVuelta: Elemento[]
   acertados: string[]
@@ -79,7 +79,7 @@ export function iniciarPartida(elementos: Elemento[], azar: Azar, reloj: Reloj):
       fallos: 0,
       fallados: [],
       pista: null,
-      pistas: 0,
+      pistasUsadas: 0,
       cola: barajar(elementos, azar),
       siguienteVuelta: [],
       acertados: [],
@@ -139,6 +139,10 @@ export function responderConTexto(partida: Partida, texto: string): Partida {
 }
 
 const PUNTOS_POR_FALLO = 25
+const PUNTOS_POR_ACIERTO_A_LA_PRIMERA = 100
+const BONUS_MAXIMO_DE_RAPIDEZ = 50
+const SEGUNDOS_HASTA_PERDER_EL_BONUS = 10
+const PUNTOS_POR_ACIERTO_EN_VUELTA_POSTERIOR = 25
 
 function anotarFallo(partida: Partida): Partida {
   const preguntado = partida.cola[0]
@@ -198,7 +202,9 @@ function resolver(partida: Partida, acierto: boolean): Partida {
   const correcto = partida.cola[0]
   if (!acierto) return avanzar(anotarFallo(partida), { acierto, conPista: false, correcto }, true, ahora)
   const segundos = (ahora - partida.mostradoEn) / 1000
-  const puntos = partida.vuelta > 1 ? 25 : 100 + Math.round(50 * Math.max(0, 1 - segundos / 10))
+  const bonus = Math.round(BONUS_MAXIMO_DE_RAPIDEZ * Math.max(0, 1 - segundos / SEGUNDOS_HASTA_PERDER_EL_BONUS))
+  const puntos =
+    partida.vuelta > 1 ? PUNTOS_POR_ACIERTO_EN_VUELTA_POSTERIOR : PUNTOS_POR_ACIERTO_A_LA_PRIMERA + bonus
   return avanzar({ ...partida, puntuacion: partida.puntuacion + puntos }, { acierto, conPista: false, correcto }, false, ahora)
 }
 
@@ -206,7 +212,7 @@ export function elegirOpcion(partida: Partida, idElegido: string): Partida {
   if (!partida.pista) return partida
   const correcto = partida.cola[0]
   const esLaCorrecta = idElegido === correcto.id
-  const conPistaUsada = { ...partida, pistas: partida.pistas + 1 }
+  const conPistaUsada = { ...partida, pistasUsadas: partida.pistasUsadas + 1 }
   return avanzar(
     esLaCorrecta ? conPistaUsada : anotarFallo(conPistaUsada),
     { acierto: false, conPista: esLaCorrecta, correcto },

@@ -143,7 +143,7 @@
           puntuacion={partida.puntuacion}
           tiempo={tiempoJugado(partida, ahora)}
           fallos={partida.fallos}
-          pistas={partida.pistas}
+          pistasUsadas={partida.pistasUsadas}
           fallados={partida.fallados}
           abandonada={partida.abandonada}
           {resultado}
