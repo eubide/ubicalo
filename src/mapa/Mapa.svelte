@@ -1,7 +1,8 @@
 <script lang="ts">
   import type { Feature, FeatureCollection, Geometry } from 'geojson'
-  import { geoPath } from 'd3-geo'
+  import { geoCentroid, geoPath } from 'd3-geo'
   import { geoConicConformalSpain } from 'd3-composite-projections'
+  import RecuadroCeutaMelilla, { esCeutaOMelilla } from './RecuadroCeutaMelilla.svelte'
 
   interface Props {
     contornos: Feature<Geometry>[]
@@ -30,6 +31,15 @@
     ),
   )
   const trazado = $derived(geoPath(proyeccion))
+  const anchoRecuadro = 232
+  const altoRecuadro = 150
+  const radioDiana = 10
+
+  const ceutaYMelilla = $derived(
+    contornos
+      .map((contorno) => ({ contorno, centro: geoCentroid(contorno) }))
+      .filter(({ centro }) => esCeutaOMelilla(centro)),
+  )
 
   interface Punto {
     x: number
@@ -166,6 +176,18 @@
       <!-- El MVP se juega con ratón o dedo; jugar con teclado no está en la spec. -->
       <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
       <g class="elementos">
+        {#each ceutaYMelilla as { contorno, centro } (contorno.id)}
+          {@const punto = proyeccion(centro)}
+          {#if punto}
+            <circle
+              class="diana"
+              cx={punto[0]}
+              cy={punto[1]}
+              r={radioDiana}
+              onclick={() => pulsarElemento(String(contorno.id))}
+            />
+          {/if}
+        {/each}
         {#each contornos as contorno (contorno.id)}
           {@const id = String(contorno.id)}
           <path
@@ -180,6 +202,19 @@
       </g>
       <path class="marcos" d={proyeccion.getCompositionBorders()} />
     </g>
+    <RecuadroCeutaMelilla
+      elementos={ceutaYMelilla}
+      {contexto}
+      {acertados}
+      {resaltado}
+      {fallados}
+      {seleccionado}
+      alElegir={pulsarElemento}
+      x={ancho - anchoRecuadro}
+      y={alto - altoRecuadro}
+      ancho={anchoRecuadro}
+      alto={altoRecuadro}
+    />
   </svg>
   {#if seleccionado !== null}
     <div class="seleccion">
@@ -218,6 +253,11 @@
     fill: #fdfdfb;
     stroke: #9aa0a6;
     stroke-width: 0.8;
+    cursor: pointer;
+  }
+
+  .elementos .diana {
+    fill: transparent;
     cursor: pointer;
   }
 
