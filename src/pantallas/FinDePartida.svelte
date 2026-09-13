@@ -16,7 +16,7 @@
   <p class="titulo">¡Partida terminada!</p>
   <dl>
     <dt>Puntuación</dt>
-    <dd>{Math.round(puntuacion)}</dd>
+    <dd>{puntuacion}</dd>
     <dt>Tiempo</dt>
     <dd>{formatearTiempo(tiempo)}</dd>
     <dt>Fallos</dt>

@@ -10,7 +10,7 @@
 </script>
 
 <p class="marcador">
-  <span>{Math.round(puntuacion)} puntos</span>
+  <span>{puntuacion} puntos</span>
   <span>{formatearTiempo(tiempo)}</span>
 </p>
 

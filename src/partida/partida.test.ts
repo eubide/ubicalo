@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { Elemento } from '../catalogo/catalogo'
-import { iniciarPartida, responder } from './partida'
+import { iniciarPartida, responder, tiempoJugado } from './partida'
 
 const elementos: Elemento[] = [
   { id: 'a', nombre: 'Alfa', alias: [] },
@@ -72,13 +72,25 @@ describe('Puntuación', () => {
     expect(partida.puntuacion).toBe(150)
   })
 
-  it('el bonus baja a 25 si el acierto a la primera llega a los 5 s de mostrarse el elemento', () => {
+  it('a los 5 s de mostrarse el elemento, el bonus lineal vale la mitad: 25', () => {
     let partida = iniciarPartida(elementos, azarFijo, reloj)
 
     ahora = 5_000
     partida = responder(partida, partida.preguntado!.id)
 
     expect(partida.puntuacion).toBe(125)
+  })
+
+  it('el bonus se redondea a entero al sumarse: 140 a los 2 s y 138 a los 2,5 s', () => {
+    let partida = iniciarPartida(elementos, azarFijo, reloj)
+
+    ahora = 2_000
+    partida = responder(partida, partida.preguntado!.id)
+    expect(partida.puntuacion).toBe(140)
+
+    ahora = 4_500
+    partida = responder(partida, partida.preguntado!.id)
+    expect(partida.puntuacion).toBe(278)
   })
 
   it('sin bonus si el acierto a la primera llega a los 10 s o más', () => {
@@ -132,7 +144,7 @@ describe('Puntuación', () => {
 })
 
 describe('Fin de partida', () => {
-  it('recuenta los fallos, lista los elementos fallados y mide el tiempo', () => {
+  it('recuenta los fallos, lista los elementos fallados y congela el tiempo jugado al terminar', () => {
     ahora = 1_000
     let partida = iniciarPartida(elementos, azarFijo, reloj)
     const fallado = partida.preguntado!
@@ -144,7 +156,7 @@ describe('Fin de partida', () => {
       partida = responder(partida, partida.preguntado!.id)
     }
     partida = responder(partida, otro.id)
-    expect(partida.fin).toBeNull()
+    expect(tiempoJugado(partida, 5_000)).toBe(4_000)
 
     ahora = 10_000
     partida = responder(partida, fallado.id)
@@ -152,6 +164,6 @@ describe('Fin de partida', () => {
     expect(partida.terminada).toBe(true)
     expect(partida.fallos).toBe(2)
     expect(partida.fallados).toEqual([fallado])
-    expect(partida.fin! - partida.inicio).toBe(9_000)
+    expect(tiempoJugado(partida, 60_000)).toBe(9_000)
   })
 })

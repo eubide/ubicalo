@@ -27,7 +27,7 @@ export interface Partida {
   ultimaRespuesta?: Respuesta
 }
 
-type Avance = Omit<Partida, 'fin' | 'mostradoEn' | 'preguntado' | 'pendientes' | 'terminada'>
+type CamposDerivados = 'fin' | 'mostradoEn' | 'preguntado' | 'pendientes' | 'terminada'
 
 function barajar<T>(lista: T[], azar: Azar): T[] {
   const copia = [...lista]
@@ -38,19 +38,20 @@ function barajar<T>(lista: T[], azar: Azar): T[] {
   return copia
 }
 
-function construir(avance: Avance, ahora: number): Partida {
-  const { cola, siguienteVuelta, vuelta } = avance
+function construir(partida: Omit<Partida, CamposDerivados>, ahora: number): Partida {
+  const { cola, siguienteVuelta, vuelta } = partida
   if (cola.length === 0 && siguienteVuelta.length > 0) {
-    return construir({ ...avance, cola: siguienteVuelta, siguienteVuelta: [], vuelta: vuelta + 1 }, ahora)
+    return construir({ ...partida, cola: siguienteVuelta, siguienteVuelta: [], vuelta: vuelta + 1 }, ahora)
   }
   const pendientes = cola.length + siguienteVuelta.length
+  const fin = pendientes === 0 ? ahora : null
   return {
-    ...avance,
-    fin: pendientes === 0 ? ahora : null,
+    ...partida,
+    fin,
     mostradoEn: ahora,
     preguntado: cola[0] ?? null,
     pendientes,
-    terminada: pendientes === 0,
+    terminada: fin !== null,
   }
 }
 
@@ -77,21 +78,23 @@ export function responder(partida: Partida, idElegido: string): Partida {
   const [correcto, ...resto] = partida.cola
   const acierto = idElegido === correcto.id
   const segundos = (ahora - partida.mostradoEn) / 1000
-  const puntos = !acierto ? -25 : partida.vuelta > 1 ? 25 : 100 + 50 * Math.max(0, 1 - segundos / 10)
+  const puntos = !acierto ? -25 : partida.vuelta > 1 ? 25 : 100 + Math.round(50 * Math.max(0, 1 - segundos / 10))
   const yaFallado = partida.fallados.some((elemento) => elemento.id === correcto.id)
   return construir(
     {
-      reloj: partida.reloj,
-      inicio: partida.inicio,
+      ...partida,
       puntuacion: Math.max(0, partida.puntuacion + puntos),
       fallos: acierto ? partida.fallos : partida.fallos + 1,
       fallados: acierto || yaFallado ? partida.fallados : [...partida.fallados, correcto],
       cola: resto,
       siguienteVuelta: acierto ? partida.siguienteVuelta : [...partida.siguienteVuelta, correcto],
       acertados: acierto ? [...partida.acertados, correcto.id] : partida.acertados,
-      vuelta: partida.vuelta,
       ultimaRespuesta: { acierto, correcto },
     },
     ahora,
   )
+}
+
+export function tiempoJugado(partida: Partida, ahora: number): number {
+  return (partida.fin ?? ahora) - partida.inicio
 }

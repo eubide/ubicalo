@@ -4,8 +4,8 @@
   import contextoGeografico from './datos/contexto-geografico.json'
   import Mapa from './mapa/Mapa.svelte'
   import FinDePartida from './pantallas/FinDePartida.svelte'
-  import Marcador from './pantallas/Marcador.svelte'
-  import { iniciarPartida, responder } from './partida/partida'
+  import PuntuacionYTiempo from './pantallas/PuntuacionYTiempo.svelte'
+  import { iniciarPartida, responder, tiempoJugado } from './partida/partida'
 
   const elementos = catalogo()
   const contornosDelTipo = contornos()
@@ -15,6 +15,7 @@
   let ahora = $state(Date.now())
 
   $effect(() => {
+    if (partida.terminada) return
     const intervalo = setInterval(() => (ahora = Date.now()), 250)
     return () => clearInterval(intervalo)
   })
@@ -34,18 +35,18 @@
     {#if partida.terminada}
       <FinDePartida
         puntuacion={partida.puntuacion}
-        tiempo={partida.fin! - partida.inicio}
+        tiempo={tiempoJugado(partida, ahora)}
         fallos={partida.fallos}
         fallados={partida.fallados}
       />
     {:else}
       <p class="pregunta">{partida.preguntado?.nombre}</p>
-      <Marcador puntuacion={partida.puntuacion} tiempo={ahora - partida.inicio} />
+      <PuntuacionYTiempo puntuacion={partida.puntuacion} tiempo={tiempoJugado(partida, ahora)} />
       <p class="pendientes">{partida.pendientes} / {elementos.length}</p>
     {/if}
   </header>
 
-  {#if respuesta}
+  {#if respuesta && !partida.terminada}
     <p class="respuesta" class:fallo={!respuesta.acierto}>
       {#if respuesta.acierto}
         Correcto: {respuesta.correcto.nombre}
