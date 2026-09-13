@@ -11,7 +11,8 @@
     tocado?: string | null
     correcto?: string | null
     preguntado: string | null
-    iluminado?: string | null
+    iluminados?: string[]
+    rotulados?: string[]
     fallados?: string[]
     alElegir: (id: string) => void
     nombreDe: (id: string) => string
@@ -24,7 +25,8 @@
     tocado = null,
     correcto = null,
     preguntado,
-    iluminado = null,
+    iluminados = [],
+    rotulados = [],
     fallados = [],
     alElegir,
     nombreDe,
@@ -48,6 +50,9 @@
   const anchoRecuadro = 232
   const altoRecuadro = 150
   const radioDiana = 10
+  const tamañoRotuloEnPixeles = 13
+  let anchoEnPantalla = $state(ancho)
+  const tamañoRotulo = $derived((tamañoRotuloEnPixeles * ancho) / Math.max(anchoEnPantalla, 1))
 
   const ceutaYMelilla = $derived(
     contornos
@@ -155,7 +160,7 @@
   }
 
   function pulsarElemento(id: string) {
-    if (iluminado !== null) return
+    if (iluminados.length > 0) return
     if (tipoDePuntero !== 'touch') {
       seleccionado = null
       alElegir(id)
@@ -171,7 +176,7 @@
   }
 </script>
 
-<figure class="mapa">
+<figure class="mapa" bind:clientWidth={anchoEnPantalla}>
   <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
   <svg
     viewBox="0 0 {ancho} {alto}"
@@ -211,7 +216,7 @@
             class:acertado={acertados.includes(id)}
             class:fallado={fallados.includes(id)}
             class:seleccionado={seleccionado === id}
-            class:iluminado={iluminado === id}
+            class:iluminado={iluminados.includes(id)}
             class:tocado={tocado === id}
             onclick={() => pulsarElemento(id)}
           />
@@ -221,6 +226,10 @@
         <!-- Encima de todos los elementos para que los vecinos no tapen el contorno grueso. -->
         <path class="correcto" d={trazado(contornoCorrecto)} />
       {/if}
+      {#each contornos.filter((contorno) => rotulados.includes(String(contorno.id))) as contorno (contorno.id)}
+        {@const [x, y] = trazado.centroid(contorno)}
+        <text class="rotulo" {x} {y} font-size={tamañoRotulo / vista.escala}>{nombreDe(String(contorno.id))}</text>
+      {/each}
       <path class="marcos" d={proyeccion.getCompositionBorders()} />
     </g>
     <RecuadroCeutaMelilla
@@ -229,7 +238,10 @@
       {acertados}
       {tocado}
       {correcto}
-      {iluminado}
+      {iluminados}
+      {rotulados}
+      {tamañoRotulo}
+      {nombreDe}
       {fallados}
       {seleccionado}
       alElegir={pulsarElemento}
@@ -324,6 +336,19 @@
     fill: none;
     stroke: #9aa0a6;
     stroke-width: 0.8;
+  }
+
+  .rotulo {
+    font-weight: 600;
+    text-anchor: middle;
+    dominant-baseline: middle;
+    fill: #1f2937;
+    stroke: #fdfdfb;
+    stroke-width: 3;
+    paint-order: stroke;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
+    pointer-events: none;
   }
 
   .seleccion {

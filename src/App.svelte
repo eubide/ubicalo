@@ -19,9 +19,12 @@
   import {
     abandonar,
     cerrarCorreccion,
+    cerrarRepaso,
     correccionTrasFallo,
+    DURACION_REPASO_UBICACION_NOMBRE,
     elegirOpcion,
     iniciarPartida,
+    marcarEnRepaso,
     responder,
     responderConTexto,
     resumirPartida,
@@ -78,6 +81,10 @@
   const respuesta = $derived(partida?.ultimaRespuesta)
   const pista = $derived(partida?.pista ?? null)
   const correccion = $derived(partida?.correccion ?? null)
+  const repaso = $derived(partida?.repaso ?? null)
+  const rotulados = $derived(
+    repaso?.elementos.map((elemento) => elemento.id).filter((id) => !repaso.marcados.includes(id)) ?? [],
+  )
 
   $effect(() => {
     if (!correccion) return
@@ -85,6 +92,16 @@
     const espera = setTimeout(() => {
       if (partida) partida = cerrarCorreccion(partida)
     }, correccion.duracion)
+    return () => clearTimeout(espera)
+  })
+
+  $effect(() => {
+    if (!repaso) return
+    confirmandoAbandono = false
+    if (!escribeNombre) return
+    const espera = setTimeout(() => {
+      if (partida) partida = cerrarRepaso(partida)
+    }, DURACION_REPASO_UBICACION_NOMBRE)
     return () => clearTimeout(espera)
   })
 
@@ -110,6 +127,10 @@
 
   function elegir(id: string) {
     if (!partida || partida.terminada) return
+    if (partida.repaso) {
+      partida = marcarEnRepaso(partida, id)
+      return
+    }
     partida = responder(partida, id)
     if (partida.terminada) registrar(partida)
   }
@@ -121,7 +142,7 @@
   })
 
   function pulsarAbandonar() {
-    if (!partida || partida.terminada || partida.correccion) return
+    if (!partida || partida.terminada || partida.correccion || partida.repaso) return
     if (!confirmandoAbandono) {
       confirmandoAbandono = true
       return
@@ -202,6 +223,8 @@
               <button type="button" onclick={() => elegirOpcionDePista(opcion.id)}>{opcion.nombreMostrado}</button>
             {/each}
           </div>
+        {:else if repaso}
+          <p class="pregunta">{escribeNombre ? 'Repaso: fíjate en dónde están' : 'Repaso: toca cada nombre'}</p>
         {:else if escribeNombre && !correccion}
           <form class="pregunta" onsubmit={enviarTexto}>
             <input
@@ -239,7 +262,12 @@
       tocado={correccion && !escribeNombre ? correccion.elegido.id : null}
       correcto={correccion?.correcto.id ?? null}
       preguntado={correccion ? null : (partida.preguntado?.id ?? null)}
-      iluminado={escribeNombre ? ((correccion?.correcto ?? partida.preguntado)?.id ?? null) : null}
+      iluminados={escribeNombre
+        ? repaso
+          ? rotulados
+          : [(correccion?.correcto ?? partida.preguntado)?.id].filter((id) => id !== undefined)
+        : []}
+      {rotulados}
       fallados={partida.terminada ? partida.fallados.map((elemento) => elemento.id) : []}
       alElegir={elegir}
       {nombreDe}
@@ -257,6 +285,10 @@
           {/if}
         </p>
         <div class="barra" style:animation-duration="{correccion.duracion}ms"></div>
+      </div>
+    {:else if repaso && escribeNombre}
+      <div class="repaso" role="status">
+        <div class="barra" style:animation-duration="{DURACION_REPASO_UBICACION_NOMBRE}ms"></div>
       </div>
     {/if}
   {/if}
@@ -353,7 +385,8 @@
     min-height: 1.5rem;
   }
 
-  .correccion {
+  .correccion,
+  .repaso {
     position: sticky;
     bottom: 0;
     padding: 0.5rem;
@@ -371,7 +404,8 @@
     color: #2f7a4a;
   }
 
-  .correccion.conPista .barra {
+  .correccion.conPista .barra,
+  .repaso .barra {
     background: #2f7a4a;
   }
 

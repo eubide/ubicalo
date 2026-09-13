@@ -25,7 +25,10 @@
     acertados: string[]
     tocado: string | null
     correcto: string | null
-    iluminado: string | null
+    iluminados: string[]
+    rotulados: string[]
+    tamañoRotulo: number
+    nombreDe: (id: string) => string
     fallados: string[]
     seleccionado: string | null
     alElegir: (id: string) => void
@@ -41,7 +44,10 @@
     acertados,
     tocado,
     correcto,
-    iluminado,
+    iluminados,
+    rotulados,
+    tamañoRotulo,
+    nombreDe,
     fallados,
     seleccionado,
     alElegir,
@@ -53,6 +59,17 @@
 
   const prefijo = $props.id()
   const radioEnGrados = 0.12
+  const letrasPorLinea = 10
+
+  function lineasDe(nombre: string): string[] {
+    return nombre.split(' ').reduce<string[]>((lineas, palabra) => {
+      const ultima = lineas.at(-1)
+      if (ultima !== undefined && ultima.length + 1 + palabra.length <= letrasPorLinea) {
+        return [...lineas.slice(0, -1), `${ultima} ${palabra}`]
+      }
+      return [...lineas, palabra]
+    }, [])
+  }
 
   const anchoCelda = $derived(ancho / Math.max(elementos.length, 1))
 
@@ -100,7 +117,7 @@
       class:acertado={acertados.includes(celda.id)}
       class:fallado={fallados.includes(celda.id)}
       class:seleccionado={seleccionado === celda.id}
-      class:iluminado={iluminado === celda.id}
+      class:iluminado={iluminados.includes(celda.id)}
       class:tocado={tocado === celda.id}
       class:correcto={correcto === celda.id}
       onclick={() => alElegir(celda.id)}
@@ -108,6 +125,21 @@
       <rect class="diana" x={celda.x0} {y} width={anchoCelda} height={alto} />
       <path d={celda.trazado(celda.contorno)} />
     </g>
+    {#if rotulados.includes(celda.id)}
+      {@const lineas = lineasDe(nombreDe(celda.id))}
+      {@const esLaUltima = celda === celdas.at(-1)}
+      {@const xRotulo = esLaUltima ? celda.x0 + anchoCelda - tamañoRotulo / 2 : celda.x0 + anchoCelda / 2}
+      <text
+        class="rotulo"
+        y={y + alto - tamañoRotulo * lineas.length}
+        font-size={tamañoRotulo}
+        text-anchor={esLaUltima ? 'end' : 'middle'}
+      >
+        {#each lineas as linea, i (i)}
+          <tspan x={xRotulo} dy={i === 0 ? 0 : '1.1em'}>{linea}</tspan>
+        {/each}
+      </text>
+    {/if}
   {/each}
   <path class="marcos" d={marcos} />
 </g>
@@ -160,6 +192,16 @@
     stroke-width: 4;
     vector-effect: non-scaling-stroke;
     stroke-linejoin: round;
+  }
+
+  .rotulo {
+    font-weight: 600;
+    fill: #1f2937;
+    stroke: #fdfdfb;
+    stroke-width: 3;
+    paint-order: stroke;
+    stroke-linejoin: round;
+    pointer-events: none;
   }
 
   .marcos {
