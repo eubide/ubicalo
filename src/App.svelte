@@ -1,49 +1,61 @@
 <script lang="ts">
   import type { FeatureCollection } from 'geojson'
-  import { catalogo, contornos } from './catalogo/catalogo'
+  import { catalogo, contornos, type Tipo } from './catalogo/catalogo'
   import contextoGeografico from './datos/contexto-geografico.json'
   import Mapa from './mapa/Mapa.svelte'
-  import { iniciarPartida, responder } from './partida/partida'
+  import { iniciarPartida, responder, type Partida } from './partida/partida'
+  import SeleccionPrueba from './seleccion/SeleccionPrueba.svelte'
 
-  const elementos = catalogo()
-  const contornosDelTipo = contornos()
   const contexto = contextoGeografico as FeatureCollection
 
-  let partida = $state(iniciarPartida(elementos, Math.random))
+  let tipo = $state<Tipo | null>(null)
+  let partida = $state<Partida | null>(null)
 
-  const respuesta = $derived(partida.ultimaRespuesta)
-  const desvelaPreguntado = $derived(respuesta?.correcto.id === partida.preguntado?.id)
+  const elementos = $derived(tipo ? catalogo(tipo) : [])
+  const contornosDelTipo = $derived(tipo ? contornos(tipo) : [])
+
+  const respuesta = $derived(partida?.ultimaRespuesta)
+  const desvelaPreguntado = $derived(respuesta?.correcto.id === partida?.preguntado?.id)
   const resaltado = $derived(respuesta && !respuesta.acierto && !desvelaPreguntado ? respuesta.correcto.id : null)
 
+  function empezar(tipoElegido: Tipo) {
+    tipo = tipoElegido
+    partida = iniciarPartida(catalogo(tipoElegido), Math.random)
+  }
+
   function elegir(id: string) {
-    if (partida.terminada) return
+    if (!partida || partida.terminada) return
     partida = responder(partida, id)
   }
 </script>
 
 <main>
-  <header>
-    {#if partida.terminada}
-      <p class="pregunta">¡Partida terminada!</p>
-    {:else}
-      <p class="pregunta">{partida.preguntado?.nombre}</p>
-      <p class="pendientes">{partida.pendientes} / {elementos.length}</p>
-    {/if}
-  </header>
-
-  {#if respuesta}
-    <p class="respuesta" class:fallo={!respuesta.acierto}>
-      {#if respuesta.acierto}
-        Correcto: {respuesta.correcto.nombre}
-      {:else if desvelaPreguntado}
-        Incorrecto
+  {#if !partida}
+    <SeleccionPrueba alElegir={empezar} />
+  {:else}
+    <header>
+      {#if partida.terminada}
+        <p class="pregunta">¡Partida terminada!</p>
       {:else}
-        Incorrecto. Era {respuesta.correcto.nombre}
+        <p class="pregunta">{partida.preguntado?.nombre}</p>
+        <p class="pendientes">{partida.pendientes} / {elementos.length}</p>
       {/if}
-    </p>
-  {/if}
+    </header>
 
-  <Mapa contornos={contornosDelTipo} {contexto} acertados={partida.acertados} {resaltado} alElegir={elegir} />
+    {#if respuesta}
+      <p class="respuesta" class:fallo={!respuesta.acierto}>
+        {#if respuesta.acierto}
+          Correcto: {respuesta.correcto.nombre}
+        {:else if desvelaPreguntado}
+          Incorrecto
+        {:else}
+          Incorrecto. Era {respuesta.correcto.nombre}
+        {/if}
+      </p>
+    {/if}
+
+    <Mapa contornos={contornosDelTipo} {contexto} acertados={partida.acertados} {resaltado} alElegir={elegir} />
+  {/if}
 </main>
 
 <style>
