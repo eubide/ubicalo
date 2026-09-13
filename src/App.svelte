@@ -1,49 +1,84 @@
 <script lang="ts">
-  import type { FeatureCollection } from 'geojson'
-  import { catalogo, contornos } from './catalogo/catalogo'
+  import type { Feature, FeatureCollection, Geometry } from 'geojson'
+  import { catalogo, contornos, type Tipo } from './catalogo/catalogo'
   import contextoGeografico from './datos/contexto-geografico.json'
   import Mapa from './mapa/Mapa.svelte'
-  import { iniciarPartida, responder } from './partida/partida'
+  import FinDePartida from './pantallas/FinDePartida.svelte'
+  import PuntuacionYTiempo from './pantallas/PuntuacionYTiempo.svelte'
+  import { iniciarPartida, responder, tiempoJugado, type Partida } from './partida/partida'
+  import SeleccionPrueba from './seleccion/SeleccionPrueba.svelte'
 
-  const elementos = catalogo()
-  const contornosDelTipo = contornos()
   const contexto = contextoGeografico as FeatureCollection
 
-  let partida = $state(iniciarPartida(elementos, Math.random))
+  let partida = $state<Partida | null>(null)
+  let totalElementos = $state(0)
+  let contornosDelTipo = $state.raw<Feature<Geometry>[]>([])
+  let ahora = $state(Date.now())
 
-  const respuesta = $derived(partida.ultimaRespuesta)
-  const desvelaPreguntado = $derived(respuesta?.correcto.id === partida.preguntado?.id)
+  $effect(() => {
+    if (!partida || partida.terminada) return
+    const intervalo = setInterval(() => (ahora = Date.now()), 250)
+    return () => clearInterval(intervalo)
+  })
+
+  const respuesta = $derived(partida?.ultimaRespuesta)
+  const desvelaPreguntado = $derived(respuesta?.correcto.id === partida?.preguntado?.id)
   const resaltado = $derived(respuesta && !respuesta.acierto && !desvelaPreguntado ? respuesta.correcto.id : null)
 
+  function empezar(tipo: Tipo) {
+    const elementos = catalogo(tipo)
+    totalElementos = elementos.length
+    contornosDelTipo = contornos(tipo)
+    ahora = Date.now()
+    partida = iniciarPartida(elementos, Math.random, Date.now)
+  }
+
   function elegir(id: string) {
-    if (partida.terminada) return
+    if (!partida || partida.terminada) return
     partida = responder(partida, id)
   }
 </script>
 
 <main>
-  <header>
-    {#if partida.terminada}
-      <p class="pregunta">¡Partida terminada!</p>
-    {:else}
-      <p class="pregunta">{partida.preguntado?.nombre}</p>
-      <p class="pendientes">{partida.pendientes} / {elementos.length}</p>
-    {/if}
-  </header>
-
-  {#if respuesta}
-    <p class="respuesta" class:fallo={!respuesta.acierto}>
-      {#if respuesta.acierto}
-        Correcto: {respuesta.correcto.nombre}
-      {:else if desvelaPreguntado}
-        Incorrecto
+  {#if !partida}
+    <SeleccionPrueba alElegir={empezar} />
+  {:else}
+    <header>
+      {#if partida.terminada}
+        <FinDePartida
+          puntuacion={partida.puntuacion}
+          tiempo={tiempoJugado(partida, ahora)}
+          fallos={partida.fallos}
+          fallados={partida.fallados}
+        />
       {:else}
-        Incorrecto. Era {respuesta.correcto.nombre}
+        <p class="pregunta">{partida.preguntado?.nombreMostrado}</p>
+        <PuntuacionYTiempo puntuacion={partida.puntuacion} tiempo={tiempoJugado(partida, ahora)} />
+        <p class="pendientes">{partida.pendientes} / {totalElementos}</p>
       {/if}
-    </p>
-  {/if}
+    </header>
 
-  <Mapa contornos={contornosDelTipo} {contexto} acertados={partida.acertados} {resaltado} alElegir={elegir} />
+    {#if respuesta && !partida.terminada}
+      <p class="respuesta" class:fallo={!respuesta.acierto}>
+        {#if respuesta.acierto}
+          Correcto: {respuesta.correcto.nombreMostrado}
+        {:else if desvelaPreguntado}
+          Incorrecto
+        {:else}
+          Incorrecto. Era {respuesta.correcto.nombreMostrado}
+        {/if}
+      </p>
+    {/if}
+
+    <Mapa
+      contornos={contornosDelTipo}
+      {contexto}
+      acertados={partida.acertados}
+      {resaltado}
+      fallados={partida.terminada ? partida.fallados.map((elemento) => elemento.id) : []}
+      alElegir={elegir}
+    />
+  {/if}
 </main>
 
 <style>
