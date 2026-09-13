@@ -235,7 +235,8 @@
       tocado={correccion && !escribeNombre ? correccion.elegido.id : null}
       correcto={correccion?.correcto.id ?? null}
       preguntado={correccion ? null : (partida.preguntado?.id ?? null)}
-      iluminado={escribeNombre ? ((correccion?.correcto ?? partida.preguntado)?.id ?? null) : null}      fallados={partida.terminada ? partida.fallados.map((elemento) => elemento.id) : []}
+      iluminado={escribeNombre ? ((correccion?.correcto ?? partida.preguntado)?.id ?? null) : null}
+      fallados={partida.terminada ? partida.fallados.map((elemento) => elemento.id) : []}
       alElegir={elegir}
       {nombreDe}
     />
