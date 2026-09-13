@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Elemento } from '../catalogo/catalogo'
+  import type { ResultadoDeRegistro } from '../competicion/competicion'
   import { formatearTiempo } from './tiempo'
 
   interface Props {
@@ -7,13 +8,27 @@
     tiempo: number
     fallos: number
     fallados: Elemento[]
+    abandonada: boolean
+    resultado: ResultadoDeRegistro | null
   }
 
-  let { puntuacion, tiempo, fallos, fallados }: Props = $props()
+  let { puntuacion, tiempo, fallos, fallados, abandonada, resultado }: Props = $props()
 </script>
 
 <section class="fin">
-  <p class="titulo">¡Partida terminada!</p>
+  <p class="titulo">{abandonada ? 'Partida abandonada' : '¡Partida terminada!'}</p>
+  {#if abandonada}
+    <p class="marca">Una partida abandonada no cuenta para la marca.</p>
+  {:else if resultado?.nuevaMarca}
+    <p class="marca nueva">¡Nueva marca!</p>
+  {:else if resultado?.puntosParaLaMarca === 0}
+    <p class="marca">Empatas a puntos con tu marca, pero con más tiempo.</p>
+  {:else if resultado?.puntosParaLaMarca}
+    <p class="marca">
+      Te has quedado a {resultado.puntosParaLaMarca}
+      {resultado.puntosParaLaMarca === 1 ? 'punto' : 'puntos'} de tu marca.
+    </p>
+  {/if}
   <dl>
     <dt>Puntuación</dt>
     <dd>{puntuacion}</dd>
@@ -37,6 +52,16 @@
     font-size: 1.5rem;
     font-weight: 600;
     margin: 0;
+  }
+
+  .marca {
+    margin: 0.25rem 0 0;
+    color: #6b7280;
+  }
+
+  .marca.nueva {
+    color: #2f7a4a;
+    font-weight: 600;
   }
 
   dl {

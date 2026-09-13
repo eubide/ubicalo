@@ -1,11 +1,14 @@
 <script lang="ts">
   import type { Tipo } from '../catalogo/catalogo'
+  import type { Marca } from '../competicion/competicion'
+  import { formatearTiempo } from '../pantallas/tiempo'
 
   interface Props {
     alElegir: (tipo: Tipo) => void
+    marcaDe: (tipo: Tipo) => Marca | null
   }
 
-  let { alElegir }: Props = $props()
+  let { alElegir, marcaDe }: Props = $props()
 
   const tipos: { tipo: Tipo; etiqueta: string }[] = [
     { tipo: 'comunidades', etiqueta: 'Comunidades autónomas' },
@@ -17,7 +20,13 @@
   <h1>¿Qué quieres repasar?</h1>
   <div class="tipos">
     {#each tipos as { tipo, etiqueta } (tipo)}
-      <button type="button" onclick={() => alElegir(tipo)}>{etiqueta}</button>
+      {@const marca = marcaDe(tipo)}
+      <button type="button" onclick={() => alElegir(tipo)}>
+        {etiqueta}
+        <span class="marca">
+          {marca ? `Marca: ${marca.puntuacion} puntos en ${formatearTiempo(marca.tiempo)}` : 'Sin marca'}
+        </span>
+      </button>
     {/each}
   </div>
 </section>
@@ -46,5 +55,12 @@
 
   button:hover {
     border-color: #2f7a4a;
+  }
+
+  .marca {
+    display: block;
+    font-size: 0.875rem;
+    color: #6b7280;
+    font-variant-numeric: tabular-nums;
   }
 </style>
