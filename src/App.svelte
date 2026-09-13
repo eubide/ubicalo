@@ -42,7 +42,7 @@
   let ahora = $state(Date.now())
   let texto = $state('')
   let campoDeTexto = $state<HTMLInputElement | null>(null)
-  let opcionesDePista = $state<HTMLElement | null>(null)
+  let pistaAbierta = $state<HTMLElement | null>(null)
 
   $effect(() => {
     if (!partida || partida.terminada) return
@@ -55,7 +55,7 @@
   })
 
   $effect(() => {
-    opcionesDePista?.querySelector('button')?.focus()
+    pistaAbierta?.focus()
   })
 
   const escribeNombre = $derived(prueba?.modo === 'ubicacion-nombre')
@@ -151,7 +151,13 @@
         />
       {:else}
         {#if pista}
-          <div class="pista" bind:this={opcionesDePista}>
+          <div
+            class="pista"
+            bind:this={pistaAbierta}
+            role="group"
+            tabindex="-1"
+            aria-label="Pista: elige el nombre del elemento iluminado"
+          >
             <p class:fallo={pista.trasFallo}>{pista.trasFallo ? 'Incorrecto. ¿Cuál es?' : '¿Cuál es?'}</p>
             {#each pista.opciones as opcion (opcion.id)}
               <button type="button" onclick={() => elegirOpcionDePista(opcion.id)}>{opcion.nombreMostrado}</button>
