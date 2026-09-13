@@ -24,6 +24,7 @@ export interface Partida {
   fin: number | null
   mostradoEn: number
   puntuacion: number
+  aciertosALaPrimera: number
   fallos: number
   fallados: Elemento[]
   pista: Pista | null
@@ -76,6 +77,7 @@ export function iniciarPartida(elementos: Elemento[], azar: Azar, reloj: Reloj):
       reloj,
       inicio: ahora,
       puntuacion: 0,
+      aciertosALaPrimera: 0,
       fallos: 0,
       fallados: [],
       pista: null,
@@ -203,9 +205,18 @@ function resolver(partida: Partida, acierto: boolean): Partida {
   if (!acierto) return avanzar(anotarFallo(partida), { acierto, conPista: false, correcto }, true, ahora)
   const segundos = (ahora - partida.mostradoEn) / 1000
   const bonus = Math.round(BONUS_MAXIMO_DE_RAPIDEZ * Math.max(0, 1 - segundos / SEGUNDOS_HASTA_PERDER_EL_BONUS))
-  const puntos =
-    partida.vuelta > 1 ? PUNTOS_POR_ACIERTO_EN_VUELTA_POSTERIOR : PUNTOS_POR_ACIERTO_A_LA_PRIMERA + bonus
-  return avanzar({ ...partida, puntuacion: partida.puntuacion + puntos }, { acierto, conPista: false, correcto }, false, ahora)
+  const aLaPrimera = partida.vuelta === 1
+  const puntos = aLaPrimera ? PUNTOS_POR_ACIERTO_A_LA_PRIMERA + bonus : PUNTOS_POR_ACIERTO_EN_VUELTA_POSTERIOR
+  return avanzar(
+    {
+      ...partida,
+      puntuacion: partida.puntuacion + puntos,
+      aciertosALaPrimera: partida.aciertosALaPrimera + (aLaPrimera ? 1 : 0),
+    },
+    { acierto, conPista: false, correcto },
+    false,
+    ahora,
+  )
 }
 
 export function elegirOpcion(partida: Partida, idElegido: string): Partida {

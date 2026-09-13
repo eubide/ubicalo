@@ -168,6 +168,8 @@
       {#if partida.terminada}
         <FinDePartida
           puntuacion={partida.puntuacion}
+          aciertosALaPrimera={partida.aciertosALaPrimera}
+          totalElementos={partida.elementos.length}
           tiempo={tiempoJugado(partida, ahora)}
           fallos={partida.fallos}
           pistasUsadas={partida.pistasUsadas}

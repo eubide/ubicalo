@@ -409,6 +409,19 @@ describe('Fin de partida', () => {
     expect(partida.fallados).toEqual([fallado])
     expect(tiempoJugado(partida, 60_000)).toBe(9_000)
   })
+
+  it('recuenta 3 aciertos a la primera de 5 si uno se falla y otro se resuelve con pista', () => {
+    let partida = iniciarPartida(elementos, azarFijo, reloj)
+    const fallado = partida.preguntado!
+    partida = responder(partida, elementos.find((elemento) => elemento.id !== fallado.id)!.id)
+    partida = elegirOpcion(pedirPista(partida), partida.preguntado!.id)
+    for (let i = 0; i < 3; i++) {
+      partida = responder(partida, partida.preguntado!.id)
+    }
+    while (!partida.terminada) partida = responder(partida, partida.preguntado!.id)
+
+    expect(partida.aciertosALaPrimera).toBe(3)
+  })
 })
 
 describe('Abandono', () => {
@@ -457,6 +470,18 @@ describe('Abandono', () => {
     expect(partida.pistasUsadas).toBe(0)
     expect(partida.fallos).toBe(0)
     expect(partida.abandonada).toBe(true)
+  })
+
+  it('una partida abandonada conserva sus 2 aciertos a la primera sin contar los pendientes', () => {
+    let partida = iniciarPartida(elementos, azarFijo, reloj)
+    partida = responder(partida, partida.preguntado!.id)
+    const fallado = partida.preguntado!
+    partida = responder(partida, elementos.find((elemento) => elemento.id !== fallado.id)!.id)
+    partida = responder(partida, partida.preguntado!.id)
+
+    partida = abandonar(partida)
+
+    expect(partida.aciertosALaPrimera).toBe(2)
   })
 
   it('abandonar una partida ya terminada no la cambia', () => {
