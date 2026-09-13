@@ -86,23 +86,29 @@
     repaso?.elementos.map((elemento) => elemento.id).filter((id) => !repaso.marcados.includes(id)) ?? [],
   )
 
+  const iluminados = $derived.by(() => {
+    if (!escribeNombre) return []
+    if (repaso) return rotulados
+    const id = (correccion?.correcto ?? partida?.preguntado)?.id
+    return id === undefined ? [] : [id]
+  })
+
+  function cerrarAlCabo(duracion: number, cerrar: (partida: Partida) => Partida) {
+    const espera = setTimeout(() => {
+      if (partida) partida = cerrar(partida)
+    }, duracion)
+    return () => clearTimeout(espera)
+  }
+
   $effect(() => {
     if (!correccion) return
     confirmandoAbandono = false
-    const espera = setTimeout(() => {
-      if (partida) partida = cerrarCorreccion(partida)
-    }, correccion.duracion)
-    return () => clearTimeout(espera)
+    return cerrarAlCabo(correccion.duracion, cerrarCorreccion)
   })
 
   $effect(() => {
-    if (!repaso) return
-    confirmandoAbandono = false
-    if (!escribeNombre) return
-    const espera = setTimeout(() => {
-      if (partida) partida = cerrarRepaso(partida)
-    }, DURACION_REPASO_UBICACION_NOMBRE)
-    return () => clearTimeout(espera)
+    if (!repaso || !escribeNombre) return
+    return cerrarAlCabo(DURACION_REPASO_UBICACION_NOMBRE, cerrarRepaso)
   })
 
   function empezar(elegida: Prueba) {
@@ -142,7 +148,7 @@
   })
 
   function pulsarAbandonar() {
-    if (!partida || partida.terminada || partida.correccion || partida.repaso) return
+    if (!partida || partida.terminada || partida.correccion) return
     if (!confirmandoAbandono) {
       confirmandoAbandono = true
       return
@@ -262,11 +268,7 @@
       tocado={correccion && !escribeNombre ? correccion.elegido.id : null}
       correcto={correccion?.correcto.id ?? null}
       preguntado={correccion ? null : (partida.preguntado?.id ?? null)}
-      iluminados={escribeNombre
-        ? repaso
-          ? rotulados
-          : [(correccion?.correcto ?? partida.preguntado)?.id].filter((id) => id !== undefined)
-        : []}
+      {iluminados}
       {rotulados}
       fallados={partida.terminada ? partida.fallados.map((elemento) => elemento.id) : []}
       alElegir={elegir}

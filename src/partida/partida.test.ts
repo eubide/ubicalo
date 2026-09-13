@@ -496,6 +496,39 @@ describe('Racha de fallos', () => {
     partida = cerrarCorreccion(elegirOpcion(responderConTexto(partida, 'Zeta'), partida.preguntado!.id))
     expect(partida.rachaDeFallos).toHaveLength(2)
   })
+
+  function segundaVueltaConDosFallosSeguidos() {
+    let partida = iniciarPartida(elementos, azarFijo, reloj)
+    partida = responderConTexto(partida, partida.preguntado!.nombre)
+    partida = responderConTexto(partida, partida.preguntado!.nombre)
+    const conPista = partida.preguntado!
+    partida = cerrarCorreccion(elegirOpcion(pedirPista(partida), conPista.id))
+    const cuarto = partida.preguntado!
+    partida = fallarEscribiendo(partida)
+    const quinto = partida.preguntado!
+    partida = fallarEscribiendo(partida)
+    expect(partida.vuelta).toBe(2)
+    expect(partida.preguntado).toEqual(conPista)
+    return { partida, conPista, cuarto, quinto }
+  }
+
+  it('sigue de una vuelta a la siguiente: fallar la primera pregunta de la vuelta 2 abre el Repaso', () => {
+    const { partida, conPista, cuarto, quinto } = segundaVueltaConDosFallosSeguidos()
+    expect(partida.rachaDeFallos).toEqual([cuarto, quinto])
+
+    const tras = fallarEscribiendo(partida)
+
+    expect(tras.repaso?.elementos).toEqual([cuarto, quinto, conPista])
+  })
+
+  it('un acierto sin ayuda en una vuelta posterior la reinicia', () => {
+    const { partida } = segundaVueltaConDosFallosSeguidos()
+
+    const tras = responderConTexto(partida, partida.preguntado!.nombre)
+
+    expect(tras.ultimaRespuesta?.acierto).toBe(true)
+    expect(tras.rachaDeFallos).toEqual([])
+  })
 })
 
 describe('Repaso', () => {
@@ -511,15 +544,17 @@ describe('Repaso', () => {
 
   it('empieza al cerrarse la Corrección del tercer fallo seguido con esos elementos y la Racha vuelve a 0', () => {
     let partida = iniciarPartida(elementos, azarFijo, reloj)
-    partida = fallarSeñalando(fallarSeñalando(partida))
+    const primero = partida.preguntado!
+    partida = fallarSeñalando(partida)
+    const segundo = partida.preguntado!
+    partida = fallarSeñalando(partida)
     const tercero = partida.preguntado!
     partida = responder(partida, elementos.find((elemento) => elemento.id !== tercero.id)!.id)
     expect(partida.repaso).toBeNull()
 
     partida = cerrarCorreccion(partida)
 
-    expect(partida.repaso?.elementos).toHaveLength(3)
-    expect(partida.repaso?.elementos).toContainEqual(tercero)
+    expect(partida.repaso?.elementos).toEqual([primero, segundo, tercero])
     expect(partida.repaso?.marcados).toEqual([])
     expect(partida.rachaDeFallos).toEqual([])
   })
@@ -547,6 +582,20 @@ describe('Repaso', () => {
     partida = cerrarCorreccion(responder(partida, otro.id))
 
     expect(partida.repaso?.elementos).toEqual([primero, otro])
+  })
+
+  it('el mismo elemento fallado tres veces seguidas abre un Repaso con ese único elemento', () => {
+    const [x, y] = elementos
+    let partida = iniciarPartida([x, y], azarFijo, reloj)
+    partida = responder(partida, partida.preguntado!.id)
+    const pendiente = partida.preguntado!
+    const otro = pendiente.id === x.id ? y : x
+    for (let i = 0; i < 3; i++) partida = cerrarCorreccion(responder(partida, otro.id))
+
+    expect(partida.repaso?.elementos).toEqual([pendiente])
+
+    partida = marcarEnRepaso(partida, pendiente.id)
+    expect(partida.repaso).toBeNull()
   })
 
   it('en Nombre → ubicar termina al marcar los tres en cualquier orden; otros ids y repeticiones se ignoran', () => {

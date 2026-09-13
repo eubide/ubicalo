@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { Feature, FeatureCollection, Geometry } from 'geojson'
+  import type { Feature, FeatureCollection, Geometry, Polygon } from 'geojson'
   import { geoCentroid, geoPath } from 'd3-geo'
   import { geoConicConformalSpain } from 'd3-composite-projections'
   import RecuadroCeutaMelilla, { esCeutaOMelilla } from './RecuadroCeutaMelilla.svelte'
@@ -159,8 +159,20 @@
     }
   }
 
+  function centroDelRotulo(contorno: Feature<Geometry>): [number, number] {
+    const { geometry } = contorno
+    if (geometry.type !== 'MultiPolygon') return trazado.centroid(contorno)
+    const poligonos = geometry.coordinates.map((coordinates): Polygon => ({ type: 'Polygon', coordinates }))
+    const mayor = poligonos.reduce((a, b) => (trazado.area(b) > trazado.area(a) ? b : a))
+    return trazado.centroid(mayor)
+  }
+
   function pulsarElemento(id: string) {
     if (iluminados.length > 0) return
+    if (rotulados.length > 0) {
+      if (rotulados.includes(id) && !huboGesto && !dobleToque) alElegir(id)
+      return
+    }
     if (tipoDePuntero !== 'touch') {
       seleccionado = null
       alElegir(id)
@@ -227,8 +239,17 @@
         <path class="correcto" d={trazado(contornoCorrecto)} />
       {/if}
       {#each contornos.filter((contorno) => rotulados.includes(String(contorno.id))) as contorno (contorno.id)}
-        {@const [x, y] = trazado.centroid(contorno)}
-        <text class="rotulo" {x} {y} font-size={tamañoRotulo / vista.escala}>{nombreDe(String(contorno.id))}</text>
+        {@const [x, y] = centroDelRotulo(contorno)}
+        {@const enRecuadro = ceutaYMelilla.some((elemento) => elemento.contorno === contorno)}
+        <text
+          class="rotulo"
+          x={enRecuadro ? x - radioDiana : x}
+          {y}
+          text-anchor={enRecuadro ? 'end' : 'middle'}
+          font-size={tamañoRotulo / vista.escala}
+        >
+          {nombreDe(String(contorno.id))}
+        </text>
       {/each}
       <path class="marcos" d={proyeccion.getCompositionBorders()} />
     </g>
@@ -340,7 +361,6 @@
 
   .rotulo {
     font-weight: 600;
-    text-anchor: middle;
     dominant-baseline: middle;
     fill: #1f2937;
     stroke: #fdfdfb;

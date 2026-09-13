@@ -35,7 +35,7 @@ export interface Repaso {
   marcados: string[]
 }
 
-export const FALLOS_PARA_REPASO = 3
+const FALLOS_PARA_REPASO = 3
 
 export const DURACION_REPASO_UBICACION_NOMBRE = 4_000
 
