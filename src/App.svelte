@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Feature, FeatureCollection, Geometry } from 'geojson'
-  import { catalogo, contornos, type Tipo } from './catalogo/catalogo'
+  import { catalogo, contornos, type Elemento, type Tipo } from './catalogo/catalogo'
   import contextoGeografico from './datos/contexto-geografico.json'
   import Mapa from './mapa/Mapa.svelte'
   import FinDePartida from './pantallas/FinDePartida.svelte'
@@ -11,6 +11,7 @@
   const contexto = contextoGeografico as FeatureCollection
 
   let partida = $state<Partida | null>(null)
+  let elementosDelTipo = $state.raw<Elemento[]>([])
   let totalElementos = $state(0)
   let contornosDelTipo = $state.raw<Feature<Geometry>[]>([])
   let ahora = $state(Date.now())
@@ -27,10 +28,15 @@
 
   function empezar(tipo: Tipo) {
     const elementos = catalogo(tipo)
+    elementosDelTipo = elementos
     totalElementos = elementos.length
     contornosDelTipo = contornos(tipo)
     ahora = Date.now()
     partida = iniciarPartida(elementos, Math.random, Date.now)
+  }
+
+  function nombreDe(id: string): string {
+    return elementosDelTipo.find((elemento) => elemento.id === id)?.nombreMostrado ?? ''
   }
 
   function elegir(id: string) {
@@ -75,8 +81,10 @@
       {contexto}
       acertados={partida.acertados}
       {resaltado}
+      preguntado={partida.preguntado?.id ?? null}
       fallados={partida.terminada ? partida.fallados.map((elemento) => elemento.id) : []}
       alElegir={elegir}
+      {nombreDe}
     />
   {/if}
 </main>

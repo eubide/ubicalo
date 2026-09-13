@@ -25,6 +25,7 @@
     acertados: string[]
     resaltado: string | null
     fallados: string[]
+    seleccionado: string | null
     alElegir: (id: string) => void
     x: number
     y: number
@@ -32,7 +33,8 @@
     alto: number
   }
 
-  let { elementos, contexto, acertados, resaltado, fallados, alElegir, x, y, ancho, alto }: Props = $props()
+  let { elementos, contexto, acertados, resaltado, fallados, seleccionado, alElegir, x, y, ancho, alto }: Props =
+    $props()
 
   const prefijo = $props.id()
   const radioEnGrados = 0.12
@@ -83,6 +85,7 @@
       class:acertado={acertados.includes(celda.id)}
       class:resaltado={resaltado === celda.id}
       class:fallado={fallados.includes(celda.id)}
+      class:seleccionado={seleccionado === celda.id}
       onclick={() => alElegir(celda.id)}
     >
       <rect class="diana" x={celda.x0} {y} width={anchoCelda} height={alto} />
@@ -120,6 +123,10 @@
   .elemento.resaltado path,
   .elemento.fallado path {
     fill: #f4c7a1;
+  }
+
+  .elemento.seleccionado path {
+    fill: #c9dcf2;
   }
 
   .marcos {
