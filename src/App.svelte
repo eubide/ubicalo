@@ -5,12 +5,35 @@
   import Mapa from './mapa/Mapa.svelte'
   import FinDePartida from './pantallas/FinDePartida.svelte'
   import PuntuacionYTiempo from './pantallas/PuntuacionYTiempo.svelte'
-  import { elegirOpcion, iniciarPartida, responder, responderConTexto, tiempoJugado, type Partida } from './partida/partida'
+  import { almacenEnMemoria, crearCompeticion, type Almacen, type ResultadoDeRegistro } from './competicion/competicion'
+  import {
+    abandonar,
+    elegirOpcion,
+    iniciarPartida,
+    responder,
+    responderConTexto,
+    resumirPartida,
+    tiempoJugado,
+    type Partida,
+  } from './partida/partida'
   import type { Prueba } from './prueba/prueba'
   import SeleccionPrueba from './seleccion/SeleccionPrueba.svelte'
 
   const contexto = contextoGeografico as FeatureCollection
 
+  function almacenDelNavegador(): Almacen {
+    try {
+      return window.localStorage ?? almacenEnMemoria()
+    } catch {
+      return almacenEnMemoria()
+    }
+  }
+
+  const competicion = crearCompeticion(almacenDelNavegador())
+
+  let resultado = $state<ResultadoDeRegistro | null>(null)
+  const ESPERA_CONFIRMAR_ABANDONO = 3_000
+  let confirmandoAbandono = $state(false)
   let partida = $state<Partida | null>(null)
   let prueba = $state<Prueba | null>(null)
   let elementosDelTipo = $state.raw<Elemento[]>([])
@@ -40,12 +63,15 @@
   const desvelaPreguntado = $derived(respuesta?.correcto.id === partida?.preguntado?.id)
   const pista = $derived(partida?.pista ?? null)
   const resaltado = $derived(
-    respuesta && !respuesta.acierto && !desvelaPreguntado && !pista ? respuesta.correcto.id : null,
+    respuesta && !respuesta.acierto && !desvelaPreguntado && !pista && !partida?.terminada
+      ? respuesta.correcto.id
+      : null,
   )
 
   function empezar(elegida: Prueba) {
     const elementos = catalogo(elegida.tipo)
     prueba = elegida
+    resultado = null
     elementosDelTipo = elementos
     totalElementos = elementos.length
     contornosDelTipo = contornos(elegida.tipo)
@@ -61,12 +87,42 @@
   function elegir(id: string) {
     if (!partida || partida.terminada) return
     partida = responder(partida, id)
+    if (partida.terminada) registrar(partida)
+  }
+
+  $effect(() => {
+    if (!confirmandoAbandono) return
+    const espera = setTimeout(() => (confirmandoAbandono = false), ESPERA_CONFIRMAR_ABANDONO)
+    return () => clearTimeout(espera)
+  })
+
+  function pulsarAbandonar() {
+    if (!partida || partida.terminada) return
+    if (!confirmandoAbandono) {
+      confirmandoAbandono = true
+      return
+    }
+    confirmandoAbandono = false
+    partida = abandonar(partida)
+    registrar(partida)
+  }
+
+  function elegirOtraPrueba() {
+    partida = null
+    prueba = null
+    resultado = null
+  }
+
+  function registrar(acabada: Partida) {
+    const jugada = prueba && resumirPartida(acabada, prueba)
+    if (jugada) resultado = competicion.registrar(jugada)
   }
 
   function enviarTexto(evento: SubmitEvent) {
     evento.preventDefault()
     if (!partida || partida.terminada) return
     partida = responderConTexto(partida, texto)
+    if (partida.terminada) registrar(partida)
     texto = ''
     campoDeTexto?.focus()
   }
@@ -79,7 +135,7 @@
 
 <main>
   {#if !partida}
-    <SeleccionPrueba alElegir={empezar} />
+    <SeleccionPrueba alElegir={empezar} marcaDe={(elegida) => competicion.marca(elegida)} />
   {:else}
     <header>
       {#if partida.terminada}
@@ -89,6 +145,9 @@
           fallos={partida.fallos}
           pistas={partida.pistas}
           fallados={partida.fallados}
+          abandonada={partida.abandonada}
+          {resultado}
+          alElegirOtraPrueba={elegirOtraPrueba}
         />
       {:else}
         {#if pista}
@@ -116,6 +175,9 @@
         {/if}
         <PuntuacionYTiempo puntuacion={partida.puntuacion} tiempo={tiempoJugado(partida, ahora)} />
         <p class="pendientes">{partida.pendientes} / {totalElementos}</p>
+        <button type="button" class="abandonar" class:confirmando={confirmandoAbandono} onclick={pulsarAbandonar}>
+          {confirmandoAbandono ? '¿Seguro? Abandonar' : 'Abandonar'}
+        </button>
       {/if}
     </header>
 
@@ -208,6 +270,21 @@
     margin: 0;
     color: #6b7280;
     font-variant-numeric: tabular-nums;
+  }
+
+  .abandonar {
+    font: inherit;
+    padding: 0.25rem 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.5rem;
+    background: #fff;
+    color: #6b7280;
+    cursor: pointer;
+  }
+
+  .abandonar.confirmando {
+    border-color: #b45309;
+    color: #b45309;
   }
 
   .respuesta {

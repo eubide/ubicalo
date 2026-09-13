@@ -1,6 +1,16 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { Elemento } from '../catalogo/catalogo'
-import { elegirOpcion, iniciarPartida, pedirPista, responder, responderConTexto, tiempoJugado, type Partida } from './partida'
+import {
+  abandonar,
+  elegirOpcion,
+  iniciarPartida,
+  pedirPista,
+  responder,
+  responderConTexto,
+  resumirPartida,
+  tiempoJugado,
+  type Partida,
+} from './partida'
 
 const elementos: Elemento[] = [
   { id: 'a', nombre: 'Alfa', nombreMostrado: 'Alfa', alias: [], vecinos: [] },
@@ -124,7 +134,7 @@ describe('Partida en Ubicación → nombre', () => {
 
     expect(partida.pista?.trasFallo).toBe(true)
     expect(partida.pista?.opciones).toContainEqual(fallado)
-    expect(partida.pistas).toBe(1)
+    expect(partida.pistas).toBe(0)
     expect(partida.preguntado).toEqual(fallado)
     expect(partida.ultimaRespuesta).toEqual(acertadoAntes)
     expect(partida.puntuacion).toBe(125)
@@ -142,7 +152,7 @@ describe('Partida en Ubicación → nombre', () => {
     expect(partida.pista?.trasFallo).toBe(false)
     expect(partida.pista?.opciones).toHaveLength(4)
     expect(partida.pista?.opciones).toContainEqual(inicial.preguntado)
-    expect(partida.pistas).toBe(1)
+    expect(partida.pistas).toBe(0)
     expect(partida.fallos).toBe(0)
     expect(partida.puntuacion).toBe(0)
     expect(partida.preguntado).toEqual(inicial.preguntado)
@@ -373,5 +383,68 @@ describe('Fin de partida', () => {
     expect(partida.fallos).toBe(2)
     expect(partida.fallados).toEqual([fallado])
     expect(tiempoJugado(partida, 60_000)).toBe(9_000)
+  })
+})
+
+describe('Abandono', () => {
+  it('abandonar termina la partida con pendientes, conserva la puntuación y la marca como abandonada', () => {
+    ahora = 1_000
+    let partida = iniciarPartida(elementos, azarFijo, reloj)
+    partida = responder(partida, partida.preguntado!.id)
+    expect(partida.abandonada).toBe(false)
+
+    ahora = 7_000
+    partida = abandonar(partida)
+
+    expect(partida.terminada).toBe(true)
+    expect(partida.abandonada).toBe(true)
+    expect(partida.puntuacion).toBe(150)
+    expect(partida.pendientes).toBe(4)
+    expect(tiempoJugado(partida, 60_000)).toBe(6_000)
+  })
+
+  it('resume una partida acabada con su prueba, puntuación, tiempo, fecha de fin y si fue abandonada', () => {
+    const prueba = { tipo: 'provincias', modo: 'ubicacion-nombre' } as const
+    ahora = 1_000
+    let partida = iniciarPartida(elementos, azarFijo, reloj)
+    expect(resumirPartida(partida, prueba)).toBeNull()
+
+    partida = responder(partida, partida.preguntado!.id)
+    ahora = 7_000
+    partida = abandonar(partida)
+
+    expect(resumirPartida(partida, prueba)).toEqual({
+      prueba: { tipo: 'provincias', modo: 'ubicacion-nombre' },
+      puntuacion: 150,
+      tiempo: 6_000,
+      fecha: '1970-01-01T00:00:07.000Z',
+      abandonada: true,
+    })
+  })
+
+  it('abandonar con una pista abierta la cierra sin contarla como pista usada ni como fallo', () => {
+    let partida = iniciarPartida(elementos, azarFijo, reloj)
+    partida = responderConTexto(partida, '')
+
+    partida = abandonar(partida)
+
+    expect(partida.pista).toBeNull()
+    expect(partida.pistas).toBe(0)
+    expect(partida.fallos).toBe(0)
+    expect(partida.abandonada).toBe(true)
+  })
+
+  it('abandonar una partida ya terminada no la cambia', () => {
+    ahora = 1_000
+    let partida = iniciarPartida(elementos, azarFijo, reloj)
+    ahora = 4_000
+    while (!partida.terminada) partida = responder(partida, partida.preguntado!.id)
+
+    ahora = 9_000
+    const tras = abandonar(partida)
+
+    expect(tras.abandonada).toBe(false)
+    expect(tras.terminada).toBe(true)
+    expect(tiempoJugado(tras, 60_000)).toBe(3_000)
   })
 })

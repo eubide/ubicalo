@@ -1,4 +1,5 @@
 import type { Elemento } from '../catalogo/catalogo'
+import type { Prueba } from '../prueba/prueba'
 
 export type Azar = () => number
 
@@ -33,6 +34,7 @@ export interface Partida {
   preguntado: Elemento | null
   pendientes: number
   terminada: boolean
+  abandonada: boolean
   ultimaRespuesta?: Respuesta
 }
 
@@ -81,6 +83,7 @@ export function iniciarPartida(elementos: Elemento[], azar: Azar, reloj: Reloj):
       siguienteVuelta: [],
       acertados: [],
       vuelta: 1,
+      abandonada: false,
     },
     ahora,
   )
@@ -164,7 +167,6 @@ function abrirPista(partida: Partida, trasFallo: boolean): Partida {
   return {
     ...partida,
     pista: { opciones: barajar([preguntado, ...distractores], partida.azar), trasFallo },
-    pistas: partida.pistas + 1,
   }
 }
 
@@ -199,9 +201,34 @@ function resolver(partida: Partida, acierto: boolean): Partida {
 export function elegirOpcion(partida: Partida, idElegido: string): Partida {
   const correcto = partida.cola[0]
   const acierto = idElegido === correcto.id
-  return avanzar(acierto ? partida : anotarFallo(partida), { acierto, correcto }, true, partida.reloj())
+  const conPistaUsada = { ...partida, pistas: partida.pistas + 1 }
+  return avanzar(acierto ? conPistaUsada : anotarFallo(conPistaUsada), { acierto, correcto }, true, partida.reloj())
+}
+
+export function abandonar(partida: Partida): Partida {
+  if (partida.terminada) return partida
+  return { ...partida, fin: partida.reloj(), preguntado: null, pista: null, terminada: true, abandonada: true }
 }
 
 export function tiempoJugado(partida: Partida, ahora: number): number {
   return (partida.fin ?? ahora) - partida.inicio
+}
+
+export interface PartidaJugada {
+  prueba: Prueba
+  puntuacion: number
+  tiempo: number
+  fecha: string
+  abandonada: boolean
+}
+
+export function resumirPartida(partida: Partida, prueba: Prueba): PartidaJugada | null {
+  if (partida.fin === null) return null
+  return {
+    prueba,
+    puntuacion: partida.puntuacion,
+    tiempo: tiempoJugado(partida, partida.fin),
+    fecha: new Date(partida.fin).toISOString(),
+    abandonada: partida.abandonada,
+  }
 }
