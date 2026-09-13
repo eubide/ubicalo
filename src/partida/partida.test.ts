@@ -613,7 +613,6 @@ describe('Repaso', () => {
 
     expect(partida.repaso).toBeNull()
     expect(partida.pausadaDesde).toBeNull()
-    expect(responder(partida, partida.preguntado!.id).puntuacion).toBe(150)
   })
 
   it('durante el Repaso se ignoran señalar, el texto, el texto vacío y las opciones', () => {
@@ -634,7 +633,7 @@ describe('Repaso', () => {
     expect(cerrarRepaso(partida)).toBe(partida)
   })
 
-  it('en Ubicación → nombre termina al cerrarlo tras 4 s, sin contar su tiempo ni restar bonus a la pregunta siguiente', () => {
+  it('en Ubicación → nombre termina al cerrarlo tras 4 s, sin contar su tiempo', () => {
     let partida = iniciarPartida(elementos, azarFijo, reloj)
     ahora = 1_000
     partida = responderConTexto(partida, 'Zeta')
@@ -658,10 +657,6 @@ describe('Repaso', () => {
     expect(partida.repaso).toBeNull()
     expect(tiempoJugado(partida, 16_000)).toBe(6_000)
 
-    ahora = 18_000
-    partida = responderConTexto(partida, partida.preguntado!.nombre)
-
-    expect(partida.puntuacion).toBe(140)
     expect(tiempoJugado(partida, 18_000)).toBe(8_000)
   })
 
@@ -674,6 +669,102 @@ describe('Repaso', () => {
     expect(partida.repaso).toBeNull()
     expect(partida.pausadaDesde).toBeNull()
     expect(tiempoJugado(partida, 60_000)).toBe(0)
+  })
+})
+
+describe('Pista de área', () => {
+  const azarSinBarajar = () => 0.99
+
+  function catalogoConComunidades(): Elemento[] {
+    const comunidadDe: Record<string, string> = { a: 'X', b: 'X', c: 'Y', d: 'Y', e: 'Y', f: 'X' }
+    return Object.entries(comunidadDe).map(([id, comunidad]) => ({
+      id,
+      nombre: id.toUpperCase(),
+      nombreMostrado: id.toUpperCase(),
+      alias: [],
+      vecinos: id === 'e' ? ['d', 'f'] : [],
+      comunidad,
+    }))
+  }
+
+  function fallarLaPregunta(partida: Partida): Partida {
+    return cerrarCorreccion(responder(partida, partida.preguntado!.id === 'a' ? 'b' : 'a'))
+  }
+
+  function trasElRepaso(catalogo: Elemento[]): Partida {
+    let partida = iniciarPartida(catalogo, azarSinBarajar, reloj)
+    partida = responder(partida, 'a')
+    for (let i = 0; i < 3; i++) partida = fallarLaPregunta(partida)
+    expect(partida.repaso?.elementos.map((elemento) => elemento.id)).toEqual(['b', 'c', 'd'])
+    return cerrarRepaso(partida)
+  }
+
+  it('con provincias, solo la pregunta siguiente al Repaso ilumina las provincias de su comunidad autónoma', () => {
+    const catalogo = catalogoConComunidades()
+    let partida = iniciarPartida(catalogo, azarSinBarajar, reloj)
+    expect(partida.pistaDeArea).toBeNull()
+
+    partida = trasElRepaso(catalogo)
+
+    expect(partida.preguntado?.id).toBe('e')
+    expect(partida.pistaDeArea).toEqual(['c', 'd', 'e'])
+
+    partida = responder(partida, 'e')
+    expect(partida.preguntado?.id).toBe('f')
+    expect(partida.pistaDeArea).toBeNull()
+  })
+
+  it('con comunidades, la pregunta siguiente al Repaso ilumina sus Vecinos', () => {
+    const catalogo = catalogoConComunidades().map(({ comunidad: _, ...elemento }) => elemento)
+
+    expect(trasElRepaso(catalogo).pistaDeArea).toEqual(['d', 'f'])
+  })
+
+  it('acertar con ella da 0 puntos, sigue pendiente, no es acierto a la primera, no cambia la Racha y abre la Corrección con pista', () => {
+    let partida = trasElRepaso(catalogoConComunidades())
+    expect(partida.puntuacion).toBe(75)
+    const e = partida.preguntado!
+
+    partida = responder(partida, 'e')
+
+    expect(partida.correccion).toEqual({ elegido: e, correcto: e, duracion: 2_000 })
+    expect(partida.ultimaRespuesta).toEqual({ acierto: false, conPista: true, correcto: e })
+    expect(partida.puntuacion).toBe(75)
+    expect(partida.aciertosALaPrimera).toBe(1)
+    expect(partida.acertados).toEqual(['a'])
+    expect(partida.pendientes).toBe(5)
+    expect(partida.fallos).toBe(3)
+    expect(partida.pistasUsadas).toBe(0)
+    expect(partida.rachaDeFallos).toEqual([])
+  })
+
+  it('fallar con ella es un Fallo normal: resta 25, abre la Corrección y suma 1 a la Racha', () => {
+    let partida = trasElRepaso(catalogoConComunidades())
+    const [a, e] = ['a', 'e'].map((id) => partida.elementos.find((elemento) => elemento.id === id)!)
+
+    partida = responder(partida, 'a')
+
+    expect(partida.correccion).toEqual({ elegido: a, correcto: e, duracion: 3_000 })
+    expect(partida.puntuacion).toBe(50)
+    expect(partida.fallos).toBe(4)
+    expect(partida.rachaDeFallos).toEqual([e])
+
+    partida = fallarLaPregunta(fallarLaPregunta(cerrarCorreccion(partida)))
+    expect(partida.repaso?.elementos.map((elemento) => elemento.id)).toEqual(['e', 'f', 'b'])
+  })
+
+  it('en Ubicación → nombre es la Pista de 4 opciones: acertarla cuenta como pista usada', () => {
+    let partida = trasElRepaso(catalogoConComunidades())
+    const e = partida.preguntado!
+
+    partida = pedirPista(partida)
+    expect(partida.pista?.opciones).toHaveLength(4)
+    partida = elegirOpcion(partida, 'e')
+
+    expect(partida.correccion).toEqual({ elegido: e, correcto: e, duracion: 2_000 })
+    expect(partida.puntuacion).toBe(75)
+    expect(partida.pistasUsadas).toBe(1)
+    expect(partida.pistaDeArea).toBeNull()
   })
 })
 

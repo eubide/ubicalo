@@ -57,6 +57,7 @@ export interface Partida {
   correccion: Correccion | null
   rachaDeFallos: Elemento[]
   repaso: Repaso | null
+  pistaDeArea: string[] | null
   cola: Elemento[]
   siguienteVuelta: Elemento[]
   acertados: string[]
@@ -115,6 +116,7 @@ export function iniciarPartida(elementos: Elemento[], azar: Azar, reloj: Reloj):
       correccion: null,
       rachaDeFallos: [],
       repaso: null,
+      pistaDeArea: null,
       cola: barajar(elementos, azar),
       siguienteVuelta: [],
       acertados: [],
@@ -171,7 +173,12 @@ export function marcarEnRepaso(partida: Partida, id: string): Partida {
 
 export function cerrarRepaso(partida: Partida): Partida {
   if (!partida.repaso) return partida
-  return { ...reanudar(partida, partida.reloj()), repaso: null }
+  return { ...reanudar(partida, partida.reloj()), repaso: null, pistaDeArea: areaDe(partida) }
+}
+
+function areaDe({ cola: [preguntado], elementos }: Partida): string[] {
+  if (preguntado.comunidad === undefined) return preguntado.vecinos
+  return elementos.filter((elemento) => elemento.comunidad === preguntado.comunidad).map((elemento) => elemento.id)
 }
 
 function reanudar(partida: Partida, ahora: number): Partida {
@@ -277,6 +284,7 @@ function avanzar(partida: Partida, respuesta: Respuesta, siguePendiente: boolean
     {
       ...partida,
       pista: null,
+      pistaDeArea: null,
       cola: resto,
       siguienteVuelta: siguePendiente ? [...partida.siguienteVuelta, correcto] : partida.siguienteVuelta,
       acertados: siguePendiente ? partida.acertados : [...partida.acertados, correcto.id],
@@ -290,6 +298,9 @@ function resolver(partida: Partida, acierto: boolean): Partida {
   const ahora = partida.reloj()
   const correcto = partida.cola[0]
   if (!acierto) return avanzar(anotarFallo(partida), { acierto, conPista: false, correcto }, true, ahora)
+  if (partida.pistaDeArea) {
+    return abrirCorreccion(avanzar(partida, { acierto: false, conPista: true, correcto }, true, ahora), correcto, correcto)
+  }
   const segundos = (ahora - partida.mostradoEn) / 1000
   const bonus = Math.round(BONUS_MAXIMO_DE_RAPIDEZ * Math.max(0, 1 - segundos / SEGUNDOS_HASTA_PERDER_EL_BONUS))
   const aLaPrimera = partida.vuelta === 1
@@ -333,6 +344,7 @@ export function abandonar(partida: Partida): Partida {
     pista: null,
     correccion: null,
     repaso: null,
+    pistaDeArea: null,
     terminada: true,
     abandonada: true,
   }
