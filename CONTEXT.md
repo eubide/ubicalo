@@ -80,6 +80,22 @@ _Evitar_: error
 Las cuatro opciones que se ofrecen en Ubicación → nombre, a petición del alumno o tras un fallo. Resolver con pista no cuenta como acierto.
 _Evitar_: ayuda, opciones
 
+**Pista de área**:
+Ayuda sobre el mapa que acompaña a una pregunta tras un Repaso: se iluminan la comunidad autónoma que contiene la provincia o los Vecinos de la comunidad. Resolver con ella cuenta como acierto con pista.
+_Evitar_: ayuda, zona
+
+**Corrección**:
+Panel temporal que sigue a un Fallo o a un acierto con pista y muestra lo que respondió el alumno junto al elemento correcto; se cierra solo y no se puede saltar.
+_Evitar_: feedback, modal, aviso
+
+**Racha de fallos**:
+Número de preguntas falladas seguidas; un acierto sin ayuda la reinicia y un acierto con pista no la cambia.
+_Evitar_: serie, racha mala
+
+**Repaso**:
+Pausa activa que abre una Racha de fallos de tres: muestra rotulados los elementos fallados de la racha para localizarlos antes de seguir.
+_Evitar_: resumen, revisión
+
 **Distractor**:
 Opción incorrecta dentro de una pista.
 _Evitar_: opción falsa, señuelo
