@@ -198,6 +198,7 @@
           {#if punto}
             <circle
               class="diana"
+              class:correcto={correcto === String(contorno.id)}
               cx={punto[0]}
               cy={punto[1]}
               r={radioDiana}
@@ -285,6 +286,12 @@
   .elementos .diana {
     fill: transparent;
     cursor: pointer;
+  }
+
+  .elementos .diana.correcto {
+    stroke: #14532d;
+    stroke-width: 3;
+    vector-effect: non-scaling-stroke;
   }
 
   .elementos path.acertado {

@@ -162,6 +162,7 @@
   .elemento.correcto path {
     stroke: #14532d;
     stroke-width: 4;
+    vector-effect: non-scaling-stroke;
     stroke-linejoin: round;
   }
 

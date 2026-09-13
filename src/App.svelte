@@ -224,7 +224,9 @@
             <button type="submit">Responder</button>
           </form>
         {:else}
-          <p class="pregunta">{correccion ? ' ' : partida.preguntado?.nombreMostrado}</p>
+          <p class="pregunta">
+            {#if !correccion}{partida.preguntado?.nombreMostrado}{/if}
+          </p>
         {/if}
         <PuntuacionYTiempo puntuacion={partida.puntuacion} tiempo={tiempoJugado(partida, ahora)} {aBatir} />
         <p class="pendientes">{partida.pendientes} / {totalElementos}</p>
@@ -254,7 +256,7 @@
       acertados={partida.acertados}
       {resaltado}
       tocado={correccion?.elegido.id ?? null}
-      correcto={correccion && !desvelaPreguntado ? correccion.correcto.id : null}
+      correcto={correccion?.correcto.id ?? null}
       preguntado={correccion ? null : (partida.preguntado?.id ?? null)}
       iluminado={escribeNombre ? (partida.preguntado?.id ?? null) : null}      fallados={partida.terminada ? partida.fallados.map((elemento) => elemento.id) : []}
       alElegir={elegir}
@@ -264,9 +266,7 @@
     {#if correccion}
       <div class="correccion" role="status">
         <p>
-          Tocaste {correccion.elegido.nombreMostrado}{desvelaPreguntado
-            ? ''
-            : ` · ${correccion.correcto.nombreMostrado} está aquí`}
+          Tocaste {correccion.elegido.nombreMostrado} · {correccion.correcto.nombreMostrado} está aquí
         </p>
         <div class="barra" style:animation-duration="{correccion.duracion}ms"></div>
       </div>
@@ -293,6 +293,10 @@
     font-size: 1.5rem;
     font-weight: 600;
     margin: 0;
+  }
+
+  p.pregunta {
+    min-height: 1lh;
   }
 
   form.pregunta {
@@ -366,8 +370,11 @@
   }
 
   .correccion {
+    position: sticky;
+    bottom: 0;
     padding: 0.5rem;
     border-top: 1px solid #d1d5db;
+    background: #f7f7f5;
   }
 
   .correccion p {
