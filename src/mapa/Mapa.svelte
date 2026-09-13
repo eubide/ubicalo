@@ -4,14 +4,14 @@
   import { geoConicConformalSpain } from 'd3-composite-projections'
 
   interface Props {
-    geometrias: Feature<Geometry>[]
+    contornos: Feature<Geometry>[]
     contexto: FeatureCollection
     acertados: string[]
     resaltado: string | null
     alElegir: (id: string) => void
   }
 
-  let { geometrias, contexto, acertados, resaltado, alElegir }: Props = $props()
+  let { contornos, contexto, acertados, resaltado, alElegir }: Props = $props()
 
   const ancho = 960
   const alto = 620
@@ -23,7 +23,7 @@
         [margen, margen],
         [ancho - margen, alto - margen],
       ],
-      { type: 'FeatureCollection', features: geometrias },
+      { type: 'FeatureCollection', features: contornos },
     ),
   )
   const trazado = $derived(geoPath(proyeccion))
@@ -36,16 +36,16 @@
         <path d={trazado(pais)} />
       {/each}
     </g>
+    <!-- El MVP se juega con ratón o dedo; jugar con teclado no está en la spec. -->
+    <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
     <g class="elementos">
-      {#each geometrias as rasgo (rasgo.id)}
+      {#each contornos as contorno (contorno.id)}
+        {@const id = String(contorno.id)}
         <path
-          d={trazado(rasgo)}
-          class:acertado={acertados.includes(String(rasgo.id))}
-          class:resaltado={resaltado === String(rasgo.id)}
-          role="button"
-          tabindex="-1"
-          onclick={() => alElegir(String(rasgo.id))}
-          onkeydown={() => {}}
+          d={trazado(contorno)}
+          class:acertado={acertados.includes(id)}
+          class:resaltado={resaltado === id}
+          onclick={() => alElegir(id)}
         />
       {/each}
     </g>
@@ -78,11 +78,6 @@
     stroke: #9aa0a6;
     stroke-width: 0.8;
     cursor: pointer;
-    outline: none;
-  }
-
-  .elementos path:hover {
-    fill: #eef2f6;
   }
 
   .elementos path.acertado {

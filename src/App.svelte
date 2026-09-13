@@ -1,27 +1,23 @@
 <script lang="ts">
   import type { FeatureCollection } from 'geojson'
-  import { catalogo, geometrias } from './catalogo/catalogo'
+  import { catalogo, contornos } from './catalogo/catalogo'
   import contextoGeografico from './datos/contexto-geografico.json'
   import Mapa from './mapa/Mapa.svelte'
   import { iniciarPartida, responder } from './partida/partida'
 
-  const elementos = catalogo('comunidades')
-  const rasgos = geometrias('comunidades')
+  const elementos = catalogo()
+  const contornosDelTipo = contornos()
   const contexto = contextoGeografico as FeatureCollection
 
   let partida = $state(iniciarPartida(elementos, Math.random))
 
-  const resaltado = $derived(
-    partida.ultimaRespuesta && !partida.ultimaRespuesta.acierto ? partida.ultimaRespuesta.correcto.id : null,
-  )
+  const respuesta = $derived(partida.ultimaRespuesta)
+  const desvelaPreguntado = $derived(respuesta?.correcto.id === partida.preguntado?.id)
+  const resaltado = $derived(respuesta && !respuesta.acierto && !desvelaPreguntado ? respuesta.correcto.id : null)
 
   function elegir(id: string) {
     if (partida.terminada) return
     partida = responder(partida, id)
-  }
-
-  function jugarOtraVez() {
-    partida = iniciarPartida(elementos, Math.random)
   }
 </script>
 
@@ -29,24 +25,25 @@
   <header>
     {#if partida.terminada}
       <p class="pregunta">¡Partida terminada!</p>
-      <button onclick={jugarOtraVez}>Jugar otra vez</button>
     {:else}
       <p class="pregunta">{partida.preguntado?.nombre}</p>
       <p class="pendientes">{partida.pendientes} / {elementos.length}</p>
     {/if}
   </header>
 
-  {#if partida.ultimaRespuesta}
-    <p class="respuesta" class:fallo={!partida.ultimaRespuesta.acierto}>
-      {#if partida.ultimaRespuesta.acierto}
-        Correcto: {partida.ultimaRespuesta.correcto.nombre}
+  {#if respuesta}
+    <p class="respuesta" class:fallo={!respuesta.acierto}>
+      {#if respuesta.acierto}
+        Correcto: {respuesta.correcto.nombre}
+      {:else if desvelaPreguntado}
+        Incorrecto
       {:else}
-        Incorrecto. Era {partida.ultimaRespuesta.correcto.nombre}
+        Incorrecto. Era {respuesta.correcto.nombre}
       {/if}
     </p>
   {/if}
 
-  <Mapa geometrias={rasgos} {contexto} acertados={partida.acertados} {resaltado} alElegir={elegir} />
+  <Mapa contornos={contornosDelTipo} {contexto} acertados={partida.acertados} {resaltado} alElegir={elegir} />
 </main>
 
 <style>

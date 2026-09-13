@@ -3,23 +3,35 @@ import { feature } from 'topojson-client'
 import type { GeometryCollection, Topology } from 'topojson-specification'
 import comunidadesTopo from 'es-atlas/es/autonomous_regions.json'
 
-export type Tipo = 'comunidades'
-
 export interface Elemento {
   id: string
   nombre: string
+  alias: string[]
 }
 
 const GIBRALTAR = '20'
 
-export function catalogo(_tipo: Tipo): Elemento[] {
-  return comunidadesTopo.objects.autonomous_regions.geometries
-    .filter((geometria) => geometria.id !== GIBRALTAR)
-    .map((geometria) => ({ id: geometria.id, nombre: geometria.properties.name }))
+const NOMBRES_DOBLES: Record<string, Pick<Elemento, 'nombre' | 'alias'>> = {
+  '09': { nombre: 'Cataluña', alias: ['Catalunya'] },
+  '16': { nombre: 'País Vasco', alias: ['Euskadi'] },
 }
 
-export function geometrias(_tipo: Tipo): Feature<Geometry>[] {
-  const topologia = comunidadesTopo as unknown as Topology<{ autonomous_regions: GeometryCollection }>
-  const coleccion = feature(topologia, topologia.objects.autonomous_regions) as FeatureCollection
-  return coleccion.features.filter((rasgo) => rasgo.id !== GIBRALTAR)
+type Comunidades = GeometryCollection<{ name: string }>
+
+const topologia = comunidadesTopo as unknown as Topology<{ autonomous_regions: Comunidades }>
+
+const comunidades: Comunidades = {
+  ...topologia.objects.autonomous_regions,
+  geometries: topologia.objects.autonomous_regions.geometries.filter((geometria) => geometria.id !== GIBRALTAR),
+}
+
+export function catalogo(): Elemento[] {
+  return comunidades.geometries.map((geometria) => {
+    const id = String(geometria.id)
+    return { id, ...(NOMBRES_DOBLES[id] ?? { nombre: (geometria.properties as { name: string }).name, alias: [] }) }
+  })
+}
+
+export function contornos(): Feature<Geometry>[] {
+  return (feature(topologia, comunidades) as FeatureCollection).features
 }
