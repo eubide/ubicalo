@@ -2,36 +2,77 @@ import type { Feature, FeatureCollection, Geometry } from 'geojson'
 import { feature } from 'topojson-client'
 import type { GeometryCollection, Topology } from 'topojson-specification'
 import comunidadesTopo from 'es-atlas/es/autonomous_regions.json'
+import provinciasTopo from 'es-atlas/es/provinces.json'
+
+export type Tipo = 'comunidades' | 'provincias'
 
 export interface Elemento {
   id: string
   nombre: string
+  nombreMostrado: string
   alias: string[]
 }
 
-const GIBRALTAR = '20'
+type Nombres = Omit<Elemento, 'id'>
 
-const NOMBRES_DOBLES: Record<string, Pick<Elemento, 'nombre' | 'alias'>> = {
-  '09': { nombre: 'Cataluña', alias: ['Catalunya'] },
-  '16': { nombre: 'País Vasco', alias: ['Euskadi'] },
+const GIBRALTAR_COMUNIDADES = '20'
+const GIBRALTAR_PROVINCIAS = '54'
+
+const NOMBRES_DOBLES: Record<string, { castellano: string; otraForma: string }> = {
+  'Cataluña/Catalunya': { castellano: 'Cataluña', otraForma: 'Catalunya' },
+  'País Vasco/Euskadi': { castellano: 'País Vasco', otraForma: 'Euskadi' },
+  'Alacant/Alicante': { castellano: 'Alicante', otraForma: 'Alacant' },
+  'Castelló/Castellón': { castellano: 'Castellón', otraForma: 'Castelló' },
+  'València/Valencia': { castellano: 'Valencia', otraForma: 'València' },
+  'Araba/Álava': { castellano: 'Álava', otraForma: 'Araba' },
 }
 
-type Comunidades = GeometryCollection<{ name: string }>
-
-const topologia = comunidadesTopo as unknown as Topology<{ autonomous_regions: Comunidades }>
-
-const comunidades: Comunidades = {
-  ...topologia.objects.autonomous_regions,
-  geometries: topologia.objects.autonomous_regions.geometries.filter((geometria) => geometria.id !== GIBRALTAR),
+const FORMAS_CASTELLANAS: Record<string, string> = {
+  'A Coruña': 'La Coruña',
+  Bizkaia: 'Vizcaya',
+  'Comunitat Valenciana': 'Comunidad Valenciana',
+  Gipuzkoa: 'Guipúzcoa',
+  Girona: 'Gerona',
+  'Illes Balears': 'Islas Baleares',
+  Lleida: 'Lérida',
+  Ourense: 'Orense',
 }
 
-export function catalogo(): Elemento[] {
-  return comunidades.geometries.map((geometria) => {
-    const id = String(geometria.id)
-    return { id, ...(NOMBRES_DOBLES[id] ?? { nombre: (geometria.properties as { name: string }).name, alias: [] }) }
-  })
+function nombresDelElemento(nombreEnAtlas: string): Nombres {
+  const doble = NOMBRES_DOBLES[nombreEnAtlas]
+  if (doble) return { nombre: doble.castellano, nombreMostrado: doble.castellano, alias: [doble.otraForma] }
+  const castellano = FORMAS_CASTELLANAS[nombreEnAtlas]
+  if (castellano) return { nombre: nombreEnAtlas, nombreMostrado: `${nombreEnAtlas} (${castellano})`, alias: [castellano] }
+  return { nombre: nombreEnAtlas, nombreMostrado: nombreEnAtlas, alias: [] }
 }
 
-export function contornos(): Feature<Geometry>[] {
-  return (feature(topologia, comunidades) as FeatureCollection).features
+type Geometrias = GeometryCollection<{ name: string }>
+
+function geometriasSinGibraltar(topologia: Topology, objeto: string, gibraltar: string) {
+  const geometrias = topologia.objects[objeto] as Geometrias
+  return {
+    topologia,
+    geometrias: { ...geometrias, geometries: geometrias.geometries.filter((geometria) => geometria.id !== gibraltar) },
+  }
+}
+
+const tipos = {
+  comunidades: geometriasSinGibraltar(
+    comunidadesTopo as unknown as Topology,
+    'autonomous_regions',
+    GIBRALTAR_COMUNIDADES,
+  ),
+  provincias: geometriasSinGibraltar(provinciasTopo as unknown as Topology, 'provinces', GIBRALTAR_PROVINCIAS),
+}
+
+export function catalogo(tipo: Tipo): Elemento[] {
+  return tipos[tipo].geometrias.geometries.map((geometria) => ({
+    id: String(geometria.id),
+    ...nombresDelElemento((geometria.properties as { name: string }).name),
+  }))
+}
+
+export function contornos(tipo: Tipo): Feature<Geometry>[] {
+  const { topologia, geometrias } = tipos[tipo]
+  return (feature(topologia, geometrias) as FeatureCollection).features
 }
