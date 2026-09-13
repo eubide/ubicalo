@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { Feature, FeatureCollection, Geometry } from 'geojson'
+  import type { Feature, FeatureCollection, Geometry, Polygon } from 'geojson'
   import { geoCentroid, geoPath } from 'd3-geo'
   import { geoConicConformalSpain } from 'd3-composite-projections'
   import RecuadroCeutaMelilla, { esCeutaOMelilla } from './RecuadroCeutaMelilla.svelte'
@@ -8,11 +8,11 @@
     contornos: Feature<Geometry>[]
     contexto: FeatureCollection
     acertados: string[]
-    resaltado: string | null
     tocado?: string | null
     correcto?: string | null
     preguntado: string | null
-    iluminado?: string | null
+    iluminados?: string[]
+    rotulados?: string[]
     fallados?: string[]
     alElegir: (id: string) => void
     nombreDe: (id: string) => string
@@ -22,11 +22,11 @@
     contornos,
     contexto,
     acertados,
-    resaltado,
     tocado = null,
     correcto = null,
     preguntado,
-    iluminado = null,
+    iluminados = [],
+    rotulados = [],
     fallados = [],
     alElegir,
     nombreDe,
@@ -50,6 +50,9 @@
   const anchoRecuadro = 232
   const altoRecuadro = 150
   const radioDiana = 10
+  const tamañoRotuloEnPixeles = 13
+  let anchoEnPantalla = $state(ancho)
+  const tamañoRotulo = $derived((tamañoRotuloEnPixeles * ancho) / Math.max(anchoEnPantalla, 1))
 
   const ceutaYMelilla = $derived(
     contornos
@@ -156,8 +159,20 @@
     }
   }
 
+  function centroDelRotulo(contorno: Feature<Geometry>): [number, number] {
+    const { geometry } = contorno
+    if (geometry.type !== 'MultiPolygon') return trazado.centroid(contorno)
+    const poligonos = geometry.coordinates.map((coordinates): Polygon => ({ type: 'Polygon', coordinates }))
+    const mayor = poligonos.reduce((a, b) => (trazado.area(b) > trazado.area(a) ? b : a))
+    return trazado.centroid(mayor)
+  }
+
   function pulsarElemento(id: string) {
-    if (iluminado !== null) return
+    if (iluminados.length > 0) return
+    if (rotulados.length > 0) {
+      if (rotulados.includes(id) && !huboGesto && !dobleToque) alElegir(id)
+      return
+    }
     if (tipoDePuntero !== 'touch') {
       seleccionado = null
       alElegir(id)
@@ -173,7 +188,7 @@
   }
 </script>
 
-<figure class="mapa">
+<figure class="mapa" bind:clientWidth={anchoEnPantalla}>
   <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
   <svg
     viewBox="0 0 {ancho} {alto}"
@@ -211,10 +226,9 @@
           <path
             d={trazado(contorno)}
             class:acertado={acertados.includes(id)}
-            class:resaltado={resaltado === id}
             class:fallado={fallados.includes(id)}
             class:seleccionado={seleccionado === id}
-            class:iluminado={iluminado === id}
+            class:iluminado={iluminados.includes(id)}
             class:tocado={tocado === id}
             onclick={() => pulsarElemento(id)}
           />
@@ -224,16 +238,31 @@
         <!-- Encima de todos los elementos para que los vecinos no tapen el contorno grueso. -->
         <path class="correcto" d={trazado(contornoCorrecto)} />
       {/if}
+      {#each contornos.filter((contorno) => rotulados.includes(String(contorno.id))) as contorno (contorno.id)}
+        {@const [x, y] = centroDelRotulo(contorno)}
+        {@const enRecuadro = ceutaYMelilla.some((elemento) => elemento.contorno === contorno)}
+        <text
+          class="rotulo"
+          x={enRecuadro ? x - radioDiana : x}
+          {y}
+          text-anchor={enRecuadro ? 'end' : 'middle'}
+          font-size={tamañoRotulo / vista.escala}
+        >
+          {nombreDe(String(contorno.id))}
+        </text>
+      {/each}
       <path class="marcos" d={proyeccion.getCompositionBorders()} />
     </g>
     <RecuadroCeutaMelilla
       elementos={ceutaYMelilla}
       {contexto}
       {acertados}
-      {resaltado}
       {tocado}
       {correcto}
-      {iluminado}
+      {iluminados}
+      {rotulados}
+      {tamañoRotulo}
+      {nombreDe}
       {fallados}
       {seleccionado}
       alElegir={pulsarElemento}
@@ -298,7 +327,6 @@
     fill: #cfe8d6;
   }
 
-  .elementos path.resaltado,
   .elementos path.fallado {
     fill: #f4c7a1;
   }
@@ -329,6 +357,18 @@
     fill: none;
     stroke: #9aa0a6;
     stroke-width: 0.8;
+  }
+
+  .rotulo {
+    font-weight: 600;
+    dominant-baseline: middle;
+    fill: #1f2937;
+    stroke: #fdfdfb;
+    stroke-width: 3;
+    paint-order: stroke;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
+    pointer-events: none;
   }
 
   .seleccion {

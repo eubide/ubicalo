@@ -19,8 +19,12 @@
   import {
     abandonar,
     cerrarCorreccion,
+    cerrarRepaso,
+    correccionTrasFallo,
+    DURACION_REPASO_UBICACION_NOMBRE,
     elegirOpcion,
     iniciarPartida,
+    marcarEnRepaso,
     responder,
     responderConTexto,
     resumirPartida,
@@ -75,27 +79,36 @@
 
   const escribeNombre = $derived(prueba?.modo === 'ubicacion-nombre')
   const respuesta = $derived(partida?.ultimaRespuesta)
-  const desvelaPreguntado = $derived(respuesta?.correcto.id === partida?.preguntado?.id)
   const pista = $derived(partida?.pista ?? null)
   const correccion = $derived(partida?.correccion ?? null)
-  const resaltado = $derived(
-    escribeNombre &&
-      respuesta &&
-      !respuesta.acierto &&
-      !respuesta.conPista &&
-      !desvelaPreguntado &&
-      !pista &&
-      !partida?.terminada
-      ? respuesta.correcto.id
-      : null,
+  const repaso = $derived(partida?.repaso ?? null)
+  const rotulados = $derived(
+    repaso?.elementos.map((elemento) => elemento.id).filter((id) => !repaso.marcados.includes(id)) ?? [],
   )
+
+  const iluminados = $derived.by(() => {
+    if (!escribeNombre) return []
+    if (repaso) return rotulados
+    const id = (correccion?.correcto ?? partida?.preguntado)?.id
+    return id === undefined ? [] : [id]
+  })
+
+  function cerrarAlCabo(duracion: number, cerrar: (partida: Partida) => Partida) {
+    const espera = setTimeout(() => {
+      if (partida) partida = cerrar(partida)
+    }, duracion)
+    return () => clearTimeout(espera)
+  }
 
   $effect(() => {
     if (!correccion) return
-    const espera = setTimeout(() => {
-      if (partida) partida = cerrarCorreccion(partida)
-    }, correccion.duracion)
-    return () => clearTimeout(espera)
+    confirmandoAbandono = false
+    return cerrarAlCabo(correccion.duracion, cerrarCorreccion)
+  })
+
+  $effect(() => {
+    if (!repaso || !escribeNombre) return
+    return cerrarAlCabo(DURACION_REPASO_UBICACION_NOMBRE, cerrarRepaso)
   })
 
   function empezar(elegida: Prueba) {
@@ -120,6 +133,10 @@
 
   function elegir(id: string) {
     if (!partida || partida.terminada) return
+    if (partida.repaso) {
+      partida = marcarEnRepaso(partida, id)
+      return
+    }
     partida = responder(partida, id)
     if (partida.terminada) registrar(partida)
   }
@@ -205,12 +222,16 @@
             tabindex="-1"
             aria-label="Pista: elige el nombre del elemento iluminado"
           >
-            <p class:fallo={pista.trasFallo}>{pista.trasFallo ? 'Incorrecto. ¿Cuál es?' : '¿Cuál es?'}</p>
+            <p class:fallo={pista.escrito !== null}>
+              {pista.escrito !== null ? `Escribiste: ${pista.escrito}. ¿Cuál es?` : '¿Cuál es?'}
+            </p>
             {#each pista.opciones as opcion (opcion.id)}
               <button type="button" onclick={() => elegirOpcionDePista(opcion.id)}>{opcion.nombreMostrado}</button>
             {/each}
           </div>
-        {:else if escribeNombre}
+        {:else if repaso}
+          <p class="pregunta">{escribeNombre ? 'Repaso: fíjate en dónde están' : 'Repaso: toca cada nombre'}</p>
+        {:else if escribeNombre && !correccion}
           <form class="pregunta" onsubmit={enviarTexto}>
             <input
               bind:this={campoDeTexto}
@@ -236,39 +257,40 @@
       {/if}
     </header>
 
-    {#if respuesta && !partida.terminada && !pista && (escribeNombre || respuesta.acierto)}
-      <p class="respuesta" class:fallo={!respuesta.acierto && !respuesta.conPista}>
-        {#if respuesta.conPista}
-          Con pista{desvelaPreguntado ? '' : `: ${respuesta.correcto.nombreMostrado}`}
-        {:else if respuesta.acierto}
-          Correcto: {respuesta.correcto.nombreMostrado}
-        {:else if desvelaPreguntado}
-          Incorrecto
-        {:else}
-          Incorrecto. Era {respuesta.correcto.nombreMostrado}
-        {/if}
-      </p>
+    {#if respuesta?.acierto && !partida.terminada && !pista}
+      <p class="respuesta">Correcto: {respuesta.correcto.nombreMostrado}</p>
     {/if}
 
     <Mapa
       contornos={contornosDelTipo}
       {contexto}
       acertados={partida.acertados}
-      {resaltado}
-      tocado={correccion?.elegido.id ?? null}
+      tocado={correccion && !escribeNombre ? correccion.elegido.id : null}
       correcto={correccion?.correcto.id ?? null}
       preguntado={correccion ? null : (partida.preguntado?.id ?? null)}
-      iluminado={escribeNombre ? (partida.preguntado?.id ?? null) : null}      fallados={partida.terminada ? partida.fallados.map((elemento) => elemento.id) : []}
+      {iluminados}
+      {rotulados}
+      fallados={partida.terminada ? partida.fallados.map((elemento) => elemento.id) : []}
       alElegir={elegir}
       {nombreDe}
     />
 
     {#if correccion}
-      <div class="correccion" role="status">
+      <div class="correccion" class:conPista={!correccionTrasFallo(correccion)} role="status">
         <p>
-          Tocaste {correccion.elegido.nombreMostrado} · {correccion.correcto.nombreMostrado} está aquí
+          {#if !escribeNombre}
+            Tocaste {correccion.elegido.nombreMostrado} · {correccion.correcto.nombreMostrado} está aquí
+          {:else if correccionTrasFallo(correccion)}
+            Elegiste {correccion.elegido.nombreMostrado} · Era {correccion.correcto.nombreMostrado}
+          {:else}
+            Con pista: {correccion.correcto.nombreMostrado}
+          {/if}
         </p>
         <div class="barra" style:animation-duration="{correccion.duracion}ms"></div>
+      </div>
+    {:else if repaso && escribeNombre}
+      <div class="repaso" role="status">
+        <div class="barra" style:animation-duration="{DURACION_REPASO_UBICACION_NOMBRE}ms"></div>
       </div>
     {/if}
   {/if}
@@ -365,11 +387,8 @@
     min-height: 1.5rem;
   }
 
-  .respuesta.fallo {
-    color: #b45309;
-  }
-
-  .correccion {
+  .correccion,
+  .repaso {
     position: sticky;
     bottom: 0;
     padding: 0.5rem;
@@ -381,6 +400,15 @@
     margin: 0 0 0.5rem;
     font-size: 1.125rem;
     color: #b45309;
+  }
+
+  .correccion.conPista p {
+    color: #2f7a4a;
+  }
+
+  .correccion.conPista .barra,
+  .repaso .barra {
+    background: #2f7a4a;
   }
 
   .barra {

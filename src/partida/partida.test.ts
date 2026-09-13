@@ -3,8 +3,11 @@ import type { Elemento } from '../catalogo/catalogo'
 import {
   abandonar,
   cerrarCorreccion,
+  cerrarRepaso,
+  correccionTrasFallo,
   elegirOpcion,
   iniciarPartida,
+  marcarEnRepaso,
   pedirPista,
   responder,
   responderConTexto,
@@ -170,7 +173,7 @@ describe('Partida en Ubicación → nombre', () => {
     const soria: Elemento = { id: 'so', nombre: 'Soria', nombreMostrado: 'Soria', alias: [], vecinos: [] }
     const acierta = (elemento: Elemento, texto: string) => {
       const partida = responderConTexto(partidaPreguntando(elemento), texto)
-      if (partida.pista?.trasFallo) return false
+      if (partida.pista) return false
       expect(partida.ultimaRespuesta).toBeDefined()
       return partida.ultimaRespuesta!.acierto
     }
@@ -204,7 +207,7 @@ describe('Partida en Ubicación → nombre', () => {
     const acertadoAntes = partida.ultimaRespuesta
     partida = responderConTexto(partida, 'Zeta')
 
-    expect(partida.pista?.trasFallo).toBe(true)
+    expect(partida.pista?.escrito).toBe('Zeta')
     expect(partida.pista?.opciones).toContainEqual(fallado)
     expect(partida.pistasUsadas).toBe(0)
     expect(partida.preguntado).toEqual(fallado)
@@ -216,12 +219,25 @@ describe('Partida en Ubicación → nombre', () => {
     expect(partida.acertados).not.toContain(fallado.id)
   })
 
+  it('un texto incorrecto abre la pista con lo que escribió el alumno, sin Corrección', () => {
+    const partida = responderConTexto(iniciarPartida(elementos, azarFijo, reloj), '  Zeta ')
+
+    expect(partida.pista?.escrito).toBe('Zeta')
+    expect(partida.correccion).toBeNull()
+  })
+
+  it('lo escrito se muestra sin la puntuación final: "Soria." queda "Soria"', () => {
+    const partida = responderConTexto(iniciarPartida(elementos, azarFijo, reloj), 'Soria. ')
+
+    expect(partida.pista?.escrito).toBe('Soria')
+  })
+
   it('un texto vacío pide pista: no cuenta como fallo ni pasa al siguiente elemento', () => {
     const inicial = iniciarPartida(elementos, azarFijo, reloj)
 
     const partida = responderConTexto(inicial, '   ')
 
-    expect(partida.pista?.trasFallo).toBe(false)
+    expect(partida.pista?.escrito).toBeNull()
     expect(partida.pista?.opciones).toHaveLength(4)
     expect(partida.pista?.opciones).toContainEqual(inicial.preguntado)
     expect(partida.pistasUsadas).toBe(0)
@@ -229,6 +245,69 @@ describe('Partida en Ubicación → nombre', () => {
     expect(partida.puntuacion).toBe(0)
     expect(partida.preguntado).toEqual(inicial.preguntado)
     expect(partida.ultimaRespuesta).toBeUndefined()
+  })
+})
+
+describe('Corrección en Ubicación → nombre', () => {
+  function pistaTrasFallo() {
+    const partida = responderConTexto(iniciarPartida(elementos, azarFijo, reloj), 'Zeta')
+    const correcto = partida.preguntado!
+    const distractor = partida.pista!.opciones.find((opcion) => opcion.id !== correcto.id)!
+    return { partida, correcto, distractor }
+  }
+
+  it('elegir un distractor abre durante 3 s una Corrección tras fallo con lo elegido y el correcto', () => {
+    const { partida, correcto, distractor } = pistaTrasFallo()
+
+    const { correccion } = elegirOpcion(partida, distractor.id)
+
+    expect(correccion).toEqual({ elegido: distractor, correcto, duracion: 3_000 })
+    expect(correccionTrasFallo(correccion!)).toBe(true)
+  })
+
+  it('elegir la opción correcta abre durante 2 s una Corrección con pista', () => {
+    const { partida, correcto } = pistaTrasFallo()
+
+    const { correccion } = elegirOpcion(partida, correcto.id)
+
+    expect(correccion).toEqual({ elegido: correcto, correcto, duracion: 2_000 })
+    expect(correccionTrasFallo(correccion!)).toBe(false)
+  })
+
+  it('elegir un id que no está entre las opciones de la pista se ignora', () => {
+    const { partida } = pistaTrasFallo()
+    const fuera = elementos.find((elemento) => !partida.pista!.opciones.includes(elemento))!
+
+    expect(elegirOpcion(partida, fuera.id)).toBe(partida)
+  })
+
+  it('durante la Corrección se ignoran el texto, el texto vacío, las opciones y señalar', () => {
+    const { partida: conPista, correcto, distractor } = pistaTrasFallo()
+    const partida = elegirOpcion(conPista, distractor.id)
+    const preguntado = partida.preguntado!
+
+    expect(responderConTexto(partida, preguntado.nombre)).toBe(partida)
+    expect(responderConTexto(partida, '')).toBe(partida)
+    expect(pedirPista(partida)).toBe(partida)
+    expect(elegirOpcion(partida, correcto.id)).toBe(partida)
+    expect(elegirOpcion(partida, distractor.id)).toBe(partida)
+    expect(responder(partida, preguntado.id)).toBe(partida)
+  })
+
+  it('el tiempo de la Corrección no suma al tiempo jugado ni al bonus de la pregunta siguiente', () => {
+    ahora = 1_000
+    let partida = responderConTexto(iniciarPartida(elementos, azarFijo, reloj), '')
+    ahora = 3_000
+    partida = elegirOpcion(partida, partida.preguntado!.id)
+    expect(tiempoJugado(partida, 4_500)).toBe(2_000)
+
+    ahora = 5_000
+    partida = cerrarCorreccion(partida)
+    ahora = 7_000
+    partida = responderConTexto(partida, partida.preguntado!.nombre)
+
+    expect(partida.puntuacion).toBe(140)
+    expect(tiempoJugado(partida, 7_000)).toBe(4_000)
   })
 })
 
@@ -299,7 +378,7 @@ describe('Pista', () => {
     const resuelto = partida.preguntado!
     partida = responderConTexto(partida, '')
 
-    partida = elegirOpcion(partida, resuelto.id)
+    partida = cerrarCorreccion(elegirOpcion(partida, resuelto.id))
 
     expect(partida.ultimaRespuesta).toEqual({ acierto: false, conPista: true, correcto: resuelto })
     expect(partida.pista).toBeNull()
@@ -328,7 +407,7 @@ describe('Pista', () => {
     partida = responderConTexto(partida, 'Zeta')
     const distractor = partida.pista!.opciones.find((opcion) => opcion.id !== fallado.id)!
 
-    partida = elegirOpcion(partida, distractor.id)
+    partida = cerrarCorreccion(elegirOpcion(partida, distractor.id))
 
     expect(partida.ultimaRespuesta).toEqual({ acierto: false, conPista: false, correcto: fallado })
     expect(partida.pista).toBeNull()
@@ -364,13 +443,237 @@ describe('Pista', () => {
     let partida = iniciarPartida(elementos, azarFijo, reloj)
 
     partida = responderConTexto(partida, '')
-    partida = elegirOpcion(partida, partida.preguntado!.id)
+    partida = cerrarCorreccion(elegirOpcion(partida, partida.preguntado!.id))
     expect(partida.pistasUsadas).toBe(1)
     partida = responderConTexto(partida, 'Zeta')
     expect(partida.pistasUsadas).toBe(1)
     partida = elegirOpcion(partida, partida.preguntado!.id)
 
     expect(partida.pistasUsadas).toBe(2)
+  })
+})
+
+function fallarSeñalando(partida: Partida): Partida {
+  const preguntado = partida.preguntado!
+  return cerrarCorreccion(responder(partida, elementos.find((elemento) => elemento.id !== preguntado.id)!.id))
+}
+
+function fallarEscribiendo(partida: Partida): Partida {
+  const conPista = responderConTexto(partida, 'Zeta')
+  const distractor = conPista.pista!.opciones.find((opcion) => opcion.id !== partida.preguntado!.id)!
+  return cerrarCorreccion(elegirOpcion(conPista, distractor.id))
+}
+
+describe('Racha de fallos', () => {
+  it('suma una por pregunta fallada y un acierto sin ayuda la reinicia', () => {
+    let partida = iniciarPartida(elementos, azarFijo, reloj)
+    expect(partida.rachaDeFallos).toEqual([])
+
+    const primero = partida.preguntado!
+    partida = fallarSeñalando(partida)
+    const segundo = partida.preguntado!
+    partida = fallarSeñalando(partida)
+    expect(partida.rachaDeFallos).toEqual([primero, segundo])
+
+    partida = responder(partida, partida.preguntado!.id)
+    expect(partida.rachaDeFallos).toEqual([])
+  })
+
+  it('un texto incorrecto y una opción incorrecta en la misma pregunta suman una sola', () => {
+    const partida = fallarEscribiendo(iniciarPartida(elementos, azarFijo, reloj))
+
+    expect(partida.fallos).toBe(2)
+    expect(partida.rachaDeFallos).toHaveLength(1)
+  })
+
+  it('un acierto con pista no la cambia, ni tras pedirla ni tras un texto incorrecto', () => {
+    let partida = fallarEscribiendo(iniciarPartida(elementos, azarFijo, reloj))
+    partida = fallarEscribiendo(partida)
+
+    partida = cerrarCorreccion(elegirOpcion(pedirPista(partida), partida.preguntado!.id))
+    expect(partida.rachaDeFallos).toHaveLength(2)
+
+    partida = cerrarCorreccion(elegirOpcion(responderConTexto(partida, 'Zeta'), partida.preguntado!.id))
+    expect(partida.rachaDeFallos).toHaveLength(2)
+  })
+
+  function segundaVueltaConDosFallosSeguidos() {
+    let partida = iniciarPartida(elementos, azarFijo, reloj)
+    partida = responderConTexto(partida, partida.preguntado!.nombre)
+    partida = responderConTexto(partida, partida.preguntado!.nombre)
+    const conPista = partida.preguntado!
+    partida = cerrarCorreccion(elegirOpcion(pedirPista(partida), conPista.id))
+    const cuarto = partida.preguntado!
+    partida = fallarEscribiendo(partida)
+    const quinto = partida.preguntado!
+    partida = fallarEscribiendo(partida)
+    expect(partida.vuelta).toBe(2)
+    expect(partida.preguntado).toEqual(conPista)
+    return { partida, conPista, cuarto, quinto }
+  }
+
+  it('sigue de una vuelta a la siguiente: fallar la primera pregunta de la vuelta 2 abre el Repaso', () => {
+    const { partida, conPista, cuarto, quinto } = segundaVueltaConDosFallosSeguidos()
+    expect(partida.rachaDeFallos).toEqual([cuarto, quinto])
+
+    const tras = fallarEscribiendo(partida)
+
+    expect(tras.repaso?.elementos).toEqual([cuarto, quinto, conPista])
+  })
+
+  it('un acierto sin ayuda en una vuelta posterior la reinicia', () => {
+    const { partida } = segundaVueltaConDosFallosSeguidos()
+
+    const tras = responderConTexto(partida, partida.preguntado!.nombre)
+
+    expect(tras.ultimaRespuesta?.acierto).toBe(true)
+    expect(tras.rachaDeFallos).toEqual([])
+  })
+})
+
+describe('Repaso', () => {
+  function tresFallosSeñalando() {
+    let partida = iniciarPartida(elementos, azarFijo, reloj)
+    const fallados: Elemento[] = []
+    for (let i = 0; i < 3; i++) {
+      fallados.push(partida.preguntado!)
+      partida = fallarSeñalando(partida)
+    }
+    return { partida, fallados }
+  }
+
+  it('empieza al cerrarse la Corrección del tercer fallo seguido con esos elementos y la Racha vuelve a 0', () => {
+    let partida = iniciarPartida(elementos, azarFijo, reloj)
+    const primero = partida.preguntado!
+    partida = fallarSeñalando(partida)
+    const segundo = partida.preguntado!
+    partida = fallarSeñalando(partida)
+    const tercero = partida.preguntado!
+    partida = responder(partida, elementos.find((elemento) => elemento.id !== tercero.id)!.id)
+    expect(partida.repaso).toBeNull()
+
+    partida = cerrarCorreccion(partida)
+
+    expect(partida.repaso?.elementos).toEqual([primero, segundo, tercero])
+    expect(partida.repaso?.marcados).toEqual([])
+    expect(partida.rachaDeFallos).toEqual([])
+  })
+
+  it('muestra los elementos de la Racha, no todos los fallados de la partida', () => {
+    let partida = fallarSeñalando(iniciarPartida(elementos, azarFijo, reloj))
+    partida = responder(partida, partida.preguntado!.id)
+    const racha: Elemento[] = []
+    for (let i = 0; i < 3; i++) {
+      racha.push(partida.preguntado!)
+      partida = fallarSeñalando(partida)
+    }
+
+    expect(partida.fallados).toHaveLength(4)
+    expect(partida.repaso?.elementos).toEqual(racha)
+  })
+
+  it('un elemento fallado varias veces en la Racha aparece una sola vez', () => {
+    const [x, y] = elementos
+    let partida = iniciarPartida([x, y], azarFijo, reloj)
+    const primero = partida.preguntado!
+    const otro = primero.id === x.id ? y : x
+    partida = cerrarCorreccion(responder(partida, otro.id))
+    partida = cerrarCorreccion(responder(partida, primero.id))
+    partida = cerrarCorreccion(responder(partida, otro.id))
+
+    expect(partida.repaso?.elementos).toEqual([primero, otro])
+  })
+
+  it('el mismo elemento fallado tres veces seguidas abre un Repaso con ese único elemento', () => {
+    const [x, y] = elementos
+    let partida = iniciarPartida([x, y], azarFijo, reloj)
+    partida = responder(partida, partida.preguntado!.id)
+    const pendiente = partida.preguntado!
+    const otro = pendiente.id === x.id ? y : x
+    for (let i = 0; i < 3; i++) partida = cerrarCorreccion(responder(partida, otro.id))
+
+    expect(partida.repaso?.elementos).toEqual([pendiente])
+
+    partida = marcarEnRepaso(partida, pendiente.id)
+    expect(partida.repaso).toBeNull()
+  })
+
+  it('en Nombre → ubicar termina al marcar los tres en cualquier orden; otros ids y repeticiones se ignoran', () => {
+    let { partida, fallados } = tresFallosSeñalando()
+    const [primero, segundo, tercero] = fallados
+    const ajeno = elementos.find((elemento) => !fallados.includes(elemento))!
+
+    expect(marcarEnRepaso(partida, ajeno.id)).toBe(partida)
+    partida = marcarEnRepaso(partida, tercero.id)
+    expect(marcarEnRepaso(partida, tercero.id)).toBe(partida)
+    partida = marcarEnRepaso(partida, primero.id)
+    expect(partida.repaso?.marcados).toEqual([tercero.id, primero.id])
+
+    partida = marcarEnRepaso(partida, segundo.id)
+
+    expect(partida.repaso).toBeNull()
+    expect(partida.pausadaDesde).toBeNull()
+    expect(responder(partida, partida.preguntado!.id).puntuacion).toBe(150)
+  })
+
+  it('durante el Repaso se ignoran señalar, el texto, el texto vacío y las opciones', () => {
+    const { partida } = tresFallosSeñalando()
+    const preguntado = partida.preguntado!
+
+    expect(responder(partida, preguntado.id)).toBe(partida)
+    expect(responderConTexto(partida, preguntado.nombre)).toBe(partida)
+    expect(responderConTexto(partida, '')).toBe(partida)
+    expect(pedirPista(partida)).toBe(partida)
+    expect(elegirOpcion(partida, preguntado.id)).toBe(partida)
+  })
+
+  it('marcar o cerrar sin Repaso no cambia la partida', () => {
+    const partida = iniciarPartida(elementos, azarFijo, reloj)
+
+    expect(marcarEnRepaso(partida, partida.preguntado!.id)).toBe(partida)
+    expect(cerrarRepaso(partida)).toBe(partida)
+  })
+
+  it('en Ubicación → nombre termina al cerrarlo tras 4 s, sin contar su tiempo ni restar bonus a la pregunta siguiente', () => {
+    let partida = iniciarPartida(elementos, azarFijo, reloj)
+    ahora = 1_000
+    partida = responderConTexto(partida, 'Zeta')
+    partida = elegirOpcion(partida, partida.pista!.opciones.find((opcion) => opcion.id !== partida.preguntado!.id)!.id)
+    ahora = 4_000
+    partida = cerrarCorreccion(partida)
+    ahora = 5_000
+    partida = fallarEscribiendo(partida)
+    ahora = 9_000
+    partida = responderConTexto(partida, 'Zeta')
+    partida = elegirOpcion(partida, partida.pista!.opciones.find((opcion) => opcion.id !== partida.preguntado!.id)!.id)
+    ahora = 12_000
+    partida = cerrarCorreccion(partida)
+
+    expect(partida.repaso).not.toBeNull()
+    expect(partida.puntuacion).toBe(0)
+    expect(tiempoJugado(partida, 14_000)).toBe(6_000)
+
+    ahora = 16_000
+    partida = cerrarRepaso(partida)
+    expect(partida.repaso).toBeNull()
+    expect(tiempoJugado(partida, 16_000)).toBe(6_000)
+
+    ahora = 18_000
+    partida = responderConTexto(partida, partida.preguntado!.nombre)
+
+    expect(partida.puntuacion).toBe(140)
+    expect(tiempoJugado(partida, 18_000)).toBe(8_000)
+  })
+
+  it('abandonar durante el Repaso lo cierra y no cuenta su tiempo', () => {
+    let { partida } = tresFallosSeñalando()
+    ahora = 5_000
+
+    partida = abandonar(partida)
+
+    expect(partida.repaso).toBeNull()
+    expect(partida.pausadaDesde).toBeNull()
+    expect(tiempoJugado(partida, 60_000)).toBe(0)
   })
 })
 
@@ -429,7 +732,7 @@ describe('Puntuación', () => {
   it('la puntuación no baja de 0 tras varios fallos', () => {
     let partida = iniciarPartida(elementos, azarFijo, reloj)
 
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 2; i++) {
       const preguntado = partida.preguntado!
       partida = cerrarCorreccion(responder(partida, elementos.find((elemento) => elemento.id !== preguntado.id)!.id))
     }
@@ -486,7 +789,7 @@ describe('Fin de partida', () => {
     let partida = iniciarPartida(elementos, azarFijo, reloj)
     const fallado = partida.preguntado!
     partida = cerrarCorreccion(responder(partida, elementos.find((elemento) => elemento.id !== fallado.id)!.id))
-    partida = elegirOpcion(pedirPista(partida), partida.preguntado!.id)
+    partida = cerrarCorreccion(elegirOpcion(pedirPista(partida), partida.preguntado!.id))
     for (let i = 0; i < 3; i++) {
       partida = responder(partida, partida.preguntado!.id)
     }
