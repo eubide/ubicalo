@@ -205,13 +205,13 @@ function resolver(partida: Partida, acierto: boolean): Partida {
   if (!acierto) return avanzar(anotarFallo(partida), { acierto, conPista: false, correcto }, true, ahora)
   const segundos = (ahora - partida.mostradoEn) / 1000
   const bonus = Math.round(BONUS_MAXIMO_DE_RAPIDEZ * Math.max(0, 1 - segundos / SEGUNDOS_HASTA_PERDER_EL_BONUS))
-  const puntos =
-    partida.vuelta > 1 ? PUNTOS_POR_ACIERTO_EN_VUELTA_POSTERIOR : PUNTOS_POR_ACIERTO_A_LA_PRIMERA + bonus
+  const aLaPrimera = partida.vuelta === 1
+  const puntos = aLaPrimera ? PUNTOS_POR_ACIERTO_A_LA_PRIMERA + bonus : PUNTOS_POR_ACIERTO_EN_VUELTA_POSTERIOR
   return avanzar(
     {
       ...partida,
       puntuacion: partida.puntuacion + puntos,
-      aciertosALaPrimera: partida.aciertosALaPrimera + (partida.vuelta === 1 ? 1 : 0),
+      aciertosALaPrimera: partida.aciertosALaPrimera + (aLaPrimera ? 1 : 0),
     },
     { acierto, conPista: false, correcto },
     false,

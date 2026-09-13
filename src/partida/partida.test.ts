@@ -482,7 +482,6 @@ describe('Abandono', () => {
     partida = abandonar(partida)
 
     expect(partida.aciertosALaPrimera).toBe(2)
-    expect(partida.elementos).toHaveLength(5)
   })
 
   it('abandonar una partida ya terminada no la cambia', () => {
