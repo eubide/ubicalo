@@ -1,7 +1,8 @@
 <script lang="ts">
   import type { Feature, FeatureCollection, Geometry } from 'geojson'
-  import { geoPath } from 'd3-geo'
+  import { geoCentroid, geoPath } from 'd3-geo'
   import { geoConicConformalSpain } from 'd3-composite-projections'
+  import RecuadroCeutaMelilla from './RecuadroCeutaMelilla.svelte'
 
   interface Props {
     contornos: Feature<Geometry>[]
@@ -27,6 +28,15 @@
     ),
   )
   const trazado = $derived(geoPath(proyeccion))
+
+  // Se reconocen por su posición porque su id cambia según el tipo.
+  const ciudadesAfricanas = $derived(
+    contornos.filter((contorno) => {
+      const [longitud, latitud] = geoCentroid(contorno)
+      return latitud < 36 && longitud > -10
+    }),
+  )
+  const recuadro = { x: ancho - 232, y: alto - 150, ancho: 232, alto: 150 }
 </script>
 
 <figure class="mapa">
@@ -39,6 +49,10 @@
     <!-- El MVP se juega con ratón o dedo; jugar con teclado no está en la spec. -->
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
     <g class="elementos">
+      {#each ciudadesAfricanas as ciudad (ciudad.id)}
+        {@const [cx, cy] = proyeccion(geoCentroid(ciudad)) ?? [0, 0]}
+        <circle class="zona" {cx} {cy} r="10" onclick={() => alElegir(String(ciudad.id))} />
+      {/each}
       {#each contornos as contorno (contorno.id)}
         {@const id = String(contorno.id)}
         <path
@@ -50,6 +64,7 @@
       {/each}
     </g>
     <path class="marcos" d={proyeccion.getCompositionBorders()} />
+    <RecuadroCeutaMelilla ciudades={ciudadesAfricanas} {contexto} {acertados} {resaltado} {alElegir} {...recuadro} />
   </svg>
   <figcaption>
     Obra derivada de las líneas límite del IGN · CC-BY 4.0 scne.es
@@ -77,6 +92,11 @@
     fill: #fdfdfb;
     stroke: #9aa0a6;
     stroke-width: 0.8;
+    cursor: pointer;
+  }
+
+  .elementos .zona {
+    fill: transparent;
     cursor: pointer;
   }
 
