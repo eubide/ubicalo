@@ -1,5 +1,5 @@
 import type { Feature, FeatureCollection, Geometry } from 'geojson'
-import { feature } from 'topojson-client'
+import { feature, neighbors } from 'topojson-client'
 import type { GeometryCollection, Topology } from 'topojson-specification'
 import comunidadesTopo from 'es-atlas/es/autonomous_regions.json'
 import provinciasTopo from 'es-atlas/es/provinces.json'
@@ -11,9 +11,10 @@ export interface Elemento {
   nombre: string
   nombreMostrado: string
   alias: string[]
+  vecinos: string[]
 }
 
-type Nombres = Omit<Elemento, 'id'>
+type Nombres = Omit<Elemento, 'id' | 'vecinos'>
 
 const GIBRALTAR_COMUNIDADES = '20'
 const GIBRALTAR_PROVINCIAS = '54'
@@ -86,9 +87,12 @@ const tipos = {
 }
 
 export function catalogo(tipo: Tipo): Elemento[] {
-  return tipos[tipo].geometrias.geometries.map((geometria) => ({
+  const { geometries } = tipos[tipo].geometrias
+  const vecinosPorIndice = neighbors(geometries)
+  return geometries.map((geometria, indice) => ({
     id: String(geometria.id),
     ...nombresDelElemento((geometria.properties as { name: string }).name),
+    vecinos: vecinosPorIndice[indice].map((vecino) => String(geometries[vecino].id)),
   }))
 }
 

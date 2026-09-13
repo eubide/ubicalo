@@ -7,11 +7,18 @@ export type Reloj = () => number
 
 export interface Respuesta {
   acierto: boolean
+  conPista: boolean
   correcto: Elemento
+}
+
+export interface Pista {
+  opciones: Elemento[]
+  trasFallo: boolean
 }
 
 export interface Partida {
   elementos: Elemento[]
+  azar: Azar
   reloj: Reloj
   inicio: number
   fin: number | null
@@ -19,6 +26,8 @@ export interface Partida {
   puntuacion: number
   fallos: number
   fallados: Elemento[]
+  pista: Pista | null
+  pistasUsadas: number
   cola: Elemento[]
   siguienteVuelta: Elemento[]
   acertados: string[]
@@ -63,11 +72,14 @@ export function iniciarPartida(elementos: Elemento[], azar: Azar, reloj: Reloj):
   return construir(
     {
       elementos,
+      azar,
       reloj,
       inicio: ahora,
       puntuacion: 0,
       fallos: 0,
       fallados: [],
+      pista: null,
+      pistasUsadas: 0,
       cola: barajar(elementos, azar),
       siguienteVuelta: [],
       acertados: [],
@@ -79,6 +91,7 @@ export function iniciarPartida(elementos: Elemento[], azar: Azar, reloj: Reloj):
 }
 
 export function responder(partida: Partida, idElegido: string): Partida {
+  if (partida.pista) return partida
   return resolver(partida, idElegido === partida.cola[0].id)
 }
 
@@ -111,42 +124,106 @@ function admiteErrata(respuesta: string, aceptado: string): boolean {
 }
 
 export function responderConTexto(partida: Partida, texto: string): Partida {
+  if (partida.pista) return partida
   const preguntado = partida.cola[0]
   const respuesta = normalizar(texto)
-  if (respuesta === '') return partida
+  if (respuesta === '') return pedirPista(partida)
   const aceptados = nombresAceptados(preguntado)
   const esNombreDeOtro = partida.elementos
     .filter((elemento) => elemento.id !== preguntado.id)
     .some((elemento) => nombresAceptados(elemento).includes(respuesta))
   const acierto =
     aceptados.includes(respuesta) || (!esNombreDeOtro && aceptados.some((aceptado) => admiteErrata(respuesta, aceptado)))
-  return resolver(partida, acierto)
+  if (acierto) return resolver(partida, true)
+  return abrirPista(anotarFallo(partida), true)
 }
 
-function resolver(partida: Partida, acierto: boolean): Partida {
-  const ahora = partida.reloj()
+const PUNTOS_POR_FALLO = 25
+const PUNTOS_POR_ACIERTO_A_LA_PRIMERA = 100
+const BONUS_MAXIMO_DE_RAPIDEZ = 50
+const SEGUNDOS_HASTA_PERDER_EL_BONUS = 10
+const PUNTOS_POR_ACIERTO_EN_VUELTA_POSTERIOR = 25
+
+function anotarFallo(partida: Partida): Partida {
+  const preguntado = partida.cola[0]
+  const yaFallado = partida.fallados.some((elemento) => elemento.id === preguntado.id)
+  return {
+    ...partida,
+    puntuacion: Math.max(0, partida.puntuacion - PUNTOS_POR_FALLO),
+    fallos: partida.fallos + 1,
+    fallados: yaFallado ? partida.fallados : [...partida.fallados, preguntado],
+  }
+}
+
+const DISTRACTORES_POR_PISTA = 3
+
+function distractoresPorPreferencia(partida: Partida): Elemento[] {
+  const [preguntado, ...restoDeLaCola] = partida.cola
+  const aunNoPreguntados = partida.vuelta === 1 ? restoDeLaCola.map((elemento) => elemento.id) : []
+  const otros = partida.elementos.filter((elemento) => elemento.id !== preguntado.id)
+  const esVecino = (elemento: Elemento) => preguntado.vecinos.includes(elemento.id)
+  const vecinosAunNoPreguntados = otros.filter((elemento) => esVecino(elemento) && aunNoPreguntados.includes(elemento.id))
+  const vecinosYaPreguntados = otros.filter((elemento) => esVecino(elemento) && !aunNoPreguntados.includes(elemento.id))
+  const restoDelTipo = otros.filter((elemento) => !esVecino(elemento))
+  return [vecinosAunNoPreguntados, vecinosYaPreguntados, restoDelTipo].flatMap((grupo) => barajar(grupo, partida.azar))
+}
+
+function abrirPista(partida: Partida, trasFallo: boolean): Partida {
+  const preguntado = partida.cola[0]
+  const distractores = distractoresPorPreferencia(partida).slice(0, DISTRACTORES_POR_PISTA)
+  return {
+    ...partida,
+    pista: { opciones: barajar([preguntado, ...distractores], partida.azar), trasFallo },
+  }
+}
+
+export function pedirPista(partida: Partida): Partida {
+  if (partida.pista) return partida
+  return abrirPista(partida, false)
+}
+
+function avanzar(partida: Partida, respuesta: Respuesta, siguePendiente: boolean, ahora: number): Partida {
   const [correcto, ...resto] = partida.cola
-  const segundos = (ahora - partida.mostradoEn) / 1000
-  const puntos = !acierto ? -25 : partida.vuelta > 1 ? 25 : 100 + Math.round(50 * Math.max(0, 1 - segundos / 10))
-  const yaFallado = partida.fallados.some((elemento) => elemento.id === correcto.id)
   return construir(
     {
       ...partida,
-      puntuacion: Math.max(0, partida.puntuacion + puntos),
-      fallos: acierto ? partida.fallos : partida.fallos + 1,
-      fallados: acierto || yaFallado ? partida.fallados : [...partida.fallados, correcto],
+      pista: null,
       cola: resto,
-      siguienteVuelta: acierto ? partida.siguienteVuelta : [...partida.siguienteVuelta, correcto],
-      acertados: acierto ? [...partida.acertados, correcto.id] : partida.acertados,
-      ultimaRespuesta: { acierto, correcto },
+      siguienteVuelta: siguePendiente ? [...partida.siguienteVuelta, correcto] : partida.siguienteVuelta,
+      acertados: siguePendiente ? partida.acertados : [...partida.acertados, correcto.id],
+      ultimaRespuesta: respuesta,
     },
     ahora,
   )
 }
 
+function resolver(partida: Partida, acierto: boolean): Partida {
+  const ahora = partida.reloj()
+  const correcto = partida.cola[0]
+  if (!acierto) return avanzar(anotarFallo(partida), { acierto, conPista: false, correcto }, true, ahora)
+  const segundos = (ahora - partida.mostradoEn) / 1000
+  const bonus = Math.round(BONUS_MAXIMO_DE_RAPIDEZ * Math.max(0, 1 - segundos / SEGUNDOS_HASTA_PERDER_EL_BONUS))
+  const puntos =
+    partida.vuelta > 1 ? PUNTOS_POR_ACIERTO_EN_VUELTA_POSTERIOR : PUNTOS_POR_ACIERTO_A_LA_PRIMERA + bonus
+  return avanzar({ ...partida, puntuacion: partida.puntuacion + puntos }, { acierto, conPista: false, correcto }, false, ahora)
+}
+
+export function elegirOpcion(partida: Partida, idElegido: string): Partida {
+  if (!partida.pista) return partida
+  const correcto = partida.cola[0]
+  const esLaCorrecta = idElegido === correcto.id
+  const conPistaUsada = { ...partida, pistasUsadas: partida.pistasUsadas + 1 }
+  return avanzar(
+    esLaCorrecta ? conPistaUsada : anotarFallo(conPistaUsada),
+    { acierto: false, conPista: esLaCorrecta, correcto },
+    true,
+    partida.reloj(),
+  )
+}
+
 export function abandonar(partida: Partida): Partida {
   if (partida.terminada) return partida
-  return { ...partida, fin: partida.reloj(), preguntado: null, terminada: true, abandonada: true }
+  return { ...partida, fin: partida.reloj(), preguntado: null, pista: null, terminada: true, abandonada: true }
 }
 
 export function tiempoJugado(partida: Partida, ahora: number): number {

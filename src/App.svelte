@@ -8,6 +8,7 @@
   import { almacenEnMemoria, crearCompeticion, type Almacen, type ResultadoDeRegistro } from './competicion/competicion'
   import {
     abandonar,
+    elegirOpcion,
     iniciarPartida,
     responder,
     responderConTexto,
@@ -41,6 +42,7 @@
   let ahora = $state(Date.now())
   let texto = $state('')
   let campoDeTexto = $state<HTMLInputElement | null>(null)
+  let pistaAbierta = $state<HTMLElement | null>(null)
 
   $effect(() => {
     if (!partida || partida.terminada) return
@@ -52,11 +54,18 @@
     campoDeTexto?.focus()
   })
 
+  $effect(() => {
+    pistaAbierta?.focus()
+  })
+
   const escribeNombre = $derived(prueba?.modo === 'ubicacion-nombre')
   const respuesta = $derived(partida?.ultimaRespuesta)
   const desvelaPreguntado = $derived(respuesta?.correcto.id === partida?.preguntado?.id)
+  const pista = $derived(partida?.pista ?? null)
   const resaltado = $derived(
-    respuesta && !respuesta.acierto && !desvelaPreguntado && !partida?.terminada ? respuesta.correcto.id : null,
+    respuesta && !respuesta.acierto && !respuesta.conPista && !desvelaPreguntado && !pista && !partida?.terminada
+      ? respuesta.correcto.id
+      : null,
   )
 
   function empezar(elegida: Prueba) {
@@ -117,6 +126,11 @@
     texto = ''
     campoDeTexto?.focus()
   }
+
+  function elegirOpcionDePista(id: string) {
+    if (!partida || partida.terminada) return
+    partida = elegirOpcion(partida, id)
+  }
 </script>
 
 <main>
@@ -129,13 +143,27 @@
           puntuacion={partida.puntuacion}
           tiempo={tiempoJugado(partida, ahora)}
           fallos={partida.fallos}
+          pistasUsadas={partida.pistasUsadas}
           fallados={partida.fallados}
           abandonada={partida.abandonada}
           {resultado}
           alElegirOtraPrueba={elegirOtraPrueba}
         />
       {:else}
-        {#if escribeNombre}
+        {#if pista}
+          <div
+            class="pista"
+            bind:this={pistaAbierta}
+            role="group"
+            tabindex="-1"
+            aria-label="Pista: elige el nombre del elemento iluminado"
+          >
+            <p class:fallo={pista.trasFallo}>{pista.trasFallo ? 'Incorrecto. ¿Cuál es?' : '¿Cuál es?'}</p>
+            {#each pista.opciones as opcion (opcion.id)}
+              <button type="button" onclick={() => elegirOpcionDePista(opcion.id)}>{opcion.nombreMostrado}</button>
+            {/each}
+          </div>
+        {:else if escribeNombre}
           <form class="pregunta" onsubmit={enviarTexto}>
             <input
               bind:this={campoDeTexto}
@@ -159,9 +187,11 @@
       {/if}
     </header>
 
-    {#if respuesta && !partida.terminada}
-      <p class="respuesta" class:fallo={!respuesta.acierto}>
-        {#if respuesta.acierto}
+    {#if respuesta && !partida.terminada && !pista}
+      <p class="respuesta" class:fallo={!respuesta.acierto && !respuesta.conPista}>
+        {#if respuesta.conPista}
+          Con pista{desvelaPreguntado ? '' : `: ${respuesta.correcto.nombreMostrado}`}
+        {:else if respuesta.acierto}
           Correcto: {respuesta.correcto.nombreMostrado}
         {:else if desvelaPreguntado}
           Incorrecto
@@ -211,7 +241,8 @@
   }
 
   form.pregunta input,
-  form.pregunta button {
+  form.pregunta button,
+  .pista button {
     font: inherit;
     font-size: 1.125rem;
     font-weight: normal;
@@ -225,6 +256,22 @@
   form.pregunta input {
     min-width: 0;
     width: 14rem;
+  }
+
+  .pista {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.5rem;
+  }
+
+  .pista p {
+    margin: 0;
+    font-size: 1.125rem;
+  }
+
+  .pista p.fallo {
+    color: #b45309;
   }
 
   .pendientes {

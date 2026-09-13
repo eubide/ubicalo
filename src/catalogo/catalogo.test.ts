@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { catalogo } from './catalogo'
+import { catalogo, type Tipo } from './catalogo'
+
+function nombresDelCatalogo(tipo: Tipo) {
+  return catalogo(tipo).map(({ vecinos: _vecinos, ...nombres }) => nombres)
+}
 
 describe('Catálogo de comunidades autónomas', () => {
   it('entrega las 19 comunidades autónomas', () => {
@@ -17,7 +21,7 @@ describe('Catálogo de comunidades autónomas', () => {
   })
 
   it('muestra en castellano las comunidades con doble nombre oficial y acepta la otra forma como alias', () => {
-    const elementos = catalogo('comunidades')
+    const elementos = nombresDelCatalogo('comunidades')
 
     expect(elementos).toContainEqual({ id: '09', nombre: 'Cataluña', nombreMostrado: 'Cataluña', alias: ['Catalunya'] })
     expect(elementos).toContainEqual({
@@ -30,7 +34,7 @@ describe('Catálogo de comunidades autónomas', () => {
   })
 
   it('muestra el nombre oficial con la forma castellana entre paréntesis y acepta esa forma como alias', () => {
-    const elementos = catalogo('comunidades')
+    const elementos = nombresDelCatalogo('comunidades')
 
     expect(elementos).toContainEqual({
       id: '04',
@@ -48,7 +52,7 @@ describe('Catálogo de comunidades autónomas', () => {
   })
 
   it('acepta como alias las formas cortas habituales sin cambiar el nombre mostrado', () => {
-    const elementos = catalogo('comunidades')
+    const elementos = nombresDelCatalogo('comunidades')
     const porId = (id: string) => elementos.find((elemento) => elemento.id === id)!
 
     expect(porId('03')).toEqual({
@@ -65,8 +69,16 @@ describe('Catálogo de comunidades autónomas', () => {
     expect(porId('19').alias).toEqual(['Melilla'])
   })
 
+  it('la Comunidad de Madrid tiene como vecinos exactamente Castilla y León y Castilla-La Mancha', () => {
+    const elementos = catalogo('comunidades')
+    const madrid = elementos.find((elemento) => elemento.nombre === 'Comunidad de Madrid')!
+    const nombresDeVecinos = madrid.vecinos.map((id) => elementos.find((elemento) => elemento.id === id)!.nombre)
+
+    expect(nombresDeVecinos.sort()).toEqual(['Castilla y León', 'Castilla-La Mancha'].sort())
+  })
+
   it('muestra tal cual el nombre oficial cuando no tiene otra forma', () => {
-    expect(catalogo('comunidades')).toContainEqual({
+    expect(nombresDelCatalogo('comunidades')).toContainEqual({
       id: '11',
       nombre: 'Extremadura',
       nombreMostrado: 'Extremadura',
@@ -88,7 +100,7 @@ describe('Catálogo de provincias', () => {
   })
 
   it('muestra en castellano las provincias con doble nombre oficial y acepta la otra forma como alias', () => {
-    const elementos = catalogo('provincias')
+    const elementos = nombresDelCatalogo('provincias')
 
     expect(elementos).toContainEqual({ id: '03', nombre: 'Alicante', nombreMostrado: 'Alicante', alias: ['Alacant'] })
     expect(elementos).toContainEqual({ id: '12', nombre: 'Castellón', nombreMostrado: 'Castellón', alias: ['Castelló'] })
@@ -98,7 +110,7 @@ describe('Catálogo de provincias', () => {
   })
 
   it('muestra el nombre oficial con la forma castellana entre paréntesis y acepta esa forma como alias', () => {
-    const elementos = catalogo('provincias')
+    const elementos = nombresDelCatalogo('provincias')
 
     expect(elementos).toContainEqual({ id: '17', nombre: 'Girona', nombreMostrado: 'Girona (Gerona)', alias: ['Gerona'] })
     expect(elementos).toContainEqual({ id: '25', nombre: 'Lleida', nombreMostrado: 'Lleida (Lérida)', alias: ['Lérida'] })
@@ -130,8 +142,16 @@ describe('Catálogo de provincias', () => {
     expect(elementos.filter((elemento) => elemento.alias.length > 0)).toHaveLength(13)
   })
 
-  it('acepta como alias las formas cortas habituales sin cambiar el nombre mostrado', () => {
+  it('la provincia de Madrid tiene como vecinos exactamente Toledo, Ávila, Segovia, Guadalajara y Cuenca', () => {
     const elementos = catalogo('provincias')
+    const madrid = elementos.find((elemento) => elemento.nombre === 'Madrid')!
+    const nombresDeVecinos = madrid.vecinos.map((id) => elementos.find((elemento) => elemento.id === id)!.nombre)
+
+    expect(nombresDeVecinos.sort()).toEqual(['Cuenca', 'Guadalajara', 'Segovia', 'Toledo', 'Ávila'].sort())
+  })
+
+  it('acepta como alias las formas cortas habituales sin cambiar el nombre mostrado', () => {
+    const elementos = nombresDelCatalogo('provincias')
     const porId = (id: string) => elementos.find((elemento) => elemento.id === id)!
 
     expect(porId('26')).toEqual({ id: '26', nombre: 'La Rioja', nombreMostrado: 'La Rioja', alias: ['Rioja'] })
