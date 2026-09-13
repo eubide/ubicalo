@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { catalogo, type Tipo } from './catalogo'
 
 function nombresDelCatalogo(tipo: Tipo) {
-  return catalogo(tipo).map(({ vecinos: _vecinos, ...nombres }) => nombres)
+  return catalogo(tipo).map(({ vecinos: _vecinos, comunidad: _comunidad, ...nombres }) => nombres)
 }
 
 describe('Catálogo de comunidades autónomas', () => {
@@ -161,5 +161,45 @@ describe('Catálogo de provincias', () => {
       nombreMostrado: 'Santa Cruz de Tenerife',
       alias: ['Tenerife'],
     })
+  })
+
+  it('cada provincia conoce la comunidad autónoma que la contiene', () => {
+    const provincias = catalogo('provincias')
+    const comunidades = catalogo('comunidades')
+    const comunidadDe = (provincia: string) => {
+      const { comunidad } = provincias.find((elemento) => elemento.nombre === provincia)!
+      return comunidades.find((elemento) => elemento.id === comunidad)?.nombre
+    }
+
+    expect(comunidadDe('Teruel')).toBe('Aragón')
+    expect(comunidadDe('Ceuta')).toBe('Ciudad Autónoma de Ceuta')
+    expect(comunidadDe('Melilla')).toBe('Ciudad Autónoma de Melilla')
+    expect(comunidadDe('Illes Balears')).toBe('Illes Balears')
+    expect(comunidadDe('Las Palmas')).toBe('Canarias')
+    expect(comunidadDe('Santa Cruz de Tenerife')).toBe('Canarias')
+    expect(comunidadDe('Valladolid')).toBe('Castilla y León')
+    expect(comunidadDe('Cádiz')).toBe('Andalucía')
+    expect(comunidadDe('Madrid')).toBe('Comunidad de Madrid')
+    expect(comunidadDe('Álava')).toBe('País Vasco')
+    expect(comunidadDe('Alicante')).toBe('Comunitat Valenciana')
+  })
+
+  it('solo Ceuta y Melilla son ciudades autónomas, como provincias y como comunidades', () => {
+    const ciudadesAutonomas = (tipo: Tipo) =>
+      catalogo(tipo)
+        .filter((elemento) => elemento.ciudadAutonoma)
+        .map((elemento) => elemento.nombre)
+
+    expect(ciudadesAutonomas('provincias')).toEqual(['Ceuta', 'Melilla'])
+    expect(ciudadesAutonomas('comunidades')).toEqual(['Ciudad Autónoma de Ceuta', 'Ciudad Autónoma de Melilla'])
+  })
+
+  it('las 52 provincias pertenecen a alguna de las 19 comunidades y todas las comunidades tienen provincia', () => {
+    const idsDeComunidades = catalogo('comunidades').map((elemento) => elemento.id)
+    const comunidadesDeProvincias = catalogo('provincias').map((elemento) => elemento.comunidad)
+
+    expect(comunidadesDeProvincias).toHaveLength(52)
+    expect(comunidadesDeProvincias.every((comunidad) => idsDeComunidades.includes(comunidad!))).toBe(true)
+    expect(new Set(comunidadesDeProvincias).size).toBe(19)
   })
 })

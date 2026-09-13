@@ -12,6 +12,7 @@
     correcto?: string | null
     preguntado: string | null
     iluminados?: string[]
+    pistaDeArea?: string[]
     rotulados?: string[]
     fallados?: string[]
     alElegir: (id: string) => void
@@ -26,6 +27,7 @@
     correcto = null,
     preguntado,
     iluminados = [],
+    pistaDeArea = [],
     rotulados = [],
     fallados = [],
     alElegir,
@@ -227,6 +229,7 @@
             d={trazado(contorno)}
             class:acertado={acertados.includes(id)}
             class:fallado={fallados.includes(id)}
+            class:pistaDeArea={pistaDeArea.includes(id)}
             class:seleccionado={seleccionado === id}
             class:iluminado={iluminados.includes(id)}
             class:tocado={tocado === id}
@@ -260,6 +263,7 @@
       {tocado}
       {correcto}
       {iluminados}
+      {pistaDeArea}
       {rotulados}
       {tamañoRotulo}
       {nombreDe}
@@ -329,6 +333,11 @@
 
   .elementos path.fallado {
     fill: #f4c7a1;
+  }
+
+  .elementos path.pistaDeArea {
+    fill: #fbe7a1;
+    stroke: #8a6d1f;
   }
 
   .elementos path.seleccionado {

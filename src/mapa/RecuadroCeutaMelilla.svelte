@@ -26,6 +26,7 @@
     tocado: string | null
     correcto: string | null
     iluminados: string[]
+    pistaDeArea: string[]
     rotulados: string[]
     tamañoRotulo: number
     nombreDe: (id: string) => string
@@ -45,6 +46,7 @@
     tocado,
     correcto,
     iluminados,
+    pistaDeArea,
     rotulados,
     tamañoRotulo,
     nombreDe,
@@ -116,6 +118,7 @@
       class="elemento"
       class:acertado={acertados.includes(celda.id)}
       class:fallado={fallados.includes(celda.id)}
+      class:pistaDeArea={pistaDeArea.includes(celda.id)}
       class:seleccionado={seleccionado === celda.id}
       class:iluminado={iluminados.includes(celda.id)}
       class:tocado={tocado === celda.id}
@@ -171,6 +174,11 @@
 
   .elemento.fallado path {
     fill: #f4c7a1;
+  }
+
+  .elemento.pistaDeArea path {
+    fill: #fbe7a1;
+    stroke: #8a6d1f;
   }
 
   .elemento.seleccionado path {

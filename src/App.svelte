@@ -124,7 +124,7 @@
     contornosDelTipo = contornos(elegida.tipo)
     ahora = Date.now()
     texto = ''
-    partida = iniciarPartida(elementos, Math.random, Date.now)
+    partida = iniciarPartida(elegida, elementos, Math.random, Date.now)
   }
 
   function nombreDe(id: string): string {
@@ -265,10 +265,11 @@
       contornos={contornosDelTipo}
       {contexto}
       acertados={partida.acertados}
-      tocado={correccion && !escribeNombre ? correccion.elegido.id : null}
+      tocado={correccion && !escribeNombre && correccionTrasFallo(correccion) ? correccion.elegido.id : null}
       correcto={correccion?.correcto.id ?? null}
       preguntado={correccion ? null : (partida.preguntado?.id ?? null)}
       {iluminados}
+      pistaDeArea={partida.pistaDeArea ?? []}
       {rotulados}
       fallados={partida.terminada ? partida.fallados.map((elemento) => elemento.id) : []}
       alElegir={elegir}
@@ -278,12 +279,12 @@
     {#if correccion}
       <div class="correccion" class:conPista={!correccionTrasFallo(correccion)} role="status">
         <p>
-          {#if !escribeNombre}
-            Tocaste {correccion.elegido.nombreMostrado} · {correccion.correcto.nombreMostrado} está aquí
-          {:else if correccionTrasFallo(correccion)}
-            Elegiste {correccion.elegido.nombreMostrado} · Era {correccion.correcto.nombreMostrado}
-          {:else}
+          {#if !correccionTrasFallo(correccion)}
             Con pista: {correccion.correcto.nombreMostrado}
+          {:else if !escribeNombre}
+            Tocaste {correccion.elegido.nombreMostrado} · {correccion.correcto.nombreMostrado} está aquí
+          {:else}
+            Elegiste {correccion.elegido.nombreMostrado} · Era {correccion.correcto.nombreMostrado}
           {/if}
         </p>
         <div class="barra" style:animation-duration="{correccion.duracion}ms"></div>
