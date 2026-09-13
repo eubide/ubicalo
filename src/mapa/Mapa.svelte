@@ -8,11 +8,12 @@
     contexto: FeatureCollection
     acertados: string[]
     resaltado: string | null
+    preguntado: string | null
     alElegir: (id: string) => void
     nombreDe: (id: string) => string
   }
 
-  let { contornos, contexto, acertados, resaltado, alElegir, nombreDe }: Props = $props()
+  let { contornos, contexto, acertados, resaltado, preguntado, alElegir, nombreDe }: Props = $props()
 
   const ancho = 960
   const alto = 620
@@ -39,6 +40,8 @@
   }
 
   const escalaMaxima = 8
+  const pausaDobleToque = 300
+  const holguraDobleToque = 30
 
   let vista = $state<Vista>({ escala: 1, x: 0, y: 0 })
   let seleccionado = $state<string | null>(null)
@@ -47,6 +50,13 @@
   let gesto: { distancia: number; centro: Punto; vista: Vista } | null = null
   let huboGesto = false
   let tipoDePuntero = 'mouse'
+  let ultimoToque: { instante: number; x: number; y: number; seleccionPrevia: string | null } | null = null
+  let dobleToque = false
+
+  $effect(() => {
+    void preguntado
+    seleccionado = null
+  })
 
   function enCoordenadasDelMapa(evento: PointerEvent): Punto {
     const caja = (evento.currentTarget as SVGSVGElement).getBoundingClientRect()
@@ -69,12 +79,17 @@
   function alPulsar(evento: PointerEvent) {
     tipoDePuntero = evento.pointerType
     if (evento.pointerType !== 'touch') return
-    if (dedos.size === 0) huboGesto = false
-    dedos.set(evento.pointerId, enCoordenadasDelMapa(evento))
-    if (dedos.size === 2) {
-      huboGesto = true
-      gesto = { ...medirGesto(), vista }
+    if (dedos.size === 0) {
+      huboGesto = false
+      dobleToque = false
     }
+    dedos.set(evento.pointerId, enCoordenadasDelMapa(evento))
+    if (dedos.size === 2) huboGesto = true
+    retomarGesto()
+  }
+
+  function retomarGesto() {
+    gesto = dedos.size === 2 ? { ...medirGesto(), vista } : null
   }
 
   function alMover(evento: PointerEvent) {
@@ -93,14 +108,32 @@
   }
 
   function alSoltar(evento: PointerEvent) {
-    dedos.delete(evento.pointerId)
-    if (dedos.size < 2) gesto = null
+    if (!dedos.delete(evento.pointerId)) return
+    retomarGesto()
+    if (evento.type === 'pointerup' && dedos.size === 0 && !huboGesto) registrarToque(evento)
   }
 
-  function tocar(id: string) {
+  function registrarToque(evento: PointerEvent) {
+    const previo = ultimoToque
+    const esDoble =
+      previo !== null &&
+      evento.timeStamp - previo.instante < pausaDobleToque &&
+      Math.hypot(evento.clientX - previo.x, evento.clientY - previo.y) < holguraDobleToque
+    if (esDoble) {
+      vista = { escala: 1, x: 0, y: 0 }
+      seleccionado = previo.seleccionPrevia
+      dobleToque = true
+      ultimoToque = null
+    } else {
+      ultimoToque = { instante: evento.timeStamp, x: evento.clientX, y: evento.clientY, seleccionPrevia: seleccionado }
+    }
+  }
+
+  function pulsarElemento(id: string) {
     if (tipoDePuntero !== 'touch') {
+      seleccionado = null
       alElegir(id)
-    } else if (!huboGesto) {
+    } else if (!huboGesto && !dobleToque && preguntado !== null) {
       seleccionado = id
     }
   }
@@ -139,7 +172,7 @@
             class:acertado={acertados.includes(id)}
             class:resaltado={resaltado === id}
             class:seleccionado={seleccionado === id}
-            onclick={() => tocar(id)}
+            onclick={() => pulsarElemento(id)}
           />
         {/each}
       </g>

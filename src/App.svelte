@@ -15,7 +15,7 @@
   const desvelaPreguntado = $derived(respuesta?.correcto.id === partida.preguntado?.id)
   const resaltado = $derived(respuesta && !respuesta.acierto && !desvelaPreguntado ? respuesta.correcto.id : null)
 
-  function nombrar(id: string): string {
+  function nombreDe(id: string): string {
     return elementos.find((elemento) => elemento.id === id)?.nombre ?? ''
   }
 
@@ -47,7 +47,7 @@
     </p>
   {/if}
 
-  <Mapa contornos={contornosDelTipo} {contexto} acertados={partida.acertados} {resaltado} alElegir={elegir} nombreDe={nombrar} />
+  <Mapa contornos={contornosDelTipo} {contexto} acertados={partida.acertados} {resaltado} preguntado={partida.preguntado?.id ?? null} alElegir={elegir} {nombreDe} />
 </main>
 
 <style>
