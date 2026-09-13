@@ -25,7 +25,6 @@
     elegirOpcion,
     iniciarPartida,
     marcarEnRepaso,
-    pedirPista,
     responder,
     responderConTexto,
     resumirPartida,
@@ -109,7 +108,7 @@
 
   $effect(() => {
     if (!repaso || !escribeNombre) return
-    return cerrarAlCabo(DURACION_REPASO_UBICACION_NOMBRE, (partida) => pedirPista(cerrarRepaso(partida)))
+    return cerrarAlCabo(DURACION_REPASO_UBICACION_NOMBRE, cerrarRepaso)
   })
 
   function empezar(elegida: Prueba) {
@@ -125,7 +124,7 @@
     contornosDelTipo = contornos(elegida.tipo)
     ahora = Date.now()
     texto = ''
-    partida = iniciarPartida(elementos, Math.random, Date.now)
+    partida = iniciarPartida(elegida, elementos, Math.random, Date.now)
   }
 
   function nombreDe(id: string): string {
@@ -270,7 +269,7 @@
       correcto={correccion?.correcto.id ?? null}
       preguntado={correccion ? null : (partida.preguntado?.id ?? null)}
       {iluminados}
-      area={escribeNombre ? [] : (partida.pistaDeArea ?? [])}
+      pistaDeArea={partida.pistaDeArea ?? []}
       {rotulados}
       fallados={partida.terminada ? partida.fallados.map((elemento) => elemento.id) : []}
       alElegir={elegir}

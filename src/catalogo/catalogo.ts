@@ -116,7 +116,9 @@ export function catalogo(tipo: Tipo): Elemento[] {
   }))
 }
 
+const contornosPorTipo: Partial<Record<Tipo, Feature<Geometry>[]>> = {}
+
 export function contornos(tipo: Tipo): Feature<Geometry>[] {
   const { topologia, geometrias } = tipos[tipo]
-  return (feature(topologia, geometrias) as FeatureCollection).features
+  return (contornosPorTipo[tipo] ??= (feature(topologia, geometrias) as FeatureCollection).features)
 }

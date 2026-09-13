@@ -188,6 +188,7 @@ describe('Catálogo de provincias', () => {
     const idsDeComunidades = catalogo('comunidades').map((elemento) => elemento.id)
     const comunidadesDeProvincias = catalogo('provincias').map((elemento) => elemento.comunidad)
 
+    expect(comunidadesDeProvincias).toHaveLength(52)
     expect(comunidadesDeProvincias.every((comunidad) => idsDeComunidades.includes(comunidad!))).toBe(true)
     expect(new Set(comunidadesDeProvincias).size).toBe(19)
   })

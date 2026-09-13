@@ -40,6 +40,7 @@ const FALLOS_PARA_REPASO = 3
 export const DURACION_REPASO_UBICACION_NOMBRE = 4_000
 
 export interface Partida {
+  prueba: Prueba
   elementos: Elemento[]
   azar: Azar
   reloj: Reloj
@@ -97,10 +98,11 @@ function construir(partida: Omit<Partida, CamposDerivados>, ahora: number): Part
   }
 }
 
-export function iniciarPartida(elementos: Elemento[], azar: Azar, reloj: Reloj): Partida {
+export function iniciarPartida(prueba: Prueba, elementos: Elemento[], azar: Azar, reloj: Reloj): Partida {
   const ahora = reloj()
   return construir(
     {
+      prueba,
       elementos,
       azar,
       reloj,
@@ -163,7 +165,12 @@ export function cerrarCorreccion(partida: Partida): Partida {
 
 export function marcarEnRepaso(partida: Partida, id: string): Partida {
   const { repaso } = partida
-  if (!repaso || repaso.marcados.includes(id) || !repaso.elementos.some((elemento) => elemento.id === id)) {
+  if (
+    !repaso ||
+    partida.prueba.modo === 'ubicacion-nombre' ||
+    repaso.marcados.includes(id) ||
+    !repaso.elementos.some((elemento) => elemento.id === id)
+  ) {
     return partida
   }
   const marcados = [...repaso.marcados, id]
@@ -173,12 +180,27 @@ export function marcarEnRepaso(partida: Partida, id: string): Partida {
 
 export function cerrarRepaso(partida: Partida): Partida {
   if (!partida.repaso) return partida
-  return { ...reanudar(partida, partida.reloj()), repaso: null, pistaDeArea: areaDe(partida) }
+  const reanudada = { ...reanudar(partida, partida.reloj()), repaso: null }
+  if (partida.prueba.modo === 'ubicacion-nombre') return abrirPista(reanudada, null)
+  return { ...reanudada, pistaDeArea: pistaDeAreaDe(partida) }
 }
 
-function areaDe({ cola: [preguntado], elementos }: Partida): string[] {
-  if (preguntado.comunidad === undefined) return preguntado.vecinos
-  return elementos.filter((elemento) => elemento.comunidad === preguntado.comunidad).map((elemento) => elemento.id)
+function pistaDeAreaDe({ prueba, elementos, cola: [preguntado] }: Partida): string[] | null {
+  const ids =
+    prueba.tipo === 'provincias' ? pistaDeAreaDeProvincia(preguntado, elementos) : pistaDeAreaDeComunidad(preguntado)
+  return ids.length > 0 ? ids : null
+}
+
+function pistaDeAreaDeProvincia(provincia: Elemento, elementos: Elemento[]): string[] {
+  if (provincia.comunidad === undefined) return []
+  const deSuComunidad = elementos
+    .filter((elemento) => elemento.comunidad === provincia.comunidad)
+    .map((elemento) => elemento.id)
+  return deSuComunidad.length > 1 ? deSuComunidad : [provincia.id, ...provincia.vecinos]
+}
+
+function pistaDeAreaDeComunidad(comunidad: Elemento): string[] {
+  return comunidad.vecinos.length > 0 ? comunidad.vecinos : [comunidad.id]
 }
 
 function reanudar(partida: Partida, ahora: number): Partida {
