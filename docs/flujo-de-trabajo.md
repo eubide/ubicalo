@@ -72,7 +72,18 @@ Qué quedó escrito:
 - **Arreglos** de los defectos y desviaciones encontrados; las dudas de producto se preguntaron antes de decidir.
 - **Integración:** `git merge main` en la rama del ticket, `task verificar`, PR con `Closes #N` y merge a `main`.
 
-Comandos del proyecto: `task` lista las tareas (`dev`, `test`, `check`, `build`, `verificar`…).
+Comandos del proyecto: `task` lista las tareas (`dev`, `dev:https`, `test`, `check`, `build`, `verificar`…). En el iPhone, usa `task dev:https`.
+
+## Cambios tras probar con usuarios
+
+Cuando una prueba real saca fallos, se vuelve a entrar en la cadena por el principio, pero sin spec nueva si cabe en pocas sesiones:
+
+1. **`/mattpocock-skills:grill-with-docs`** con lo observado (modo, dispositivo, qué creyó el usuario). Los términos nuevos van a `CONTEXT.md`.
+2. **`/mattpocock-skills:prototype`** solo si el "cómo se ve" no se decide hablando.
+3. **`/mattpocock-skills:to-tickets`** directamente desde la conversación.
+4. **`/mattpocock-skills:implement`** por frontera, como en el paso 4.
+
+En Ubícalo (2026-09-13): la prueba con un alumno llevó a Corrección, Racha de fallos, Repaso y Pista de área (glosario en PR #24), tickets #25–#29 y PRs #30–#34.
 
 ## Entre fases: seguir, limpiar o traspasar
 
@@ -106,6 +117,7 @@ Nunca compactes a mitad de una fase.
 - [x] Resolver los cuatro puntos "Sin decidir" de #1
 - [x] `/mattpocock-skills:to-tickets #1` → #2–#10
 - [x] `/mattpocock-skills:implement` de #2 a #10 → PRs #11–#18 y #21
+- [x] Prueba con usuario → `grill-with-docs` → `to-tickets` #25–#29 → `implement` → PRs #30–#34
 - [ ] Probar en un móvil real: gestos táctiles, recuadro de Ceuta y Melilla, y compartir un reto (requiere HTTPS)
 - [ ] Decidir si se cierra #1: es la spec padre y ningún skill la cierra
 - [ ] Siguiente bloque: despliegue (dominio y Terraform) o ríos, montañas, cabos y golfos con `/mattpocock-skills:grill-with-docs`
