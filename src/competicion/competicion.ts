@@ -1,5 +1,6 @@
+import type { Tipo } from '../catalogo/catalogo'
 import type { PartidaJugada } from '../partida/partida'
-import type { Prueba } from '../prueba/prueba'
+import type { Modo, Prueba } from '../prueba/prueba'
 
 export type Almacen = Pick<Storage, 'getItem' | 'setItem'>
 
@@ -16,6 +17,12 @@ export type ResultadoDeRegistro =
   | { caso: 'empate-total' }
   | { caso: 'abandonada' }
 
+export interface Reto {
+  prueba: Prueba
+  puntuacion: number
+  tiempo: number
+}
+
 interface Registro {
   marcas: Record<string, Marca>
   historial: PartidaJugada[]
@@ -24,6 +31,8 @@ interface Registro {
 const CLAVE = 'ubicalo:competicion'
 const PARTIDAS_EN_HISTORIAL = 10
 const MILISEGUNDOS_POR_SEGUNDO = 1_000
+const TIPOS: Record<Tipo, true> = { comunidades: true, provincias: true }
+const MODOS: Record<Modo, true> = { 'nombre-ubicar': true, 'ubicacion-nombre': true }
 
 function claveDe(prueba: Prueba): string {
   return `${prueba.tipo}/${prueba.modo}`
@@ -121,4 +130,39 @@ export function crearCompeticion(almacen: Almacen) {
       return leer().historial
     },
   }
+}
+
+export function retoDe(partida: PartidaJugada): Reto | null {
+  if (partida.abandonada) return null
+  const { prueba, puntuacion, tiempo } = partida
+  return { prueba, puntuacion, tiempo }
+}
+
+export function enlaceDeReto(reto: Reto, pagina: string): string {
+  const enlace = new URL(pagina)
+  enlace.search = new URLSearchParams({
+    tipo: reto.prueba.tipo,
+    modo: reto.prueba.modo,
+    puntuacion: String(reto.puntuacion),
+    tiempo: String(reto.tiempo),
+  }).toString()
+  enlace.hash = ''
+  return enlace.toString()
+}
+
+export function retoDeEnlace(enlace: string): Reto | null {
+  if (!URL.canParse(enlace)) return null
+  const parametros = new URL(enlace).searchParams
+  const tipo = parametros.get('tipo') ?? ''
+  const modo = parametros.get('modo') ?? ''
+  const puntuacion = entero(parametros.get('puntuacion'))
+  const tiempo = entero(parametros.get('tiempo'))
+  if (!Object.hasOwn(TIPOS, tipo) || !Object.hasOwn(MODOS, modo) || puntuacion === null || tiempo === null) return null
+  return { prueba: { tipo: tipo as Tipo, modo: modo as Modo }, puntuacion, tiempo }
+}
+
+function entero(parametro: string | null): number | null {
+  if (!parametro || !/^\d+$/.test(parametro)) return null
+  const valor = Number(parametro)
+  return Number.isSafeInteger(valor) ? valor : null
 }

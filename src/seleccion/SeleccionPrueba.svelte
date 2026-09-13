@@ -1,30 +1,41 @@
 <script lang="ts">
+  import { untrack } from 'svelte'
   import type { Tipo } from '../catalogo/catalogo'
-  import type { Marca } from '../competicion/competicion'
+  import type { Marca, Reto } from '../competicion/competicion'
   import { formatearTiempo } from '../pantallas/tiempo'
-  import type { Modo, Prueba } from '../prueba/prueba'
+  import { etiquetaDeModo, etiquetaDeTipo, nombreDePrueba, type Modo, type Prueba } from '../prueba/prueba'
 
   interface Props {
     alElegir: (prueba: Prueba) => void
     marcaDe: (prueba: Prueba) => Marca | null
+    reto: Reto | null
   }
 
-  let { alElegir, marcaDe }: Props = $props()
+  let { alElegir, marcaDe, reto }: Props = $props()
 
   const modos: { modo: Modo; etiqueta: string }[] = [
-    { modo: 'nombre-ubicar', etiqueta: 'Nombre → ubicar' },
-    { modo: 'ubicacion-nombre', etiqueta: 'Ubicación → nombre' },
+    { modo: 'nombre-ubicar', etiqueta: etiquetaDeModo['nombre-ubicar'] },
+    { modo: 'ubicacion-nombre', etiqueta: etiquetaDeModo['ubicacion-nombre'] },
   ]
 
   const tipos: { tipo: Tipo; etiqueta: string }[] = [
-    { tipo: 'comunidades', etiqueta: 'Comunidades autónomas' },
-    { tipo: 'provincias', etiqueta: 'Provincias' },
+    { tipo: 'comunidades', etiqueta: etiquetaDeTipo.comunidades },
+    { tipo: 'provincias', etiqueta: etiquetaDeTipo.provincias },
   ]
 
-  let modoElegido = $state<Modo>('nombre-ubicar')
+  let modoElegido = $state<Modo>(untrack(() => reto?.prueba.modo ?? 'nombre-ubicar'))
 </script>
 
 <section>
+  {#if reto}
+    <div class="reto">
+      <p>
+        Te han retado a {nombreDePrueba(reto.prueba)}. Marca a batir:
+        <strong>{reto.puntuacion} puntos en {formatearTiempo(reto.tiempo)}</strong>
+      </p>
+      <button type="button" onclick={() => alElegir(reto.prueba)}>Jugar el reto</button>
+    </div>
+  {/if}
   <h1>¿Qué quieres repasar?</h1>
   <fieldset class="modos">
     <legend>Modo</legend>
@@ -91,6 +102,22 @@
 
   button:hover {
     border-color: #2f7a4a;
+  }
+
+  .reto {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 0 0 1.5rem;
+    padding: 0.75rem 1rem;
+    border: 1px solid #2f7a4a;
+    border-radius: 0.5rem;
+  }
+
+  .reto p {
+    margin: 0;
+    font-variant-numeric: tabular-nums;
   }
 
   .marca {

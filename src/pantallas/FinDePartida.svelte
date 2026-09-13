@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Elemento } from '../catalogo/catalogo'
-  import type { ResultadoDeRegistro } from '../competicion/competicion'
+  import type { ResultadoDeRegistro, Reto } from '../competicion/competicion'
+  import CompartirReto from './CompartirReto.svelte'
   import { formatearTiempo } from './tiempo'
 
   interface Props {
@@ -10,10 +11,11 @@
     fallados: Elemento[]
     abandonada: boolean
     resultado: ResultadoDeRegistro | null
+    reto: Reto | null
     alElegirOtraPrueba: () => void
   }
 
-  let { puntuacion, tiempo, fallos, fallados, abandonada, resultado, alElegirOtraPrueba }: Props = $props()
+  let { puntuacion, tiempo, fallos, fallados, abandonada, resultado, reto, alElegirOtraPrueba }: Props = $props()
 </script>
 
 <section class="fin">
@@ -47,6 +49,9 @@
         <li>{elemento.nombreMostrado}</li>
       {/each}
     </ul>
+  {/if}
+  {#if reto}
+    <CompartirReto {reto} />
   {/if}
   <button type="button" onclick={alElegirOtraPrueba}>Elegir otra prueba</button>
 </section>
