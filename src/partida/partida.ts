@@ -13,15 +13,17 @@ export interface Respuesta {
 
 export interface Pista {
   opciones: Elemento[]
-  trasFallo: boolean
   escrito: string | null
 }
 
 export interface Correccion {
   elegido: Elemento
   correcto: Elemento
-  trasFallo: boolean
   duracion: number
+}
+
+export function correccionTrasFallo({ elegido, correcto }: Correccion): boolean {
+  return elegido.id !== correcto.id
 }
 
 export const DURACION_CORRECCION_TRAS_FALLO = 3_000
@@ -120,9 +122,8 @@ export function responder(partida: Partida, idElegido: string): Partida {
 }
 
 function abrirCorreccion(partida: Partida, elegido: Elemento, correcto: Elemento): Partida {
-  const trasFallo = elegido.id !== correcto.id
-  const duracion = trasFallo ? DURACION_CORRECCION_TRAS_FALLO : DURACION_CORRECCION_CON_PISTA
-  return { ...partida, correccion: { elegido, correcto, trasFallo, duracion }, pausadaDesde: partida.mostradoEn }
+  const duracion = elegido.id !== correcto.id ? DURACION_CORRECCION_TRAS_FALLO : DURACION_CORRECCION_CON_PISTA
+  return { ...partida, correccion: { elegido, correcto, duracion }, pausadaDesde: partida.mostradoEn }
 }
 
 export function cerrarCorreccion(partida: Partida): Partida {
@@ -180,7 +181,7 @@ export function responderConTexto(partida: Partida, texto: string): Partida {
   const acierto =
     aceptados.includes(respuesta) || (!esNombreDeOtro && aceptados.some((aceptado) => admiteErrata(respuesta, aceptado)))
   if (acierto) return resolver(partida, true)
-  return abrirPista(anotarFallo(partida), texto.trim())
+  return abrirPista(anotarFallo(partida), texto.trim().replace(/[\s.,;:!?…]+$/u, ''))
 }
 
 const PUNTOS_POR_FALLO = 25
@@ -218,7 +219,7 @@ function abrirPista(partida: Partida, escrito: string | null): Partida {
   const distractores = distractoresPorPreferencia(partida).slice(0, DISTRACTORES_POR_PISTA)
   return {
     ...partida,
-    pista: { opciones: barajar([preguntado, ...distractores], partida.azar), trasFallo: escrito !== null, escrito },
+    pista: { opciones: barajar([preguntado, ...distractores], partida.azar), escrito },
   }
 }
 

@@ -19,6 +19,7 @@
   import {
     abandonar,
     cerrarCorreccion,
+    correccionTrasFallo,
     elegirOpcion,
     iniciarPartida,
     responder,
@@ -80,6 +81,7 @@
 
   $effect(() => {
     if (!correccion) return
+    confirmandoAbandono = false
     const espera = setTimeout(() => {
       if (partida) partida = cerrarCorreccion(partida)
     }, correccion.duracion)
@@ -193,7 +195,9 @@
             tabindex="-1"
             aria-label="Pista: elige el nombre del elemento iluminado"
           >
-            <p class:fallo={pista.trasFallo}>{pista.trasFallo ? `Escribiste: ${pista.escrito}. ¿Cuál es?` : '¿Cuál es?'}</p>
+            <p class:fallo={pista.escrito !== null}>
+              {pista.escrito !== null ? `Escribiste: ${pista.escrito}. ¿Cuál es?` : '¿Cuál es?'}
+            </p>
             {#each pista.opciones as opcion (opcion.id)}
               <button type="button" onclick={() => elegirOpcionDePista(opcion.id)}>{opcion.nombreMostrado}</button>
             {/each}
@@ -242,11 +246,11 @@
     />
 
     {#if correccion}
-      <div class="correccion" class:conPista={!correccion.trasFallo} role="status">
+      <div class="correccion" class:conPista={!correccionTrasFallo(correccion)} role="status">
         <p>
           {#if !escribeNombre}
             Tocaste {correccion.elegido.nombreMostrado} · {correccion.correcto.nombreMostrado} está aquí
-          {:else if correccion.trasFallo}
+          {:else if correccionTrasFallo(correccion)}
             Elegiste {correccion.elegido.nombreMostrado} · Era {correccion.correcto.nombreMostrado}
           {:else}
             Con pista: {correccion.correcto.nombreMostrado}
