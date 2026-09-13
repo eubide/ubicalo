@@ -16,18 +16,29 @@ export interface Pista {
   trasFallo: boolean
 }
 
+export interface Correccion {
+  elegido: Elemento
+  correcto: Elemento
+  duracion: number
+}
+
+export const DURACION_CORRECCION_TRAS_FALLO = 3_000
+
 export interface Partida {
   elementos: Elemento[]
   azar: Azar
   reloj: Reloj
   inicio: number
   fin: number | null
+  pausadaDesde: number | null
+  tiempoEnPausa: number
   mostradoEn: number
   puntuacion: number
   fallos: number
   fallados: Elemento[]
   pista: Pista | null
   pistasUsadas: number
+  correccion: Correccion | null
   cola: Elemento[]
   siguienteVuelta: Elemento[]
   acertados: string[]
@@ -75,11 +86,14 @@ export function iniciarPartida(elementos: Elemento[], azar: Azar, reloj: Reloj):
       azar,
       reloj,
       inicio: ahora,
+      pausadaDesde: null,
+      tiempoEnPausa: 0,
       puntuacion: 0,
       fallos: 0,
       fallados: [],
       pista: null,
       pistasUsadas: 0,
+      correccion: null,
       cola: barajar(elementos, azar),
       siguienteVuelta: [],
       acertados: [],
@@ -91,8 +105,32 @@ export function iniciarPartida(elementos: Elemento[], azar: Azar, reloj: Reloj):
 }
 
 export function responder(partida: Partida, idElegido: string): Partida {
-  if (partida.pista) return partida
-  return resolver(partida, idElegido === partida.cola[0].id)
+  if (partida.pista || partida.correccion) return partida
+  const correcto = partida.cola[0]
+  if (idElegido === correcto.id) return resolver(partida, true)
+  const elegido = partida.elementos.find((elemento) => elemento.id === idElegido)
+  const resuelta = resolver(partida, false)
+  if (!elegido) return resuelta
+  return {
+    ...resuelta,
+    correccion: { elegido, correcto, duracion: DURACION_CORRECCION_TRAS_FALLO },
+    pausadaDesde: resuelta.mostradoEn,
+  }
+}
+
+export function cerrarCorreccion(partida: Partida): Partida {
+  if (!partida.correccion) return partida
+  return { ...reanudar(partida, partida.reloj()), correccion: null }
+}
+
+function reanudar(partida: Partida, ahora: number): Partida {
+  if (partida.pausadaDesde === null) return partida
+  return {
+    ...partida,
+    pausadaDesde: null,
+    tiempoEnPausa: partida.tiempoEnPausa + ahora - partida.pausadaDesde,
+    mostradoEn: ahora,
+  }
 }
 
 function normalizar(texto: string): string {
@@ -227,7 +265,9 @@ export function abandonar(partida: Partida): Partida {
 }
 
 export function tiempoJugado(partida: Partida, ahora: number): number {
-  return (partida.fin ?? ahora) - partida.inicio
+  const hasta = partida.fin ?? ahora
+  const pausaAbierta = partida.pausadaDesde === null ? 0 : hasta - partida.pausadaDesde
+  return hasta - partida.inicio - partida.tiempoEnPausa - pausaAbierta
 }
 
 export interface PartidaJugada {

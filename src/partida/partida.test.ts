@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import type { Elemento } from '../catalogo/catalogo'
 import {
   abandonar,
+  cerrarCorreccion,
   elegirOpcion,
   iniciarPartida,
   pedirPista,
@@ -49,7 +50,7 @@ describe('Partida en Nombre → ubicar', () => {
     const fallado = partida.preguntado!
     const otro = elementos.find((elemento) => elemento.id !== fallado.id)!
 
-    partida = responder(partida, otro.id)
+    partida = cerrarCorreccion(responder(partida, otro.id))
 
     expect(partida.ultimaRespuesta).toEqual({ acierto: false, conPista: false, correcto: fallado })
     expect(partida.acertados).toEqual([])
@@ -70,6 +71,54 @@ describe('Partida en Nombre → ubicar', () => {
 
     expect(partida.ultimaRespuesta).toEqual({ acierto: true, conPista: false, correcto: fallado })
     expect(partida.terminada).toBe(true)
+  })
+})
+
+describe('Corrección en Nombre → ubicar', () => {
+  function fallarLaPrimera(partida: Partida) {
+    const correcto = partida.preguntado!
+    const elegido = elementos.find((elemento) => elemento.id !== correcto.id)!
+    return { partida: responder(partida, elegido.id), correcto, elegido }
+  }
+
+  it('un fallo abre durante 3 s una Corrección con lo que tocó el alumno y el elemento correcto', () => {
+    const { partida, correcto, elegido } = fallarLaPrimera(iniciarPartida(elementos, azarFijo, reloj))
+
+    expect(partida.correccion).toEqual({ elegido, correcto, duracion: 3_000 })
+  })
+
+  it('un acierto sin ayuda no abre Corrección', () => {
+    const partida = iniciarPartida(elementos, azarFijo, reloj)
+
+    expect(responder(partida, partida.preguntado!.id).correccion).toBeNull()
+  })
+
+  it('las respuestas durante la Corrección se ignoran hasta cerrarla', () => {
+    const { partida } = fallarLaPrimera(iniciarPartida(elementos, azarFijo, reloj))
+
+    expect(responder(partida, partida.preguntado!.id)).toBe(partida)
+
+    const cerrada = cerrarCorreccion(partida)
+    expect(cerrada.correccion).toBeNull()
+    expect(responder(cerrada, cerrada.preguntado!.id).puntuacion).toBe(150)
+  })
+
+  it('el tiempo de la Corrección no suma al tiempo jugado ni al bonus de la pregunta siguiente', () => {
+    let partida = iniciarPartida(elementos, azarFijo, reloj)
+    ahora = 2_000
+    partida = fallarLaPrimera(partida).partida
+
+    expect(tiempoJugado(partida, 4_000)).toBe(2_000)
+
+    ahora = 5_000
+    partida = cerrarCorreccion(partida)
+    expect(tiempoJugado(partida, 5_000)).toBe(2_000)
+
+    ahora = 7_000
+    partida = responder(partida, partida.preguntado!.id)
+
+    expect(partida.puntuacion).toBe(140)
+    expect(tiempoJugado(partida, 7_000)).toBe(4_000)
   })
 })
 
@@ -215,7 +264,7 @@ describe('Pista', () => {
 
   it('en una vuelta posterior todos los vecinos ya se preguntaron y se eligen igualmente antes que otros elementos', () => {
     let partida = iniciarPartida(catalogoConVecinos({ c: ['e'], a: ['d', 'e'] }), azarSinBarajar, reloj)
-    partida = responder(partida, 'b')
+    partida = cerrarCorreccion(responder(partida, 'b'))
     for (let i = 0; i < 6; i++) partida = responder(partida, partida.preguntado!.id)
     expect(partida.vuelta).toBe(2)
     expect(partida.preguntado?.id).toBe('a')
@@ -363,7 +412,7 @@ describe('Puntuación', () => {
 
     for (let i = 0; i < 3; i++) {
       const preguntado = partida.preguntado!
-      partida = responder(partida, elementos.find((elemento) => elemento.id !== preguntado.id)!.id)
+      partida = cerrarCorreccion(responder(partida, elementos.find((elemento) => elemento.id !== preguntado.id)!.id))
     }
     expect(partida.puntuacion).toBe(0)
 
@@ -374,7 +423,7 @@ describe('Puntuación', () => {
   it('un acierto en vuelta posterior suma 25 sin bonus', () => {
     let partida = iniciarPartida(elementos, azarFijo, reloj)
     const fallado = partida.preguntado!
-    partida = responder(partida, elementos.find((elemento) => elemento.id !== fallado.id)!.id)
+    partida = cerrarCorreccion(responder(partida, elementos.find((elemento) => elemento.id !== fallado.id)!.id))
 
     for (let i = 0; i < 4; i++) {
       partida = responder(partida, partida.preguntado!.id)
@@ -394,11 +443,11 @@ describe('Fin de partida', () => {
     const otro = elementos.find((elemento) => elemento.id !== fallado.id)!
 
     ahora = 3_000
-    partida = responder(partida, otro.id)
+    partida = cerrarCorreccion(responder(partida, otro.id))
     for (let i = 0; i < 4; i++) {
       partida = responder(partida, partida.preguntado!.id)
     }
-    partida = responder(partida, otro.id)
+    partida = cerrarCorreccion(responder(partida, otro.id))
     expect(tiempoJugado(partida, 5_000)).toBe(4_000)
 
     ahora = 10_000

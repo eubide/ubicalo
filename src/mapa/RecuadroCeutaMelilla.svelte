@@ -24,6 +24,8 @@
     contexto: FeatureCollection
     acertados: string[]
     resaltado: string | null
+    tocado: string | null
+    correcto: string | null
     iluminado: string | null
     fallados: string[]
     seleccionado: string | null
@@ -39,6 +41,8 @@
     contexto,
     acertados,
     resaltado,
+    tocado,
+    correcto,
     iluminado,
     fallados,
     seleccionado,
@@ -100,6 +104,8 @@
       class:fallado={fallados.includes(celda.id)}
       class:seleccionado={seleccionado === celda.id}
       class:iluminado={iluminado === celda.id}
+      class:tocado={tocado === celda.id}
+      class:correcto={correcto === celda.id}
       onclick={() => alElegir(celda.id)}
     >
       <rect class="diana" x={celda.x0} {y} width={anchoCelda} height={alto} />
@@ -147,6 +153,16 @@
     fill: #f6d365;
     stroke: #8a6d1f;
     stroke-width: 1.6;
+  }
+
+  .elemento.tocado path {
+    fill: #dc2626;
+  }
+
+  .elemento.correcto path {
+    stroke: #14532d;
+    stroke-width: 4;
+    stroke-linejoin: round;
   }
 
   .marcos {
