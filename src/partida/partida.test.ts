@@ -269,6 +269,22 @@ describe('Pista', () => {
     expect(partida.preguntado).toEqual(fallado)
   })
 
+  it('elegir una opción sin pista abierta no cambia la partida', () => {
+    const partida = iniciarPartida(elementos, azarFijo, reloj)
+
+    expect(elegirOpcion(partida, partida.preguntado!.id)).toBe(partida)
+  })
+
+  it('con una pista abierta, responder con texto o señalando y volver a pedir pista no cambian la partida', () => {
+    const partida = pedirPista(iniciarPartida(elementos, azarFijo, reloj))
+    const preguntado = partida.preguntado!
+
+    expect(responderConTexto(partida, preguntado.nombre)).toBe(partida)
+    expect(responderConTexto(partida, '')).toBe(partida)
+    expect(responder(partida, preguntado.id)).toBe(partida)
+    expect(pedirPista(partida)).toBe(partida)
+  })
+
   it('recuenta las pistas usadas en la partida', () => {
     let partida = iniciarPartida(elementos, azarFijo, reloj)
 

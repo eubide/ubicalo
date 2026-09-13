@@ -91,6 +91,7 @@ export function iniciarPartida(elementos: Elemento[], azar: Azar, reloj: Reloj):
 }
 
 export function responder(partida: Partida, idElegido: string): Partida {
+  if (partida.pista) return partida
   return resolver(partida, idElegido === partida.cola[0].id)
 }
 
@@ -123,9 +124,10 @@ function admiteErrata(respuesta: string, aceptado: string): boolean {
 }
 
 export function responderConTexto(partida: Partida, texto: string): Partida {
+  if (partida.pista) return partida
   const preguntado = partida.cola[0]
   const respuesta = normalizar(texto)
-  if (respuesta === '') return abrirPista(partida, false)
+  if (respuesta === '') return pedirPista(partida)
   const aceptados = nombresAceptados(preguntado)
   const esNombreDeOtro = partida.elementos
     .filter((elemento) => elemento.id !== preguntado.id)
@@ -172,6 +174,7 @@ function abrirPista(partida: Partida, trasFallo: boolean): Partida {
 }
 
 export function pedirPista(partida: Partida): Partida {
+  if (partida.pista) return partida
   return abrirPista(partida, false)
 }
 
@@ -200,6 +203,7 @@ function resolver(partida: Partida, acierto: boolean): Partida {
 }
 
 export function elegirOpcion(partida: Partida, idElegido: string): Partida {
+  if (!partida.pista) return partida
   const correcto = partida.cola[0]
   const esLaCorrecta = idElegido === correcto.id
   const conPistaUsada = { ...partida, pistas: partida.pistas + 1 }
