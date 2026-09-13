@@ -3,13 +3,22 @@
   import { catalogo, contornos } from './catalogo/catalogo'
   import contextoGeografico from './datos/contexto-geografico.json'
   import Mapa from './mapa/Mapa.svelte'
-  import { iniciarPartida, responder } from './partida/partida'
+  import FinDePartida from './pantallas/FinDePartida.svelte'
+  import PuntuacionYTiempo from './pantallas/PuntuacionYTiempo.svelte'
+  import { iniciarPartida, responder, tiempoJugado } from './partida/partida'
 
   const elementos = catalogo()
   const contornosDelTipo = contornos()
   const contexto = contextoGeografico as FeatureCollection
 
-  let partida = $state(iniciarPartida(elementos, Math.random))
+  let partida = $state(iniciarPartida(elementos, Math.random, Date.now))
+  let ahora = $state(Date.now())
+
+  $effect(() => {
+    if (partida.terminada) return
+    const intervalo = setInterval(() => (ahora = Date.now()), 250)
+    return () => clearInterval(intervalo)
+  })
 
   const respuesta = $derived(partida.ultimaRespuesta)
   const desvelaPreguntado = $derived(respuesta?.correcto.id === partida.preguntado?.id)
@@ -28,14 +37,20 @@
 <main>
   <header>
     {#if partida.terminada}
-      <p class="pregunta">¡Partida terminada!</p>
+      <FinDePartida
+        puntuacion={partida.puntuacion}
+        tiempo={tiempoJugado(partida, ahora)}
+        fallos={partida.fallos}
+        fallados={partida.fallados}
+      />
     {:else}
       <p class="pregunta">{partida.preguntado?.nombre}</p>
+      <PuntuacionYTiempo puntuacion={partida.puntuacion} tiempo={tiempoJugado(partida, ahora)} />
       <p class="pendientes">{partida.pendientes} / {elementos.length}</p>
     {/if}
   </header>
 
-  {#if respuesta}
+  {#if respuesta && !partida.terminada}
     <p class="respuesta" class:fallo={!respuesta.acierto}>
       {#if respuesta.acierto}
         Correcto: {respuesta.correcto.nombre}
@@ -47,7 +62,16 @@
     </p>
   {/if}
 
-  <Mapa contornos={contornosDelTipo} {contexto} acertados={partida.acertados} {resaltado} preguntado={partida.preguntado?.id ?? null} alElegir={elegir} {nombreDe} />
+  <Mapa
+    contornos={contornosDelTipo}
+    {contexto}
+    acertados={partida.acertados}
+    {resaltado}
+    preguntado={partida.preguntado?.id ?? null}
+    fallados={partida.terminada ? partida.fallados.map((elemento) => elemento.id) : []}
+    alElegir={elegir}
+    {nombreDe}
+  />
 </main>
 
 <style>
