@@ -3,11 +3,11 @@ import type { Elemento } from '../catalogo/catalogo'
 import { iniciarPartida, responder, responderConTexto, tiempoJugado } from './partida'
 
 const elementos: Elemento[] = [
-  { id: 'a', nombre: 'Alfa', nombreMostrado: 'Alfa', alias: [] },
-  { id: 'b', nombre: 'Beta', nombreMostrado: 'Beta', alias: [] },
-  { id: 'c', nombre: 'Gamma', nombreMostrado: 'Gamma', alias: [] },
-  { id: 'd', nombre: 'Delta', nombreMostrado: 'Delta', alias: [] },
-  { id: 'e', nombre: 'Épsilon', nombreMostrado: 'Épsilon', alias: [] },
+  { id: 'a', nombre: 'Alfa', nombreMostrado: 'Alfa', alias: [], vecinos: [] },
+  { id: 'b', nombre: 'Beta', nombreMostrado: 'Beta', alias: [], vecinos: [] },
+  { id: 'c', nombre: 'Gamma', nombreMostrado: 'Gamma', alias: [], vecinos: [] },
+  { id: 'd', nombre: 'Delta', nombreMostrado: 'Delta', alias: [], vecinos: [] },
+  { id: 'e', nombre: 'Épsilon', nombreMostrado: 'Épsilon', alias: [], vecinos: [] },
 ]
 
 const azarFijo = () => 0.5
@@ -64,7 +64,7 @@ describe('Partida en Nombre → ubicar', () => {
 })
 
 describe('Partida en Ubicación → nombre', () => {
-  const cadiz: Elemento = { id: 'ca', nombre: 'Cádiz', nombreMostrado: 'Cádiz', alias: [] }
+  const cadiz: Elemento = { id: 'ca', nombre: 'Cádiz', nombreMostrado: 'Cádiz', alias: [], vecinos: [] }
 
   function partidaPreguntando(elemento: Elemento) {
     return iniciarPartida([elemento], azarFijo, reloj)
@@ -79,17 +79,17 @@ describe('Partida en Ubicación → nombre', () => {
   })
 
   it('vale cualquier alias: "Gerona" por "Girona" y "Alacant" por "Alicante"', () => {
-    const girona: Elemento = { id: 'gi', nombre: 'Girona', nombreMostrado: 'Girona (Gerona)', alias: ['Gerona'] }
-    const alicante: Elemento = { id: 'al', nombre: 'Alicante', nombreMostrado: 'Alicante', alias: ['Alacant'] }
+    const girona: Elemento = { id: 'gi', nombre: 'Girona', nombreMostrado: 'Girona (Gerona)', alias: ['Gerona'], vecinos: [] }
+    const alicante: Elemento = { id: 'al', nombre: 'Alicante', nombreMostrado: 'Alicante', alias: ['Alacant'], vecinos: [] }
 
     expect(responderConTexto(partidaPreguntando(girona), 'Gerona').ultimaRespuesta?.acierto).toBe(true)
     expect(responderConTexto(partidaPreguntando(alicante), 'alacant').ultimaRespuesta?.acierto).toBe(true)
   })
 
   it('admite una errata en nombres de seis letras o más y la rechaza en los más cortos', () => {
-    const valladolid: Elemento = { id: 'va', nombre: 'Valladolid', nombreMostrado: 'Valladolid', alias: [] }
-    const huelva: Elemento = { id: 'h', nombre: 'Huelva', nombreMostrado: 'Huelva', alias: [] }
-    const soria: Elemento = { id: 'so', nombre: 'Soria', nombreMostrado: 'Soria', alias: [] }
+    const valladolid: Elemento = { id: 'va', nombre: 'Valladolid', nombreMostrado: 'Valladolid', alias: [], vecinos: [] }
+    const huelva: Elemento = { id: 'h', nombre: 'Huelva', nombreMostrado: 'Huelva', alias: [], vecinos: [] }
+    const soria: Elemento = { id: 'so', nombre: 'Soria', nombreMostrado: 'Soria', alias: [], vecinos: [] }
     const acierta = (elemento: Elemento, texto: string) =>
       responderConTexto(partidaPreguntando(elemento), texto).ultimaRespuesta?.acierto
 
@@ -102,8 +102,8 @@ describe('Partida en Ubicación → nombre', () => {
   })
 
   it('no admite como errata el nombre o alias de otro elemento del tipo', () => {
-    const palencia: Elemento = { id: 'pa', nombre: 'Palencia', nombreMostrado: 'Palencia', alias: [] }
-    const valencia: Elemento = { id: 'va', nombre: 'València', nombreMostrado: 'Valencia', alias: ['Valencia'] }
+    const palencia: Elemento = { id: 'pa', nombre: 'Palencia', nombreMostrado: 'Palencia', alias: [], vecinos: [] }
+    const valencia: Elemento = { id: 'va', nombre: 'València', nombreMostrado: 'Valencia', alias: ['Valencia'], vecinos: [] }
     const partida = iniciarPartida([palencia, valencia], azarFijo, reloj)
     expect(partida.preguntado).toEqual(palencia)
 
