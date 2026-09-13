@@ -6,10 +6,11 @@
     puntuacion: number
     tiempo: number
     fallos: number
+    pistas: number
     fallados: Elemento[]
   }
 
-  let { puntuacion, tiempo, fallos, fallados }: Props = $props()
+  let { puntuacion, tiempo, fallos, pistas, fallados }: Props = $props()
 </script>
 
 <section class="fin">
@@ -21,6 +22,8 @@
     <dd>{formatearTiempo(tiempo)}</dd>
     <dt>Fallos</dt>
     <dd>{fallos}</dd>
+    <dt>Pistas</dt>
+    <dd>{pistas}</dd>
   </dl>
   {#if fallados.length > 0}
     <p>Para repasar:</p>

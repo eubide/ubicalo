@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { Elemento } from '../catalogo/catalogo'
-import { iniciarPartida, responder, responderConTexto, tiempoJugado } from './partida'
+import { elegirOpcion, iniciarPartida, pedirPista, responder, responderConTexto, tiempoJugado, type Partida } from './partida'
 
 const elementos: Elemento[] = [
   { id: 'a', nombre: 'Alfa', nombreMostrado: 'Alfa', alias: [], vecinos: [] },
@@ -91,7 +91,7 @@ describe('Partida en Ubicación → nombre', () => {
     const huelva: Elemento = { id: 'h', nombre: 'Huelva', nombreMostrado: 'Huelva', alias: [], vecinos: [] }
     const soria: Elemento = { id: 'so', nombre: 'Soria', nombreMostrado: 'Soria', alias: [], vecinos: [] }
     const acierta = (elemento: Elemento, texto: string) =>
-      responderConTexto(partidaPreguntando(elemento), texto).ultimaRespuesta?.acierto
+      responderConTexto(partidaPreguntando(elemento), texto).ultimaRespuesta?.acierto === true
 
     expect(acierta(valladolid, 'Valladoliz')).toBe(true)
     expect(acierta(valladolid, 'Valladoloz')).toBe(false)
@@ -107,35 +107,167 @@ describe('Partida en Ubicación → nombre', () => {
     const partida = iniciarPartida([palencia, valencia], azarFijo, reloj)
     expect(partida.preguntado).toEqual(palencia)
 
-    expect(responderConTexto(partida, 'valencia').ultimaRespuesta?.acierto).toBe(false)
-    expect(responderConTexto(partida, 'València').ultimaRespuesta?.acierto).toBe(false)
+    expect(responderConTexto(partida, 'valencia').fallos).toBe(1)
+    expect(responderConTexto(partida, 'València').fallos).toBe(1)
     expect(responderConTexto(partida, 'Palencio').ultimaRespuesta?.acierto).toBe(true)
     expect(responderConTexto(partida, 'palencia').ultimaRespuesta?.acierto).toBe(true)
   })
 
-  it('un texto incorrecto es un fallo: resta 25, desvela el correcto y el elemento sigue pendiente', () => {
+  it('un texto incorrecto es un fallo: resta 25 y abre la pista sin desvelar el correcto ni pasar al siguiente', () => {
     let partida = iniciarPartida(elementos, azarFijo, reloj)
     partida = responderConTexto(partida, partida.preguntado!.nombre)
     expect(partida.puntuacion).toBe(150)
 
     const fallado = partida.preguntado!
+    const acertadoAntes = partida.ultimaRespuesta
     partida = responderConTexto(partida, 'Zeta')
 
-    expect(partida.ultimaRespuesta).toEqual({ acierto: false, correcto: fallado })
+    expect(partida.pista?.trasFallo).toBe(true)
+    expect(partida.pista?.opciones).toContainEqual(fallado)
+    expect(partida.pistas).toBe(1)
+    expect(partida.preguntado).toEqual(fallado)
+    expect(partida.ultimaRespuesta).toEqual(acertadoAntes)
     expect(partida.puntuacion).toBe(125)
     expect(partida.fallos).toBe(1)
+    expect(partida.fallados).toEqual([fallado])
     expect(partida.pendientes).toBe(4)
     expect(partida.acertados).not.toContain(fallado.id)
   })
 
-  it('un texto vacío no cuenta como fallo ni pasa al siguiente elemento', () => {
+  it('un texto vacío pide pista: no cuenta como fallo ni pasa al siguiente elemento', () => {
     const inicial = iniciarPartida(elementos, azarFijo, reloj)
 
     const partida = responderConTexto(inicial, '   ')
 
+    expect(partida.pista?.trasFallo).toBe(false)
+    expect(partida.pista?.opciones).toHaveLength(4)
+    expect(partida.pista?.opciones).toContainEqual(inicial.preguntado)
+    expect(partida.pistas).toBe(1)
     expect(partida.fallos).toBe(0)
+    expect(partida.puntuacion).toBe(0)
     expect(partida.preguntado).toEqual(inicial.preguntado)
     expect(partida.ultimaRespuesta).toBeUndefined()
+  })
+})
+
+describe('Pista', () => {
+  const azarSinBarajar = () => 0.99
+
+  function catalogoConVecinos(vecinosDe: Record<string, string[]>): Elemento[] {
+    return ['a', 'b', 'c', 'd', 'e', 'f', 'g'].map((id) => ({
+      id,
+      nombre: id.toUpperCase(),
+      nombreMostrado: id.toUpperCase(),
+      alias: [],
+      vecinos: vecinosDe[id] ?? [],
+    }))
+  }
+
+  function pistaSobreC(vecinosDeC: string[]) {
+    let partida = iniciarPartida(catalogoConVecinos({ c: vecinosDeC }), azarSinBarajar, reloj)
+    partida = responder(partida, 'a')
+    partida = responder(partida, 'b')
+    expect(partida.preguntado?.id).toBe('c')
+    return pedirPista(partida)
+  }
+
+  function distractores(partida: Partida): string[] {
+    return partida.pista!.opciones.map((opcion) => opcion.id).filter((id) => id !== 'c').sort()
+  }
+
+  it('prefiere como distractores los vecinos aún no preguntados', () => {
+    const partida = pistaSobreC(['a', 'd', 'f', 'g'])
+
+    expect(distractores(partida)).toEqual(['d', 'f', 'g'])
+  })
+
+  it('a falta de vecinos aún no preguntados, completa con vecinos ya preguntados antes que con otros elementos', () => {
+    const partida = pistaSobreC(['a', 'b', 'e'])
+
+    expect(distractores(partida)).toEqual(['a', 'b', 'e'])
+  })
+
+  it('a falta de vecinos, completa con cualquier otro elemento del tipo', () => {
+    const partida = pistaSobreC(['g'])
+    const elegidos = distractores(partida)
+
+    expect(elegidos).toHaveLength(3)
+    expect(elegidos).toContain('g')
+    expect(new Set(elegidos).size).toBe(3)
+  })
+
+  it('en una vuelta posterior todos los vecinos ya se preguntaron y se eligen igualmente antes que otros elementos', () => {
+    let partida = iniciarPartida(catalogoConVecinos({ c: ['e'], a: ['d', 'e'] }), azarSinBarajar, reloj)
+    partida = responder(partida, 'b')
+    for (let i = 0; i < 6; i++) partida = responder(partida, partida.preguntado!.id)
+    expect(partida.vuelta).toBe(2)
+    expect(partida.preguntado?.id).toBe('a')
+
+    partida = pedirPista(partida)
+
+    expect(partida.pista!.opciones.map((opcion) => opcion.id)).toEqual(expect.arrayContaining(['a', 'd', 'e']))
+  })
+
+  it('elegir la opción correcta da 0 puntos, no es fallo y el elemento vuelve en la vuelta siguiente', () => {
+    let partida = iniciarPartida(elementos, azarFijo, reloj)
+    partida = responder(partida, partida.preguntado!.id)
+    const resuelto = partida.preguntado!
+    partida = responderConTexto(partida, '')
+
+    partida = elegirOpcion(partida, resuelto.id)
+
+    expect(partida.ultimaRespuesta).toEqual({ acierto: true, correcto: resuelto })
+    expect(partida.pista).toBeNull()
+    expect(partida.puntuacion).toBe(150)
+    expect(partida.fallos).toBe(0)
+    expect(partida.fallados).toEqual([])
+    expect(partida.acertados).not.toContain(resuelto.id)
+    expect(partida.pendientes).toBe(4)
+    expect(partida.preguntado).not.toEqual(resuelto)
+
+    for (let i = 0; i < 3; i++) partida = responder(partida, partida.preguntado!.id)
+    expect(partida.vuelta).toBe(2)
+    expect(partida.preguntado).toEqual(resuelto)
+    expect(partida.puntuacion).toBe(600)
+
+    partida = responder(partida, resuelto.id)
+    expect(partida.puntuacion).toBe(625)
+    expect(partida.terminada).toBe(true)
+    expect(partida.pistas).toBe(1)
+  })
+
+  it('elegir una opción incorrecta es otro fallo, desvela el correcto y el elemento sigue pendiente', () => {
+    let partida = iniciarPartida(elementos, azarFijo, reloj)
+    partida = responder(partida, partida.preguntado!.id)
+    const fallado = partida.preguntado!
+    partida = responderConTexto(partida, 'Zeta')
+    const distractor = partida.pista!.opciones.find((opcion) => opcion.id !== fallado.id)!
+
+    partida = elegirOpcion(partida, distractor.id)
+
+    expect(partida.ultimaRespuesta).toEqual({ acierto: false, correcto: fallado })
+    expect(partida.pista).toBeNull()
+    expect(partida.puntuacion).toBe(100)
+    expect(partida.fallos).toBe(2)
+    expect(partida.fallados).toEqual([fallado])
+    expect(partida.acertados).not.toContain(fallado.id)
+    expect(partida.pendientes).toBe(4)
+    expect(partida.preguntado).not.toEqual(fallado)
+
+    for (let i = 0; i < 3; i++) partida = responder(partida, partida.preguntado!.id)
+    expect(partida.vuelta).toBe(2)
+    expect(partida.preguntado).toEqual(fallado)
+  })
+
+  it('recuenta las pistas usadas en la partida', () => {
+    let partida = iniciarPartida(elementos, azarFijo, reloj)
+
+    partida = responderConTexto(partida, '')
+    partida = elegirOpcion(partida, partida.preguntado!.id)
+    partida = responderConTexto(partida, 'Zeta')
+    partida = elegirOpcion(partida, partida.preguntado!.id)
+
+    expect(partida.pistas).toBe(2)
   })
 })
 

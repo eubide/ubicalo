@@ -5,7 +5,7 @@
   import Mapa from './mapa/Mapa.svelte'
   import FinDePartida from './pantallas/FinDePartida.svelte'
   import PuntuacionYTiempo from './pantallas/PuntuacionYTiempo.svelte'
-  import { iniciarPartida, responder, responderConTexto, tiempoJugado, type Partida } from './partida/partida'
+  import { elegirOpcion, iniciarPartida, responder, responderConTexto, tiempoJugado, type Partida } from './partida/partida'
   import type { Prueba } from './prueba/prueba'
   import SeleccionPrueba from './seleccion/SeleccionPrueba.svelte'
 
@@ -19,6 +19,7 @@
   let ahora = $state(Date.now())
   let texto = $state('')
   let campoDeTexto = $state<HTMLInputElement | null>(null)
+  let opcionesDePista = $state<HTMLElement | null>(null)
 
   $effect(() => {
     if (!partida || partida.terminada) return
@@ -30,10 +31,17 @@
     campoDeTexto?.focus()
   })
 
+  $effect(() => {
+    opcionesDePista?.querySelector('button')?.focus()
+  })
+
   const escribeNombre = $derived(prueba?.modo === 'ubicacion-nombre')
   const respuesta = $derived(partida?.ultimaRespuesta)
   const desvelaPreguntado = $derived(respuesta?.correcto.id === partida?.preguntado?.id)
-  const resaltado = $derived(respuesta && !respuesta.acierto && !desvelaPreguntado ? respuesta.correcto.id : null)
+  const pista = $derived(partida?.pista ?? null)
+  const resaltado = $derived(
+    respuesta && !respuesta.acierto && !desvelaPreguntado && !pista ? respuesta.correcto.id : null,
+  )
 
   function empezar(elegida: Prueba) {
     const elementos = catalogo(elegida.tipo)
@@ -62,6 +70,11 @@
     texto = ''
     campoDeTexto?.focus()
   }
+
+  function elegirOpcionDePista(id: string) {
+    if (!partida || partida.terminada) return
+    partida = elegirOpcion(partida, id)
+  }
 </script>
 
 <main>
@@ -74,10 +87,18 @@
           puntuacion={partida.puntuacion}
           tiempo={tiempoJugado(partida, ahora)}
           fallos={partida.fallos}
+          pistas={partida.pistas}
           fallados={partida.fallados}
         />
       {:else}
-        {#if escribeNombre}
+        {#if pista}
+          <div class="pista" bind:this={opcionesDePista}>
+            <p class:fallo={pista.trasFallo}>{pista.trasFallo ? 'Incorrecto. ¿Cuál es?' : '¿Cuál es?'}</p>
+            {#each pista.opciones as opcion (opcion.id)}
+              <button type="button" onclick={() => elegirOpcionDePista(opcion.id)}>{opcion.nombreMostrado}</button>
+            {/each}
+          </div>
+        {:else if escribeNombre}
           <form class="pregunta" onsubmit={enviarTexto}>
             <input
               bind:this={campoDeTexto}
@@ -98,7 +119,7 @@
       {/if}
     </header>
 
-    {#if respuesta && !partida.terminada}
+    {#if respuesta && !partida.terminada && !pista}
       <p class="respuesta" class:fallo={!respuesta.acierto}>
         {#if respuesta.acierto}
           Correcto: {respuesta.correcto.nombreMostrado}
@@ -150,7 +171,8 @@
   }
 
   form.pregunta input,
-  form.pregunta button {
+  form.pregunta button,
+  .pista button {
     font: inherit;
     font-size: 1.125rem;
     font-weight: normal;
@@ -164,6 +186,22 @@
   form.pregunta input {
     min-width: 0;
     width: 14rem;
+  }
+
+  .pista {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.5rem;
+  }
+
+  .pista p {
+    margin: 0;
+    font-size: 1.125rem;
+  }
+
+  .pista p.fallo {
+    color: #b45309;
   }
 
   .pendientes {
