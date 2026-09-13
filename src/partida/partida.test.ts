@@ -51,7 +51,7 @@ describe('Partida en Nombre → ubicar', () => {
 
     partida = responder(partida, otro.id)
 
-    expect(partida.ultimaRespuesta).toEqual({ acierto: false, correcto: fallado })
+    expect(partida.ultimaRespuesta).toEqual({ acierto: false, conPista: false, correcto: fallado })
     expect(partida.acertados).toEqual([])
     expect(partida.pendientes).toBe(5)
     expect(partida.vuelta).toBe(1)
@@ -68,7 +68,7 @@ describe('Partida en Nombre → ubicar', () => {
 
     partida = responder(partida, fallado.id)
 
-    expect(partida.ultimaRespuesta).toEqual({ acierto: true, correcto: fallado })
+    expect(partida.ultimaRespuesta).toEqual({ acierto: true, conPista: false, correcto: fallado })
     expect(partida.terminada).toBe(true)
   })
 })
@@ -83,7 +83,7 @@ describe('Partida en Ubicación → nombre', () => {
   it('da igual mayúsculas y tildes: "cadiz" vale por "Cádiz"', () => {
     const partida = responderConTexto(partidaPreguntando(cadiz), 'cadiz')
 
-    expect(partida.ultimaRespuesta).toEqual({ acierto: true, correcto: cadiz })
+    expect(partida.ultimaRespuesta).toEqual({ acierto: true, conPista: false, correcto: cadiz })
     expect(partida.acertados).toEqual(['ca'])
     expect(partida.terminada).toBe(true)
   })
@@ -226,7 +226,7 @@ describe('Pista', () => {
 
     partida = elegirOpcion(partida, resuelto.id)
 
-    expect(partida.ultimaRespuesta).toEqual({ acierto: true, correcto: resuelto })
+    expect(partida.ultimaRespuesta).toEqual({ acierto: false, conPista: true, correcto: resuelto })
     expect(partida.pista).toBeNull()
     expect(partida.puntuacion).toBe(150)
     expect(partida.fallos).toBe(0)
@@ -255,7 +255,7 @@ describe('Pista', () => {
 
     partida = elegirOpcion(partida, distractor.id)
 
-    expect(partida.ultimaRespuesta).toEqual({ acierto: false, correcto: fallado })
+    expect(partida.ultimaRespuesta).toEqual({ acierto: false, conPista: false, correcto: fallado })
     expect(partida.pista).toBeNull()
     expect(partida.puntuacion).toBe(100)
     expect(partida.fallos).toBe(2)
@@ -274,7 +274,9 @@ describe('Pista', () => {
 
     partida = responderConTexto(partida, '')
     partida = elegirOpcion(partida, partida.preguntado!.id)
+    expect(partida.pistas).toBe(1)
     partida = responderConTexto(partida, 'Zeta')
+    expect(partida.pistas).toBe(1)
     partida = elegirOpcion(partida, partida.preguntado!.id)
 
     expect(partida.pistas).toBe(2)

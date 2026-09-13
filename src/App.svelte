@@ -63,7 +63,7 @@
   const desvelaPreguntado = $derived(respuesta?.correcto.id === partida?.preguntado?.id)
   const pista = $derived(partida?.pista ?? null)
   const resaltado = $derived(
-    respuesta && !respuesta.acierto && !desvelaPreguntado && !pista && !partida?.terminada
+    respuesta && !respuesta.acierto && !respuesta.conPista && !desvelaPreguntado && !pista && !partida?.terminada
       ? respuesta.correcto.id
       : null,
   )
@@ -182,8 +182,10 @@
     </header>
 
     {#if respuesta && !partida.terminada && !pista}
-      <p class="respuesta" class:fallo={!respuesta.acierto}>
-        {#if respuesta.acierto}
+      <p class="respuesta" class:fallo={!respuesta.acierto && !respuesta.conPista}>
+        {#if respuesta.conPista}
+          Con pista{desvelaPreguntado ? '' : `: ${respuesta.correcto.nombreMostrado}`}
+        {:else if respuesta.acierto}
           Correcto: {respuesta.correcto.nombreMostrado}
         {:else if desvelaPreguntado}
           Incorrecto

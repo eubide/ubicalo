@@ -7,6 +7,7 @@ export type Reloj = () => number
 
 export interface Respuesta {
   acierto: boolean
+  conPista: boolean
   correcto: Elemento
 }
 
@@ -192,17 +193,22 @@ function avanzar(partida: Partida, respuesta: Respuesta, siguePendiente: boolean
 function resolver(partida: Partida, acierto: boolean): Partida {
   const ahora = partida.reloj()
   const correcto = partida.cola[0]
-  if (!acierto) return avanzar(anotarFallo(partida), { acierto, correcto }, true, ahora)
+  if (!acierto) return avanzar(anotarFallo(partida), { acierto, conPista: false, correcto }, true, ahora)
   const segundos = (ahora - partida.mostradoEn) / 1000
   const puntos = partida.vuelta > 1 ? 25 : 100 + Math.round(50 * Math.max(0, 1 - segundos / 10))
-  return avanzar({ ...partida, puntuacion: partida.puntuacion + puntos }, { acierto, correcto }, false, ahora)
+  return avanzar({ ...partida, puntuacion: partida.puntuacion + puntos }, { acierto, conPista: false, correcto }, false, ahora)
 }
 
 export function elegirOpcion(partida: Partida, idElegido: string): Partida {
   const correcto = partida.cola[0]
-  const acierto = idElegido === correcto.id
+  const esLaCorrecta = idElegido === correcto.id
   const conPistaUsada = { ...partida, pistas: partida.pistas + 1 }
-  return avanzar(acierto ? conPistaUsada : anotarFallo(conPistaUsada), { acierto, correcto }, true, partida.reloj())
+  return avanzar(
+    esLaCorrecta ? conPistaUsada : anotarFallo(conPistaUsada),
+    { acierto: false, conPista: esLaCorrecta, correcto },
+    true,
+    partida.reloj(),
+  )
 }
 
 export function abandonar(partida: Partida): Partida {
