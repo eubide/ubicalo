@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Elemento } from '../catalogo/catalogo'
+  import type { ResultadoDeRegistro } from '../competicion/competicion'
   import { formatearTiempo } from './tiempo'
 
   interface Props {
@@ -7,13 +8,30 @@
     tiempo: number
     fallos: number
     fallados: Elemento[]
+    abandonada: boolean
+    resultado: ResultadoDeRegistro | null
+    alElegirOtraPrueba: () => void
   }
 
-  let { puntuacion, tiempo, fallos, fallados }: Props = $props()
+  let { puntuacion, tiempo, fallos, fallados, abandonada, resultado, alElegirOtraPrueba }: Props = $props()
 </script>
 
 <section class="fin">
-  <p class="titulo">¡Partida terminada!</p>
+  <p class="titulo">{abandonada ? 'Partida abandonada' : '¡Partida terminada!'}</p>
+  {#if resultado?.caso === 'abandonada'}
+    <p class="marca">Una partida abandonada no cuenta para la marca.</p>
+  {:else if resultado?.caso === 'nueva-marca'}
+    <p class="marca nueva">¡Nueva marca!</p>
+  {:else if resultado?.caso === 'empate-a-puntos-con-mas-tiempo'}
+    <p class="marca">Empatas a puntos con tu marca, pero con más tiempo.</p>
+  {:else if resultado?.caso === 'empate-total'}
+    <p class="marca">Igualas tu marca en puntos y tiempo.</p>
+  {:else if resultado?.caso === 'faltan-puntos'}
+    <p class="marca">
+      Te has quedado a {resultado.puntos}
+      {resultado.puntos === 1 ? 'punto' : 'puntos'} de tu marca.
+    </p>
+  {/if}
   <dl>
     <dt>Puntuación</dt>
     <dd>{puntuacion}</dd>
@@ -30,6 +48,7 @@
       {/each}
     </ul>
   {/if}
+  <button type="button" onclick={alElegirOtraPrueba}>Elegir otra prueba</button>
 </section>
 
 <style>
@@ -37,6 +56,16 @@
     font-size: 1.5rem;
     font-weight: 600;
     margin: 0;
+  }
+
+  .marca {
+    margin: 0.25rem 0 0;
+    color: #6b7280;
+  }
+
+  .marca.nueva {
+    color: #2f7a4a;
+    font-weight: 600;
   }
 
   dl {
@@ -49,6 +78,20 @@
 
   dt {
     color: #6b7280;
+  }
+
+  button {
+    font: inherit;
+    margin-top: 0.75rem;
+    padding: 0.5rem 1rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.5rem;
+    background: #fff;
+    cursor: pointer;
+  }
+
+  button:hover {
+    border-color: #2f7a4a;
   }
 
   dd {
