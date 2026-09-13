@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Prueba } from '../prueba/prueba'
-import { almacenEnMemoria, crearCompeticion, type Almacen } from './competicion'
+import { almacenEnMemoria, crearCompeticion, enlaceDeReto, enlaceSinReto, retoDe, retoDeEnlace, superaReto, type Almacen, type Reto } from './competicion'
 
 const comunidadesUbicar: Prueba = { tipo: 'comunidades', modo: 'nombre-ubicar' }
 const provinciasUbicar: Prueba = { tipo: 'provincias', modo: 'nombre-ubicar' }
@@ -167,6 +167,15 @@ describe('Almacén', () => {
     expect(competicion.marca(comunidadesUbicar)).toEqual({ puntuacion: 100, tiempo: 70_000, fecha: '2026-09-13T10:00:00.000Z' })
   })
 
+  it.each([
+    ['tipo desconocido', { tipo: 'rios', modo: 'nombre-ubicar' }],
+    ['modo desconocido', { tipo: 'provincias', modo: 'pista' }],
+  ])('descarta del historial una partida guardada con %s', (_caso, prueba) => {
+    const guardado = JSON.stringify({ marcas: {}, historial: [{ ...partida, prueba }, partida] })
+
+    expect(crearCompeticion(almacenConDatos(guardado)).historial()).toEqual([partida])
+  })
+
   it('si el almacén falla al leer y al escribir, registrar no rompe y no hay marcas', () => {
     const competicion = crearCompeticion({
       getItem: () => {
@@ -217,5 +226,65 @@ describe('Historial', () => {
       fecha: '2026-09-12T10:00:00.000Z',
       abandonada: true,
     })
+  })
+})
+
+describe('Reto', () => {
+  const pagina = 'http://localhost:5173/'
+
+  it('una partida terminada genera un reto con su prueba, puntuación y tiempo; una abandonada no', () => {
+    const partida = { prueba: provinciasUbicar, puntuacion: 1_650, tiempo: 80_000, fecha: '2026-09-13T10:00:00.000Z' }
+
+    expect(retoDe({ ...partida, abandonada: false })).toEqual({ prueba: provinciasUbicar, puntuacion: 1_650, tiempo: 80_000 })
+    expect(retoDe({ ...partida, abandonada: true })).toBeNull()
+  })
+
+  it('supera el reto con más puntuación o con la misma puntuación en menos segundos enteros; abandonar no lo supera', () => {
+    const reto: Reto = { prueba: comunidadesNombrar, puntuacion: 1_800, tiempo: 95_400 }
+    const jugar = (puntuacion: number, tiempo: number, abandonada = false) =>
+      superaReto({ prueba: comunidadesNombrar, puntuacion, tiempo, fecha: '2026-09-13T10:00:00.000Z', abandonada }, reto)
+
+    expect(jugar(1_801, 200_000)).toBe(true)
+    expect(jugar(1_799, 10_000)).toBe(false)
+    expect(jugar(1_800, 94_999)).toBe(true)
+    expect(jugar(1_800, 95_900)).toBe(false)
+    expect(jugar(1_800, 96_000)).toBe(false)
+    expect(jugar(2_000, 10_000, true)).toBe(false)
+  })
+
+  it('un reto convertido en enlace y el enlace convertido de nuevo en reto dan el mismo reto', () => {
+    const reto: Reto = { prueba: { tipo: 'provincias', modo: 'ubicacion-nombre' }, puntuacion: 1_825, tiempo: 95_400 }
+
+    expect(retoDeEnlace(enlaceDeReto(reto, pagina))).toEqual(reto)
+
+    const enlace = enlaceDeReto(reto, 'http://localhost:5173/ubicalo/?idioma=es#mapa')
+    expect(enlace).toBe('http://localhost:5173/ubicalo/?tipo=provincias&modo=ubicacion-nombre&puntuacion=1825&tiempo=95400')
+    expect(retoDeEnlace(enlace)).toEqual(reto)
+  })
+
+  it.each([
+    ['sin parámetros', 'http://localhost:5173/'],
+    ['sin tiempo', 'http://localhost:5173/?tipo=provincias&modo=nombre-ubicar&puntuacion=1800'],
+    ['tipo desconocido', 'http://localhost:5173/?tipo=rios&modo=nombre-ubicar&puntuacion=1800&tiempo=95000'],
+    ['modo desconocido', 'http://localhost:5173/?tipo=provincias&modo=pista&puntuacion=1800&tiempo=95000'],
+    ['puntuación no numérica', 'http://localhost:5173/?tipo=provincias&modo=nombre-ubicar&puntuacion=mucha&tiempo=95000'],
+    ['puntuación vacía', 'http://localhost:5173/?tipo=provincias&modo=nombre-ubicar&puntuacion=&tiempo=95000'],
+    ['tiempo negativo', 'http://localhost:5173/?tipo=provincias&modo=nombre-ubicar&puntuacion=1800&tiempo=-5'],
+    ['puntuación decimal', 'http://localhost:5173/?tipo=provincias&modo=nombre-ubicar&puntuacion=18.5&tiempo=95000'],
+    ['puntuación negativa', 'http://localhost:5173/?tipo=provincias&modo=nombre-ubicar&puntuacion=-1800&tiempo=95000'],
+    ['tiempo mayor que el entero seguro', 'http://localhost:5173/?tipo=provincias&modo=nombre-ubicar&puntuacion=1800&tiempo=9007199254740993'],
+    ['tiempo infinito', 'http://localhost:5173/?tipo=provincias&modo=nombre-ubicar&puntuacion=1800&tiempo=Infinity'],
+    ['no es una URL', 'reto de provincias'],
+  ])('un enlace inválido (%s) no da reto', (_caso, enlace) => {
+    expect(retoDeEnlace(enlace)).toBeNull()
+  })
+
+  it('quitar el reto de un enlace conserva la ruta, los demás parámetros y el fragmento', () => {
+    expect(
+      enlaceSinReto('http://localhost:5173/ubicalo/?tipo=provincias&idioma=es&modo=nombre-ubicar&puntuacion=1800&tiempo=95000#mapa'),
+    ).toBe('http://localhost:5173/ubicalo/?idioma=es#mapa')
+    expect(enlaceSinReto('http://localhost:5173/ubicalo/?tipo=provincias&modo=nombre-ubicar&puntuacion=1800&tiempo=95000')).toBe(
+      'http://localhost:5173/ubicalo/',
+    )
   })
 })

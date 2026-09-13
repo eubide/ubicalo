@@ -1,5 +1,6 @@
+import type { Tipo } from '../catalogo/catalogo'
 import type { PartidaJugada } from '../partida/partida'
-import type { Prueba } from '../prueba/prueba'
+import { etiquetaDeModo, etiquetaDeTipo, type Modo, type Prueba } from '../prueba/prueba'
 
 export type Almacen = Pick<Storage, 'getItem' | 'setItem'>
 
@@ -16,6 +17,12 @@ export type ResultadoDeRegistro =
   | { caso: 'empate-total' }
   | { caso: 'abandonada' }
 
+export interface Reto {
+  prueba: Prueba
+  puntuacion: number
+  tiempo: number
+}
+
 interface Registro {
   marcas: Record<string, Marca>
   historial: PartidaJugada[]
@@ -24,6 +31,7 @@ interface Registro {
 const CLAVE = 'ubicalo:competicion'
 const PARTIDAS_EN_HISTORIAL = 10
 const MILISEGUNDOS_POR_SEGUNDO = 1_000
+const PARAMETROS_DEL_RETO = ['tipo', 'modo', 'puntuacion', 'tiempo']
 
 function claveDe(prueba: Prueba): string {
   return `${prueba.tipo}/${prueba.modo}`
@@ -31,6 +39,14 @@ function claveDe(prueba: Prueba): string {
 
 function esObjeto(valor: unknown): valor is Record<string, unknown> {
   return typeof valor === 'object' && valor !== null && !Array.isArray(valor)
+}
+
+function esTipo(valor: unknown): valor is Tipo {
+  return typeof valor === 'string' && Object.hasOwn(etiquetaDeTipo, valor)
+}
+
+function esModo(valor: unknown): valor is Modo {
+  return typeof valor === 'string' && Object.hasOwn(etiquetaDeModo, valor)
 }
 
 function esMarca(valor: unknown): valor is Marca {
@@ -47,8 +63,8 @@ function esPartidaJugada(valor: unknown): valor is PartidaJugada {
   const { prueba, abandonada } = valor as Record<string, unknown>
   return (
     esObjeto(prueba) &&
-    typeof prueba.tipo === 'string' &&
-    typeof prueba.modo === 'string' &&
+    esTipo(prueba.tipo) &&
+    esModo(prueba.modo) &&
     typeof abandonada === 'boolean'
   )
 }
@@ -62,7 +78,7 @@ function registroValido(datos: unknown): Registro {
   }
 }
 
-function comparar(partida: PartidaJugada, marca: Marca | undefined): ResultadoDeRegistro {
+function comparar(partida: PartidaJugada, marca: Pick<Marca, 'puntuacion' | 'tiempo'> | undefined): ResultadoDeRegistro {
   if (partida.abandonada) return { caso: 'abandonada' }
   if (!marca || partida.puntuacion > marca.puntuacion) return { caso: 'nueva-marca' }
   if (partida.puntuacion < marca.puntuacion) return { caso: 'faltan-puntos', puntos: marca.puntuacion - partida.puntuacion }
@@ -121,4 +137,49 @@ export function crearCompeticion(almacen: Almacen) {
       return leer().historial
     },
   }
+}
+
+export function retoDe(partida: PartidaJugada): Reto | null {
+  if (partida.abandonada) return null
+  const { prueba, puntuacion, tiempo } = partida
+  return { prueba, puntuacion, tiempo }
+}
+
+export function superaReto(partida: PartidaJugada, reto: Reto): boolean {
+  return comparar(partida, reto).caso === 'nueva-marca'
+}
+
+export function enlaceDeReto(reto: Reto, pagina: string): string {
+  const enlace = new URL(pagina)
+  enlace.search = new URLSearchParams({
+    tipo: reto.prueba.tipo,
+    modo: reto.prueba.modo,
+    puntuacion: String(reto.puntuacion),
+    tiempo: String(reto.tiempo),
+  }).toString()
+  enlace.hash = ''
+  return enlace.toString()
+}
+
+export function retoDeEnlace(enlace: string): Reto | null {
+  if (!URL.canParse(enlace)) return null
+  const parametros = new URL(enlace).searchParams
+  const tipo = parametros.get('tipo')
+  const modo = parametros.get('modo')
+  const puntuacion = entero(parametros.get('puntuacion'))
+  const tiempo = entero(parametros.get('tiempo'))
+  if (!esTipo(tipo) || !esModo(modo) || puntuacion === null || tiempo === null) return null
+  return { prueba: { tipo, modo }, puntuacion, tiempo }
+}
+
+export function enlaceSinReto(enlace: string): string {
+  const url = new URL(enlace)
+  for (const parametro of PARAMETROS_DEL_RETO) url.searchParams.delete(parametro)
+  return url.toString()
+}
+
+function entero(parametro: string | null): number | null {
+  if (!parametro || !/^\d+$/.test(parametro)) return null
+  const valor = Number(parametro)
+  return Number.isSafeInteger(valor) ? valor : null
 }

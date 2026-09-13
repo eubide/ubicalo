@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Elemento } from '../catalogo/catalogo'
-  import type { ResultadoDeRegistro } from '../competicion/competicion'
+  import type { ResultadoDeRegistro, Reto } from '../competicion/competicion'
+  import CompartirReto from './CompartirReto.svelte'
   import { formatearTiempo } from './tiempo'
 
   interface Props {
@@ -11,10 +12,12 @@
     fallados: Elemento[]
     abandonada: boolean
     resultado: ResultadoDeRegistro | null
+    reto: Reto | null
+    retoSuperado: boolean | null
     alElegirOtraPrueba: () => void
   }
 
-  let { puntuacion, tiempo, fallos, pistasUsadas, fallados, abandonada, resultado, alElegirOtraPrueba }: Props = $props()
+  let { puntuacion, tiempo, fallos, pistasUsadas, fallados, abandonada, resultado, reto, retoSuperado, alElegirOtraPrueba }: Props = $props()
 </script>
 
 <section class="fin">
@@ -33,6 +36,11 @@
       {resultado.puntos === 1 ? 'punto' : 'puntos'} de tu marca.
     </p>
   {/if}
+  {#if retoSuperado === true}
+    <p class="marca nueva">¡Reto superado!</p>
+  {:else if retoSuperado === false}
+    <p class="marca">Reto no superado.</p>
+  {/if}
   <dl>
     <dt>Puntuación</dt>
     <dd>{puntuacion}</dd>
@@ -50,6 +58,9 @@
         <li>{elemento.nombreMostrado}</li>
       {/each}
     </ul>
+  {/if}
+  {#if reto}
+    <CompartirReto {reto} />
   {/if}
   <button type="button" onclick={alElegirOtraPrueba}>Elegir otra prueba</button>
 </section>
