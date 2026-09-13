@@ -1,0 +1,61 @@
+version: '3'
+
+tasks:
+  default:
+    desc: Lista las tareas disponibles
+    cmds:
+      - task --list
+
+  instalar:
+    desc: Instala las dependencias
+    cmds:
+      - npm install
+
+  dev:
+    desc: Arranca la app en desarrollo; en el móvil abre la URL Network
+    cmds:
+      - npm run dev
+
+  test:
+    desc: Ejecuta los tests una vez
+    cmds:
+      - npx vitest run
+
+  test:vigilar:
+    desc: Ejecuta los tests y los repite al guardar
+    cmds:
+      - npx vitest
+
+  check:
+    desc: Comprueba tipos de TypeScript y Svelte
+    cmds:
+      - npm run check
+
+  build:
+    desc: Compila la app para producción en dist/
+    cmds:
+      - npm run build
+
+  preview:
+    desc: Compila y sirve la versión de producción en la red local
+    cmds:
+      - task: build
+      - npx vite preview --host
+
+  verificar:
+    desc: Tests, tipos y compilación, como antes de un merge
+    cmds:
+      - task: test
+      - task: check
+      - task: build
+      - rm -rf dist
+
+  datos:contexto:
+    desc: Regenera los países del contexto geográfico desde world-atlas
+    cmds:
+      - npm run datos:contexto
+
+  limpiar:
+    desc: Borra la compilación y la caché de Vite
+    cmds:
+      - rm -rf dist node_modules/.vite
