@@ -13,7 +13,7 @@ export interface Respuesta {
 
 export interface Pista {
   opciones: Elemento[]
-  trasFallo: boolean
+  escrito: string | null
 }
 
 export interface Correccion {
@@ -22,7 +22,13 @@ export interface Correccion {
   duracion: number
 }
 
+export function correccionTrasFallo({ elegido, correcto }: Correccion): boolean {
+  return elegido.id !== correcto.id
+}
+
 export const DURACION_CORRECCION_TRAS_FALLO = 3_000
+
+export const DURACION_CORRECCION_CON_PISTA = 2_000
 
 export interface Partida {
   elementos: Elemento[]
@@ -112,12 +118,12 @@ export function responder(partida: Partida, idElegido: string): Partida {
   if (idElegido === correcto.id) return resolver(partida, true)
   const elegido = partida.elementos.find((elemento) => elemento.id === idElegido)
   if (!elegido) return partida
-  const resuelta = resolver(partida, false)
-  return {
-    ...resuelta,
-    correccion: { elegido, correcto, duracion: DURACION_CORRECCION_TRAS_FALLO },
-    pausadaDesde: resuelta.mostradoEn,
-  }
+  return abrirCorreccion(resolver(partida, false), elegido, correcto)
+}
+
+function abrirCorreccion(partida: Partida, elegido: Elemento, correcto: Elemento): Partida {
+  const duracion = elegido.id !== correcto.id ? DURACION_CORRECCION_TRAS_FALLO : DURACION_CORRECCION_CON_PISTA
+  return { ...partida, correccion: { elegido, correcto, duracion }, pausadaDesde: partida.mostradoEn }
 }
 
 export function cerrarCorreccion(partida: Partida): Partida {
@@ -164,7 +170,7 @@ function admiteErrata(respuesta: string, aceptado: string): boolean {
 }
 
 export function responderConTexto(partida: Partida, texto: string): Partida {
-  if (partida.pista) return partida
+  if (partida.pista || partida.correccion) return partida
   const preguntado = partida.cola[0]
   const respuesta = normalizar(texto)
   if (respuesta === '') return pedirPista(partida)
@@ -175,7 +181,7 @@ export function responderConTexto(partida: Partida, texto: string): Partida {
   const acierto =
     aceptados.includes(respuesta) || (!esNombreDeOtro && aceptados.some((aceptado) => admiteErrata(respuesta, aceptado)))
   if (acierto) return resolver(partida, true)
-  return abrirPista(anotarFallo(partida), true)
+  return abrirPista(anotarFallo(partida), texto.trim().replace(/[\s.,;:!?…]+$/u, ''))
 }
 
 const PUNTOS_POR_FALLO = 25
@@ -208,18 +214,18 @@ function distractoresPorPreferencia(partida: Partida): Elemento[] {
   return [vecinosAunNoPreguntados, vecinosYaPreguntados, restoDelTipo].flatMap((grupo) => barajar(grupo, partida.azar))
 }
 
-function abrirPista(partida: Partida, trasFallo: boolean): Partida {
+function abrirPista(partida: Partida, escrito: string | null): Partida {
   const preguntado = partida.cola[0]
   const distractores = distractoresPorPreferencia(partida).slice(0, DISTRACTORES_POR_PISTA)
   return {
     ...partida,
-    pista: { opciones: barajar([preguntado, ...distractores], partida.azar), trasFallo },
+    pista: { opciones: barajar([preguntado, ...distractores], partida.azar), escrito },
   }
 }
 
 export function pedirPista(partida: Partida): Partida {
-  if (partida.pista) return partida
-  return abrirPista(partida, false)
+  if (partida.pista || partida.correccion) return partida
+  return abrirPista(partida, null)
 }
 
 function avanzar(partida: Partida, respuesta: Respuesta, siguePendiente: boolean, ahora: number): Partida {
@@ -260,14 +266,17 @@ function resolver(partida: Partida, acierto: boolean): Partida {
 export function elegirOpcion(partida: Partida, idElegido: string): Partida {
   if (!partida.pista) return partida
   const correcto = partida.cola[0]
+  const elegido = partida.pista.opciones.find((opcion) => opcion.id === idElegido)
+  if (!elegido) return partida
   const esLaCorrecta = idElegido === correcto.id
   const conPistaUsada = { ...partida, pistasUsadas: partida.pistasUsadas + 1 }
-  return avanzar(
+  const resuelta = avanzar(
     esLaCorrecta ? conPistaUsada : anotarFallo(conPistaUsada),
     { acierto: false, conPista: esLaCorrecta, correcto },
     true,
     partida.reloj(),
   )
+  return abrirCorreccion(resuelta, elegido, correcto)
 }
 
 export function abandonar(partida: Partida): Partida {

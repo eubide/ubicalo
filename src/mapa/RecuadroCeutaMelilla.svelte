@@ -23,7 +23,6 @@
     elementos: ElementoConCentro[]
     contexto: FeatureCollection
     acertados: string[]
-    resaltado: string | null
     tocado: string | null
     correcto: string | null
     iluminado: string | null
@@ -40,7 +39,6 @@
     elementos,
     contexto,
     acertados,
-    resaltado,
     tocado,
     correcto,
     iluminado,
@@ -100,7 +98,6 @@
     <g
       class="elemento"
       class:acertado={acertados.includes(celda.id)}
-      class:resaltado={resaltado === celda.id}
       class:fallado={fallados.includes(celda.id)}
       class:seleccionado={seleccionado === celda.id}
       class:iluminado={iluminado === celda.id}
@@ -140,7 +137,6 @@
     fill: #cfe8d6;
   }
 
-  .elemento.resaltado path,
   .elemento.fallado path {
     fill: #f4c7a1;
   }
