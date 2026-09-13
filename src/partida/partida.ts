@@ -111,8 +111,8 @@ export function responder(partida: Partida, idElegido: string): Partida {
   const correcto = partida.cola[0]
   if (idElegido === correcto.id) return resolver(partida, true)
   const elegido = partida.elementos.find((elemento) => elemento.id === idElegido)
+  if (!elegido) return partida
   const resuelta = resolver(partida, false)
-  if (!elegido) return resuelta
   return {
     ...resuelta,
     correccion: { elegido, correcto, duracion: DURACION_CORRECCION_TRAS_FALLO },
@@ -272,7 +272,16 @@ export function elegirOpcion(partida: Partida, idElegido: string): Partida {
 
 export function abandonar(partida: Partida): Partida {
   if (partida.terminada) return partida
-  return { ...partida, fin: partida.reloj(), preguntado: null, pista: null, terminada: true, abandonada: true }
+  const ahora = partida.reloj()
+  return {
+    ...reanudar(partida, ahora),
+    fin: ahora,
+    preguntado: null,
+    pista: null,
+    correccion: null,
+    terminada: true,
+    abandonada: true,
+  }
 }
 
 export function tiempoJugado(partida: Partida, ahora: number): number {

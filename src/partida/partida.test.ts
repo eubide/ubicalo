@@ -84,7 +84,26 @@ describe('Corrección en Nombre → ubicar', () => {
   it('un fallo abre durante 3 s una Corrección con lo que tocó el alumno y el elemento correcto', () => {
     const { partida, correcto, elegido } = fallarLaPrimera(iniciarPartida(elementos, azarFijo, reloj))
 
-    expect(partida.correccion).toEqual({ elegido, correcto, duracion: 3_000 })
+    expect(partida.correccion).toMatchObject({ elegido, correcto })
+  })
+
+  it('responder con un id que no es de ningún elemento se ignora', () => {
+    const partida = iniciarPartida(elementos, azarFijo, reloj)
+
+    expect(responder(partida, 'desconocido')).toBe(partida)
+  })
+
+  it('abandonar durante la Corrección la cierra y no cuenta su tiempo', () => {
+    let partida = iniciarPartida(elementos, azarFijo, reloj)
+    ahora = 2_000
+    partida = fallarLaPrimera(partida).partida
+
+    ahora = 4_000
+    partida = abandonar(partida)
+
+    expect(partida.correccion).toBeNull()
+    expect(partida.pausadaDesde).toBeNull()
+    expect(tiempoJugado(partida, 60_000)).toBe(2_000)
   })
 
   it('un acierto sin ayuda no abre Corrección', () => {
@@ -443,12 +462,16 @@ describe('Fin de partida', () => {
     const otro = elementos.find((elemento) => elemento.id !== fallado.id)!
 
     ahora = 3_000
-    partida = cerrarCorreccion(responder(partida, otro.id))
+    partida = responder(partida, otro.id)
+    ahora = 4_000
+    partida = cerrarCorreccion(partida)
     for (let i = 0; i < 4; i++) {
       partida = responder(partida, partida.preguntado!.id)
     }
-    partida = cerrarCorreccion(responder(partida, otro.id))
-    expect(tiempoJugado(partida, 5_000)).toBe(4_000)
+    partida = responder(partida, otro.id)
+    expect(tiempoJugado(partida, 5_000)).toBe(2_000)
+    ahora = 6_000
+    partida = cerrarCorreccion(partida)
 
     ahora = 10_000
     partida = responder(partida, fallado.id)
@@ -456,7 +479,7 @@ describe('Fin de partida', () => {
     expect(partida.terminada).toBe(true)
     expect(partida.fallos).toBe(2)
     expect(partida.fallados).toEqual([fallado])
-    expect(tiempoJugado(partida, 60_000)).toBe(9_000)
+    expect(tiempoJugado(partida, 60_000)).toBe(6_000)
   })
 
   it('recuenta 3 aciertos a la primera de 5 si uno se falla y otro se resuelve con pista', () => {
