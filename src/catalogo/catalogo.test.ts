@@ -36,15 +36,35 @@ describe('Catálogo de comunidades autónomas', () => {
       id: '04',
       nombre: 'Illes Balears',
       nombreMostrado: 'Illes Balears (Islas Baleares)',
-      alias: ['Islas Baleares'],
+      alias: ['Islas Baleares', 'Baleares'],
     })
     expect(elementos).toContainEqual({
       id: '10',
       nombre: 'Comunitat Valenciana',
       nombreMostrado: 'Comunitat Valenciana (Comunidad Valenciana)',
-      alias: ['Comunidad Valenciana'],
+      alias: ['Comunidad Valenciana', 'Valencia'],
     })
-    expect(elementos.filter((elemento) => elemento.alias.length > 0)).toHaveLength(4)
+    expect(elementos.filter((elemento) => elemento.alias.length > 0)).toHaveLength(11)
+  })
+
+  it('acepta como alias las formas cortas habituales sin cambiar el nombre mostrado', () => {
+    const elementos = catalogo('comunidades')
+    const porId = (id: string) => elementos.find((elemento) => elemento.id === id)!
+
+    expect(porId('03')).toEqual({
+      id: '03',
+      nombre: 'Principado de Asturias',
+      nombreMostrado: 'Principado de Asturias',
+      alias: ['Asturias'],
+    })
+    expect(porId('04').alias).toEqual(['Islas Baleares', 'Baleares'])
+    expect(porId('10').alias).toEqual(['Comunidad Valenciana', 'Valencia'])
+    expect(porId('13').alias).toEqual(['Madrid'])
+    expect(porId('14').alias).toEqual(['Murcia'])
+    expect(porId('15').alias).toEqual(['Navarra'])
+    expect(porId('17').alias).toEqual(['Rioja'])
+    expect(porId('18').alias).toEqual(['Ceuta'])
+    expect(porId('19').alias).toEqual(['Melilla'])
   })
 
   it('muestra tal cual el nombre oficial cuando no tiene otra forma', () => {
@@ -88,7 +108,7 @@ describe('Catálogo de provincias', () => {
       id: '15',
       nombre: 'A Coruña',
       nombreMostrado: 'A Coruña (La Coruña)',
-      alias: ['La Coruña'],
+      alias: ['La Coruña', 'Coruña'],
     })
     expect(elementos).toContainEqual({ id: '32', nombre: 'Ourense', nombreMostrado: 'Ourense (Orense)', alias: ['Orense'] })
     expect(elementos).toContainEqual({
@@ -107,8 +127,23 @@ describe('Catálogo de provincias', () => {
       id: '07',
       nombre: 'Illes Balears',
       nombreMostrado: 'Illes Balears (Islas Baleares)',
-      alias: ['Islas Baleares'],
+      alias: ['Islas Baleares', 'Baleares'],
     })
-    expect(elementos.filter((elemento) => elemento.alias.length > 0)).toHaveLength(11)
+    expect(elementos.filter((elemento) => elemento.alias.length > 0)).toHaveLength(13)
+  })
+
+  it('acepta como alias las formas cortas habituales sin cambiar el nombre mostrado', () => {
+    const elementos = catalogo('provincias')
+    const porId = (id: string) => elementos.find((elemento) => elemento.id === id)!
+
+    expect(porId('15').alias).toEqual(['La Coruña', 'Coruña'])
+    expect(porId('07').alias).toEqual(['Islas Baleares', 'Baleares'])
+    expect(porId('26')).toEqual({ id: '26', nombre: 'La Rioja', nombreMostrado: 'La Rioja', alias: ['Rioja'] })
+    expect(porId('38')).toEqual({
+      id: '38',
+      nombre: 'Santa Cruz de Tenerife',
+      nombreMostrado: 'Santa Cruz de Tenerife',
+      alias: ['Tenerife'],
+    })
   })
 })

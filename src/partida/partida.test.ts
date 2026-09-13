@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { Elemento } from '../catalogo/catalogo'
-import { iniciarPartida, responder, tiempoJugado } from './partida'
+import { iniciarPartida, responder, responderConTexto, tiempoJugado } from './partida'
 
 const elementos: Elemento[] = [
   { id: 'a', nombre: 'Alfa', nombreMostrado: 'Alfa', alias: [] },
@@ -60,6 +60,70 @@ describe('Partida en Nombre → ubicar', () => {
 
     expect(partida.ultimaRespuesta).toEqual({ acierto: true, correcto: fallado })
     expect(partida.terminada).toBe(true)
+  })
+})
+
+describe('Partida en Ubicación → nombre', () => {
+  const cadiz: Elemento = { id: 'ca', nombre: 'Cádiz', nombreMostrado: 'Cádiz', alias: [] }
+
+  function partidaPreguntando(elemento: Elemento) {
+    return iniciarPartida([elemento], azarFijo, reloj)
+  }
+
+  it('da igual mayúsculas y tildes: "cadiz" vale por "Cádiz"', () => {
+    const partida = responderConTexto(partidaPreguntando(cadiz), 'cadiz')
+
+    expect(partida.ultimaRespuesta).toEqual({ acierto: true, correcto: cadiz })
+    expect(partida.acertados).toEqual(['ca'])
+    expect(partida.terminada).toBe(true)
+  })
+
+  it('vale cualquier alias: "Gerona" por "Girona" y "Alacant" por "Alicante"', () => {
+    const girona: Elemento = { id: 'gi', nombre: 'Girona', nombreMostrado: 'Girona (Gerona)', alias: ['Gerona'] }
+    const alicante: Elemento = { id: 'al', nombre: 'Alicante', nombreMostrado: 'Alicante', alias: ['Alacant'] }
+
+    expect(responderConTexto(partidaPreguntando(girona), 'Gerona').ultimaRespuesta?.acierto).toBe(true)
+    expect(responderConTexto(partidaPreguntando(alicante), 'alacant').ultimaRespuesta?.acierto).toBe(true)
+  })
+
+  it('admite una errata en nombres de seis letras o más y la rechaza en los más cortos', () => {
+    const valladolid: Elemento = { id: 'va', nombre: 'Valladolid', nombreMostrado: 'Valladolid', alias: [] }
+    const huelva: Elemento = { id: 'h', nombre: 'Huelva', nombreMostrado: 'Huelva', alias: [] }
+    const soria: Elemento = { id: 'so', nombre: 'Soria', nombreMostrado: 'Soria', alias: [] }
+    const acierta = (elemento: Elemento, texto: string) =>
+      responderConTexto(partidaPreguntando(elemento), texto).ultimaRespuesta?.acierto
+
+    expect(acierta(valladolid, 'Valladoliz')).toBe(true)
+    expect(acierta(valladolid, 'Valladoloz')).toBe(false)
+    expect(acierta(huelva, 'Huelvo')).toBe(true)
+    expect(acierta(huelva, 'Huelvaa')).toBe(true)
+    expect(acierta(soria, 'Sorie')).toBe(false)
+    expect(acierta(soria, 'Sori')).toBe(false)
+  })
+
+  it('un texto incorrecto es un fallo: resta 25, desvela el correcto y el elemento sigue pendiente', () => {
+    let partida = iniciarPartida(elementos, azarFijo, reloj)
+    partida = responderConTexto(partida, partida.preguntado!.nombre)
+    expect(partida.puntuacion).toBe(150)
+
+    const fallado = partida.preguntado!
+    partida = responderConTexto(partida, 'Zeta')
+
+    expect(partida.ultimaRespuesta).toEqual({ acierto: false, correcto: fallado })
+    expect(partida.puntuacion).toBe(125)
+    expect(partida.fallos).toBe(1)
+    expect(partida.pendientes).toBe(4)
+    expect(partida.acertados).not.toContain(fallado.id)
+  })
+
+  it('un texto vacío no cuenta como fallo ni pasa al siguiente elemento', () => {
+    const inicial = iniciarPartida(elementos, azarFijo, reloj)
+
+    const partida = responderConTexto(inicial, '   ')
+
+    expect(partida.fallos).toBe(0)
+    expect(partida.preguntado).toEqual(inicial.preguntado)
+    expect(partida.ultimaRespuesta).toBeUndefined()
   })
 })
 
