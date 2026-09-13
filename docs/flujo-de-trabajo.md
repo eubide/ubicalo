@@ -14,7 +14,7 @@ grill → to-spec → to-tickets → implement → code-review
 | 1 | `/mattpocock-skills:grill-with-docs` | Decisiones, `CONTEXT.md` y ADRs en `docs/adr/` | [x] Hecho (2026-09-13) |
 | 2 | `/mattpocock-skills:to-spec` | Un issue de GitHub con la spec | [x] Hecho: #1 (2026-09-13) |
 | 3 | `/mattpocock-skills:to-tickets` | Un issue de GitHub por ticket, con sus dependencias | [x] Hecho: #2–#10 (2026-09-13) |
-| 4 | `/mattpocock-skills:implement` | Código con TDD, revisión y commit, un ticket por sesión | [ ] Pendiente |
+| 4 | `/mattpocock-skills:implement` | Código con TDD, revisión y commit, un ticket por sesión | [x] Hecho: #2–#10, PRs #11–#18 y #21 (2026-09-13) |
 | 5 | `/mattpocock-skills:code-review <punto fijo>` | Informe de estándares y de fidelidad a la spec | Lo lanza `implement` al terminar |
 
 ## Paso 0: preparar el repositorio (hecho)
@@ -64,6 +64,16 @@ Qué quedó escrito:
 4. El push a GitHub no lo hace ningún skill: lo pides aparte.
 5. Cierra el issue del ticket y pasa al siguiente.
 
+### Cómo se hizo en Ubícalo
+
+- **Oleadas por frontera:** #3, #4, #5 y #6 en paralelo; luego #7 y #9; luego #8 y #10.
+- **Un agente por ticket**, cada uno en su propio worktree (`git worktree add <ruta> -b ticket-N-… main`), con TDD solo en las seams Partida, Competición y Catálogo.
+- **Revisión en dos ejes** por ticket, con dos subagentes en paralelo: estándares (glosario, reglas y olores) y spec (criterios del issue y casos límite).
+- **Arreglos** de los defectos y desviaciones encontrados; las dudas de producto se preguntaron antes de decidir.
+- **Integración:** `git merge main` en la rama del ticket, `task verificar`, PR con `Closes #N` y merge a `main`.
+
+Comandos del proyecto: `task` lista las tareas (`dev`, `test`, `check`, `build`, `verificar`…).
+
 ## Entre fases: seguir, limpiar o traspasar
 
 En cada frontera entre fases, recorre las preguntas en orden y quédate con el primer sí:
@@ -95,4 +105,7 @@ Nunca compactes a mitad de una fase.
 - [x] `/mattpocock-skills:to-spec` → #1
 - [x] Resolver los cuatro puntos "Sin decidir" de #1
 - [x] `/mattpocock-skills:to-tickets #1` → #2–#10
-- [ ] Abrir una sesión nueva y lanzar `/mattpocock-skills:implement #2`
+- [x] `/mattpocock-skills:implement` de #2 a #10 → PRs #11–#18 y #21
+- [ ] Probar en un móvil real: gestos táctiles, recuadro de Ceuta y Melilla, y compartir un reto (requiere HTTPS)
+- [ ] Decidir si se cierra #1: es la spec padre y ningún skill la cierra
+- [ ] Siguiente bloque: despliegue (dominio y Terraform) o ríos, montañas, cabos y golfos con `/mattpocock-skills:grill-with-docs`
