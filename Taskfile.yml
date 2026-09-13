@@ -16,6 +16,13 @@ tasks:
     cmds:
       - npm run dev
 
+  dev:https:
+    desc: Arranca la app con HTTPS autofirmado para probar en el iPhone
+    env:
+      UBICALO_HTTPS: '1'
+    cmds:
+      - npx vite
+
   test:
     desc: Ejecuta los tests una vez
     cmds:
