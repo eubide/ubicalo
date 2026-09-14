@@ -24,6 +24,7 @@
     correccionTrasFallo,
     DURACION_REPASO_UBICACION_NOMBRE,
     elegirOpcion,
+    elegirPregunta,
     iniciarPartida,
     marcarEnRepaso,
     responder,
@@ -64,6 +65,7 @@
   let contextoDelTipo = $state.raw<ContextoDeRelieve | null>(null)
   let ahora = $state(Date.now())
   let texto = $state('')
+  let simulacroActivo = $state<string | null>(null)
   let campoDeTexto = $state<HTMLInputElement | null>(null)
   let pistaAbierta = $state<HTMLElement | null>(null)
 
@@ -82,6 +84,16 @@
   })
 
   const escribeNombre = $derived(prueba?.modo === 'ubicacion-nombre')
+  const esSimulacro = $derived(prueba?.tipo === 'simulacro')
+  // Solo lo ya visible (Acertado o Desbloqueado); el resto del mapa mudo sigue sin dibujarse.
+  const contornosVisibles = $derived(
+    esSimulacro && partida
+      ? contornosDelTipo.filter(
+          (contorno) => partida!.acertados.includes(String(contorno.id)) || partida!.desbloqueados.includes(String(contorno.id)),
+        )
+      : contornosDelTipo,
+  )
+  const desbloqueadosVisibles = $derived(esSimulacro ? (partida?.desbloqueados ?? []) : [])
   const respuesta = $derived(partida?.ultimaRespuesta)
   const pista = $derived(partida?.pista ?? null)
   const correccion = $derived(partida?.correccion ?? null)
@@ -111,6 +123,8 @@
   const iluminados = $derived.by(() => {
     if (!escribeNombre) return []
     if (repaso) return rotulos.map((rotulo) => rotulo.id)
+    // El alumno elige qué tocar; solo se ilumina la respuesta correcta mientras se ve la Corrección.
+    if (esSimulacro) return correccion ? [correccion.correcto.id] : []
     const id = (correccion?.correcto ?? partida?.preguntado)?.id
     return id === undefined ? [] : [id]
   })
@@ -125,7 +139,10 @@
   $effect(() => {
     if (!correccion) return
     confirmandoAbandono = false
-    return cerrarAlCabo(correccion.duracion, cerrarCorreccion)
+    return cerrarAlCabo(correccion.duracion, (partidaEnCorreccion) => {
+      simulacroActivo = null
+      return cerrarCorreccion(partidaEnCorreccion)
+    })
   })
 
   $effect(() => {
@@ -149,6 +166,7 @@
     contextoDelTipo = contextoDe(elegida.tipo)
     ahora = Date.now()
     texto = ''
+    simulacroActivo = null
     partida = iniciarPartida(elegida, elementos, Math.random, Date.now, elementosDelMapa)
   }
 
@@ -164,6 +182,15 @@
     }
     partida = responder(partida, id)
     if (partida.terminada) registrar(partida)
+  }
+
+  // Tocar un elemento en el Simulacro lo elige como pregunta; responderlo es cosa del formulario de texto.
+  function elegirEnSimulacro(id: string) {
+    if (!partida) return
+    const elegida = elegirPregunta(partida, id)
+    if (elegida === partida) return
+    partida = elegida
+    simulacroActivo = id
   }
 
   $effect(() => {
@@ -208,6 +235,7 @@
     if (!partida || partida.terminada) return
     partida = responderConTexto(partida, texto)
     if (partida.terminada) registrar(partida)
+    if (!partida.pista && !partida.correccion) simulacroActivo = null
     texto = ''
     campoDeTexto?.focus()
   }
@@ -256,7 +284,7 @@
           </div>
         {:else if repaso}
           <p class="pregunta">{escribeNombre ? 'Repaso: fíjate en dónde están' : 'Repaso: toca cada nombre'}</p>
-        {:else if escribeNombre && !correccion}
+        {:else if escribeNombre && !correccion && (!esSimulacro || simulacroActivo)}
           <form class="pregunta" onsubmit={enviarTexto}>
             {#if enunciado}
               <span class="enunciado">{enunciado}</span>
@@ -272,6 +300,8 @@
             />
             <button type="submit">Responder</button>
           </form>
+        {:else if esSimulacro && !correccion}
+          <p class="pregunta">Toca una forma para responderla</p>
         {:else}
           <p class="pregunta">
             {#if !correccion}
@@ -293,8 +323,9 @@
     {/if}
 
     <Mapa
-      contornos={contornosDelTipo}
+      contornos={contornosVisibles}
       contextoDeRelieve={contextoDelTipo}
+      desbloqueados={desbloqueadosVisibles}
       {contexto}
       acertados={partida.acertados}
       tocado={correccion && !escribeNombre && correccionTrasFallo(correccion) ? correccion.elegido.id : null}
@@ -306,7 +337,7 @@
       {rotulos}
       {alturas}
       fallados={partida.terminada ? partida.fallados.map((elemento) => elemento.id) : []}
-      alElegir={elegir}
+      alElegir={esSimulacro ? elegirEnSimulacro : elegir}
       {nombreDe}
     />
 

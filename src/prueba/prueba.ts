@@ -19,13 +19,14 @@ export const etiquetaDeTipo: Record<Tipo, string> = {
 
 export const gruposDeTipos: { grupo: string; tipos: Tipo[] }[] = [
   { grupo: 'Político', tipos: ['comunidades', 'provincias'] },
-  { grupo: 'Relieve', tipos: ['cordilleras-y-sierras', 'picos', 'jerarquia', 'alturas'] },
+  { grupo: 'Relieve', tipos: ['cordilleras-y-sierras', 'picos', 'jerarquia', 'alturas', 'simulacro'] },
 ]
 
 // Los Tipos de apoyo solo tienen sentido en una dirección: el Modo no se elige.
 export const modoFijoDeTipo: Partial<Record<Tipo, Modo>> = {
   jerarquia: 'nombre-ubicar',
   alturas: 'ubicacion-nombre',
+  simulacro: 'ubicacion-nombre',
 }
 
 // En Alturas se escribe una cifra, no un nombre.

@@ -20,6 +20,7 @@
     preguntado: string | null
     iluminados?: string[]
     destacados?: string[]
+    desbloqueados?: string[]
     pistaDeArea?: string[]
     rotulos?: Rotulo[]
     alturas?: Rotulo[]
@@ -38,6 +39,7 @@
     preguntado,
     iluminados = [],
     destacados = [],
+    desbloqueados = [],
     pistaDeArea = [],
     rotulos = [],
     alturas = [],
@@ -290,6 +292,7 @@
             class:seleccionado={seleccionado === id}
             class:iluminado={iluminados.includes(id)}
             class:destacado={destacados.includes(id)}
+            class:desbloqueado={desbloqueados.includes(id)}
             class:tocado={tocado === id}
             onclick={() => pulsarElemento(id)}
           />
@@ -453,6 +456,11 @@
   .elementos path.destacado {
     fill: #f6d365;
     stroke: #8a6d1f;
+  }
+
+  .elementos path.desbloqueado {
+    stroke: #2563eb;
+    stroke-width: 1.8;
   }
 
   .elementos .diana {
