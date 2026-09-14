@@ -120,4 +120,8 @@ Nunca compactes a mitad de una fase.
 - [x] Prueba con usuario → `grill-with-docs` → `to-tickets` #25–#29 → `implement` → PRs #30–#34
 - [ ] Probar en un móvil real: gestos táctiles, recuadro de Ceuta y Melilla, y compartir un reto (requiere HTTPS)
 - [ ] Decidir si se cierra #1: es la spec padre y ningún skill la cierra
-- [ ] Siguiente bloque: despliegue (dominio y Terraform) o ríos, montañas, cabos y golfos con `/mattpocock-skills:grill-with-docs`
+- [x] Siguiente bloque: relieve (cordilleras, sierras, picos) con `grill-with-docs` → spec #36 → tickets #37–#45 → `implement` → `code-review` (dos ejes, hallazgos corregidos) → PR #46
+- [ ] Fusionar PR #46 (cierra #37–#40, #42, #43, #45 en automático)
+- [ ] Decidir si se cierra #36: es la spec padre de este bloque y ningún skill la cierra
+- [ ] Probar el relieve en un móvil real: dianas de sierras y picos, rótulos apilados en el Repaso de Jerarquía
+- [ ] Siguiente bloque: despliegue (dominio y Terraform), relieve de Aragón, o ríos, cabos y golfos con `/mattpocock-skills:grill-with-docs`
