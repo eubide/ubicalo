@@ -7,15 +7,39 @@ Web pública para que alumnos de ESO repasen la geografía de España señalando
 ### Contenido
 
 **Elemento**:
-Lugar concreto del mapa que se pregunta: una provincia o una comunidad autónoma.
+Lugar concreto del mapa que se pregunta: una provincia, una comunidad autónoma, una cordillera, una sierra o un pico.
 _Evitar_: accidente, lugar, zona, área
 
 **Tipo**:
-Categoría de elementos que se juega por separado: comunidades autónomas, provincias y, más adelante, ríos, montañas, cabos y golfos.
+Categoría de elementos que se juega por separado: comunidades autónomas, provincias, cordilleras, sierras, picos, jerarquía, cordillera → pico, alturas y, más adelante, ríos, cabos y golfos.
 _Evitar_: tipo de prueba, categoría, capa
 
+**Cordillera**:
+Unidad montañosa de primer nivel de los apuntes (Pirineos, Sistema Ibérico, Montes de Toledo, Montañas de Canarias); se pulsa como una mancha de área.
+_Evitar_: sistema montañoso, montaña, unidad de relieve
+
+**Sierra**:
+Unidad montañosa que pertenece a una Cordillera (Gredos, Picos de Europa, Montseny); se pulsa como un punto, salvo las tres partes del Pirineo, que son manchas.
+_Evitar_: subunidad, macizo, montaña
+
+**Pico**:
+Cumbre concreta que pertenece a una Cordillera y se pregunta como un punto del mapa (Aneto, Mulhacén, Teide).
+_Evitar_: cima, cumbre, montaña
+
+**Jerarquía**:
+Tipo de apoyo en el que se muestra el nombre de una Sierra o un Pico y el alumno toca la Cordillera a la que pertenece. Se juega siempre en Nombre → ubicar.
+_Evitar_: árbol, clasificación, pertenencia
+
+**Cordillera → pico**:
+Tipo de apoyo en el que se muestra y destaca una Cordillera y el alumno toca su Pico. Se juega siempre en Nombre → ubicar.
+_Evitar_: inverso, pico de la cordillera
+
+**Altura**:
+Tipo de apoyo en el que se muestra un Pico y el alumno escribe sus metros; solo se preguntan Moncayo, Aneto, Teide y Mulhacén. Se juega siempre en Ubicación → nombre.
+_Evitar_: altitud, cota
+
 **Nombre oficial**:
-Nombre canónico de un elemento, el que usa el mapa (Girona, Bizkaia).
+Nombre canónico de un elemento: en provincias y comunidades el que usa el mapa (Girona, Bizkaia); en cordilleras y picos el que usan los libros de texto (Cordillera Cantábrica, Torre Cerredo).
 _Evitar_: nombre real, nombre original
 
 **Alias**:
@@ -23,11 +47,11 @@ Otra forma aceptada del nombre de un elemento, normalmente la castellana (Gerona
 _Evitar_: sinónimo, traducción
 
 **Vecino**:
-Elemento del mismo tipo que comparte frontera con otro.
-_Evitar_: limítrofe, colindante
+Elemento del mismo tipo que comparte frontera con otro; en el relieve, uno de los tres más cercanos, y en Jerarquía, un vecino de la Cordillera a la que pertenece.
+_Evitar_: limítrofe, colindante, cercano
 
 **Contexto geográfico**:
-Países que rodean España en el mapa; se ven, pero nunca se preguntan.
+Lo que se ve en el mapa y nunca se pregunta: los países que rodean España y, en el relieve, los ríos principales y las cordilleras en tono tenue.
 _Evitar_: fondo, países vecinos
 
 ### Juego
@@ -81,7 +105,7 @@ Las cuatro opciones que se ofrecen en Ubicación → nombre, a petición del alu
 _Evitar_: ayuda, opciones
 
 **Pista de área**:
-Ayuda sobre el mapa que acompaña a una pregunta tras un Repaso: se iluminan la comunidad autónoma que contiene la provincia o los Vecinos de la comunidad. Resolver con ella cuenta como acierto con pista.
+Ayuda sobre el mapa que acompaña a una pregunta tras un Repaso: se iluminan la comunidad autónoma que contiene la provincia o los Vecinos del elemento en los demás tipos. Resolver con ella cuenta como acierto con pista.
 _Evitar_: ayuda, zona
 
 **Corrección**:
@@ -129,4 +153,6 @@ _Evitar_: desafío, challenge
 ## Ambigüedades resueltas
 
 - "Regiones" en la idea original significa comunidades autónomas, no regiones naturales.
+- "Montañas" en la idea original son los tipos de relieve: **Cordilleras**, **Sierras** y **Picos** sobre el mapa, más **Jerarquía**, **Cordillera → pico** y **Altura** como apoyo. La Meseta y las depresiones no son montañas y quedan para otro tipo.
+- El listado de relieve son los apuntes del alumno desde "Macizo / sierra", con un pico por cordillera para darle simetría; el examen es rellenar un mapa mudo físico con ríos.
 - "Tipo de prueba" mezclaba dos conceptos: el **Tipo** (qué se pregunta) y la **Prueba** (tipo más modo).
