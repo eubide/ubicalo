@@ -198,7 +198,7 @@ function catalogoDeSimulacro(): Elemento[] {
   }))
   const alturas = picos
     .filter((pico) => pico.altura !== undefined)
-    .map((pico) => ({ ...elementoDeAltura(pico, `altura-${pico.id}`), desbloqueaCon: [pico.id] }))
+    .map((pico) => ({ ...elementoDeAltura(pico, idDeAltura(pico.id)), desbloqueaCon: [pico.id] }))
   return [...cordilleras, ...sierras, ...picos, ...alturas]
 }
 
@@ -232,6 +232,16 @@ export function contornosDeRelieve(tipo: TipoDeRelieve): Feature<Geometry>[] {
 export function contextoDeRelieve(tipo: TipoDeRelieve, contorno: Feature<Geometry>): ContextoDeRelieve {
   const tenues = CLASES_DEL_MAPA[tipo].includes('cordillera') ? [] : contornosPorClase.cordillera
   return { contorno, tenues, rios }
+}
+
+// Id de la pregunta de Altura de un pico dentro del Simulacro: distinto del id del propio pico, para
+// que acertar uno y acertar el otro queden como dos entradas independientes en Acertados.
+export function idDeAltura(idDelPico: string): string {
+  return `altura-${idDelPico}`
+}
+
+export function esIdDeAltura(id: string): boolean {
+  return id.startsWith('altura-')
 }
 
 export function textoDeAltura(altura: number): string {

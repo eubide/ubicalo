@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Feature, FeatureCollection, Geometry } from 'geojson'
   import { catalogo, catalogoDelMapa, contextoDe, contornos, type Elemento } from './catalogo/catalogo'
-  import { etiquetaDeClase, textoDeAltura, type ContextoDeRelieve } from './catalogo/relieve'
+  import { esIdDeAltura, etiquetaDeClase, idDeAltura, textoDeAltura, type ContextoDeRelieve } from './catalogo/relieve'
   import contextoGeografico from './datos/contexto-geografico.json'
   import Mapa from './mapa/Mapa.svelte'
   import FinDePartida from './pantallas/FinDePartida.svelte'
@@ -93,7 +93,12 @@
         )
       : contornosDelTipo,
   )
-  const desbloqueadosVisibles = $derived(esSimulacro ? (partida?.desbloqueados ?? []) : [])
+  // Un pico ya acertado con su Altura aún pendiente sigue marcado: le queda una pregunta.
+  const desbloqueadosVisibles = $derived(
+    esSimulacro
+      ? (partida?.desbloqueados ?? []).map((id) => (esIdDeAltura(id) ? id.slice(idDeAltura('').length) : id))
+      : [],
+  )
   const respuesta = $derived(partida?.ultimaRespuesta)
   const pista = $derived(partida?.pista ?? null)
   const correccion = $derived(partida?.correccion ?? null)
@@ -104,10 +109,13 @@
       .map((elemento) => ({ id: respuestaDe(elemento), texto: elemento.rotulo ?? elemento.nombreMostrado })) ?? [],
   )
 
+  // En el Simulacro la altura es una pregunta: no se muestra como etiqueta hasta acertarla.
   const alturas = $derived(
-    elementosDelMapa.flatMap((elemento) =>
-      elemento.altura === undefined ? [] : [{ id: elemento.id, texto: textoDeAltura(elemento.altura) }],
-    ),
+    elementosDelMapa.flatMap((elemento) => {
+      if (elemento.altura === undefined) return []
+      if (esSimulacro && !(partida?.acertados.includes(idDeAltura(elemento.id)) ?? false)) return []
+      return [{ id: elemento.id, texto: textoDeAltura(elemento.altura) }]
+    }),
   )
 
   const enunciado = $derived.by(() => {
@@ -115,6 +123,8 @@
     if (!preguntado || correccion) return null
     return preguntado.pregunta ?? (preguntado.clase && etiquetaDeClase[preguntado.clase]) ?? null
   })
+
+  const preguntaDeAltura = $derived((simulacroActivo && esIdDeAltura(simulacroActivo)) ?? false)
 
   function nombreDeLaRespuesta(elemento: Elemento): string {
     return elemento.respuesta === undefined ? '' : nombreDe(elemento.respuesta)
@@ -185,12 +195,15 @@
   }
 
   // Tocar un elemento en el Simulacro lo elige como pregunta; responderlo es cosa del formulario de texto.
+  // Un pico ya acertado con su Altura pendiente redirige al toque hacia esa pregunta.
   function elegirEnSimulacro(id: string) {
     if (!partida) return
-    const elegida = elegirPregunta(partida, id)
+    const objetivoAltura = idDeAltura(id)
+    const objetivo = partida.desbloqueados.includes(objetivoAltura) ? objetivoAltura : id
+    const elegida = elegirPregunta(partida, objetivo)
     if (elegida === partida) return
     partida = elegida
-    simulacroActivo = id
+    simulacroActivo = objetivo
   }
 
   $effect(() => {
@@ -293,7 +306,7 @@
               bind:this={campoDeTexto}
               bind:value={texto}
               aria-label={enunciado ?? 'Nombre del elemento iluminado'}
-              placeholder={(prueba && indicacionDeRespuesta[prueba.tipo]) ?? '¿Cómo se llama?'}
+              placeholder={preguntaDeAltura ? 'Metros' : ((prueba && indicacionDeRespuesta[prueba.tipo]) ?? '¿Cómo se llama?')}
               autocomplete="off"
               autocapitalize="off"
               spellcheck="false"
