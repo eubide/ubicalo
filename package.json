@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json",
     "test": "vitest run",
-    "datos:contexto": "node scripts/extraer-contexto-geografico.mjs"
+    "datos:contexto": "node scripts/extraer-contexto-geografico.mjs",
+    "datos:relieve": "node scripts/extraer-relieve.mjs"
   },
   "dependencies": {
     "d3-composite-projections": "^2.0.0",

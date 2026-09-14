@@ -62,6 +62,11 @@ tasks:
     cmds:
       - npm run datos:contexto
 
+  datos:relieve:
+    desc: Regenera cordilleras y picos desde el Atlas Didáctico del IGN
+    cmds:
+      - npm run datos:relieve
+
   limpiar:
     desc: Borra la compilación y la caché de Vite
     cmds:
