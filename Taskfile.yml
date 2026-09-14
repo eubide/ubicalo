@@ -62,6 +62,11 @@ tasks:
     cmds:
       - npm run datos:contexto
 
+  datos:relieve:
+    desc: Regenera cordilleras, sierras, picos y ríos desde el IGN y Natural Earth
+    cmds:
+      - npm run datos:relieve
+
   limpiar:
     desc: Borra la compilación y la caché de Vite
     cmds:

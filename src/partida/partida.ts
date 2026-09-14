@@ -42,6 +42,7 @@ export const DURACION_REPASO_UBICACION_NOMBRE = 4_000
 export interface Partida {
   prueba: Prueba
   elementos: Elemento[]
+  tocables: Elemento[]
   azar: Azar
   reloj: Reloj
   inicio: number
@@ -98,12 +99,24 @@ function construir(partida: Omit<Partida, CamposDerivados>, ahora: number): Part
   }
 }
 
-export function iniciarPartida(prueba: Prueba, elementos: Elemento[], azar: Azar, reloj: Reloj): Partida {
+// Elemento del mapa que hay que tocar para acertar: el propio, salvo que responda por otro (Jerarquía).
+export function respuestaDe(elemento: Elemento): string {
+  return elemento.respuesta ?? elemento.id
+}
+
+export function iniciarPartida(
+  prueba: Prueba,
+  elementos: Elemento[],
+  azar: Azar,
+  reloj: Reloj,
+  tocables: Elemento[] = elementos,
+): Partida {
   const ahora = reloj()
   return construir(
     {
       prueba,
       elementos,
+      tocables,
       azar,
       reloj,
       inicio: ahora,
@@ -136,8 +149,8 @@ function esperandoRespuesta(partida: Partida): boolean {
 export function responder(partida: Partida, idElegido: string): Partida {
   if (!esperandoRespuesta(partida)) return partida
   const correcto = partida.cola[0]
-  if (idElegido === correcto.id) return resolver(partida, true)
-  const elegido = partida.elementos.find((elemento) => elemento.id === idElegido)
+  if (idElegido === respuestaDe(correcto)) return resolver(partida, true)
+  const elegido = partida.tocables.find((elemento) => elemento.id === idElegido)
   if (!elegido) return partida
   return abrirCorreccion(resolver(partida, false), elegido, correcto)
 }
@@ -165,15 +178,12 @@ export function cerrarCorreccion(partida: Partida): Partida {
 
 export function marcarEnRepaso(partida: Partida, id: string): Partida {
   const { repaso } = partida
-  if (
-    !repaso ||
-    partida.prueba.modo === 'ubicacion-nombre' ||
-    repaso.marcados.includes(id) ||
-    !repaso.elementos.some((elemento) => elemento.id === id)
-  ) {
-    return partida
-  }
-  const marcados = [...repaso.marcados, id]
+  if (!repaso || partida.prueba.modo === 'ubicacion-nombre') return partida
+  const tocados = repaso.elementos
+    .filter((elemento) => respuestaDe(elemento) === id && !repaso.marcados.includes(elemento.id))
+    .map((elemento) => elemento.id)
+  if (tocados.length === 0) return partida
+  const marcados = [...repaso.marcados, ...tocados]
   if (marcados.length === repaso.elementos.length) return cerrarRepaso(partida)
   return { ...partida, repaso: { ...repaso, marcados } }
 }
@@ -190,7 +200,7 @@ function pistaDeAreaDe({ prueba, elementos, cola: [preguntado] }: Partida): stri
     ? elementos.filter((elemento) => elemento.ciudadAutonoma).map((elemento) => elemento.id)
     : prueba.tipo === 'provincias'
       ? pistaDeAreaDeProvincia(preguntado, elementos)
-      : pistaDeAreaDeComunidad(preguntado)
+      : pistaDeAreaDeVecinos(preguntado)
   return ids.length > 0 ? ids : null
 }
 
@@ -202,8 +212,8 @@ function pistaDeAreaDeProvincia(provincia: Elemento, elementos: Elemento[]): str
   return deSuComunidad.length > 1 ? deSuComunidad : [provincia.id, ...provincia.vecinos]
 }
 
-function pistaDeAreaDeComunidad(comunidad: Elemento): string[] {
-  return comunidad.vecinos.length > 0 ? comunidad.vecinos : [comunidad.id]
+function pistaDeAreaDeVecinos(elemento: Elemento): string[] {
+  return elemento.vecinos.length > 0 ? elemento.vecinos : [respuestaDe(elemento)]
 }
 
 function reanudar(partida: Partida, ahora: number): Partida {

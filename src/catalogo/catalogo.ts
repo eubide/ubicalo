@@ -1,11 +1,22 @@
 import { geoArea, geoCentroid, geoContains } from 'd3-geo'
 import type { Feature, FeatureCollection, Geometry, Polygon } from 'geojson'
-import { feature, neighbors } from 'topojson-client'
-import type { GeometryCollection, Topology } from 'topojson-specification'
+import { feature, merge, neighbors } from 'topojson-client'
+import type { GeometryCollection, MultiPolygon, Topology } from 'topojson-specification'
 import comunidadesTopo from 'es-atlas/es/autonomous_regions.json'
 import provinciasTopo from 'es-atlas/es/provinces.json'
+import {
+  catalogoDeRelieve,
+  contextoDeRelieve,
+  contornosDeRelieve,
+  esDeRelieve,
+  tocablesDeRelieve,
+  type Clase,
+  type ContextoDeRelieve,
+  type TipoDeRelieve,
+} from './relieve'
 
-export type Tipo = 'comunidades' | 'provincias'
+type TipoPolitico = 'comunidades' | 'provincias'
+export type Tipo = TipoPolitico | TipoDeRelieve
 
 export interface Elemento {
   id: string
@@ -15,9 +26,19 @@ export interface Elemento {
   vecinos: string[]
   comunidad?: string
   ciudadAutonoma?: true
+  clase?: Clase
+  cordillera?: string
+  altura?: number
+  // Id que hay que tocar cuando no es el propio elemento (Jerarquía).
+  respuesta?: string
+  // Enunciado que acompaña al nombre; sin él, se muestra la clase.
+  pregunta?: string
+  // Texto del rótulo en el Repaso cuando el nombre mostrado no basta (Alturas).
+  rotulo?: string
+  destacar?: true
 }
 
-type Nombres = Omit<Elemento, 'id' | 'vecinos' | 'comunidad' | 'ciudadAutonoma'>
+type Nombres = Pick<Elemento, 'nombre' | 'nombreMostrado' | 'alias'>
 
 const CIUDADES_AUTONOMAS = ['Ceuta', 'Melilla', 'Ciudad Autónoma de Ceuta', 'Ciudad Autónoma de Melilla']
 
@@ -82,7 +103,7 @@ function geometriasSinGibraltar(topologia: Topology, objeto: string, gibraltar: 
   }
 }
 
-const tipos = {
+const topologias: Record<TipoPolitico, ReturnType<typeof geometriasSinGibraltar>> = {
   comunidades: geometriasSinGibraltar(
     comunidadesTopo as unknown as Topology,
     'autonomous_regions',
@@ -106,8 +127,14 @@ function comunidadQueContiene(provincia: Feature<Geometry>, comunidades: Feature
   return String(comunidad.id)
 }
 
+// Elementos que se tocan en el mapa; en Jerarquía no coinciden con los preguntados.
+export function catalogoDelMapa(tipo: Tipo): Elemento[] {
+  return esDeRelieve(tipo) ? tocablesDeRelieve(tipo) : catalogo(tipo)
+}
+
 export function catalogo(tipo: Tipo): Elemento[] {
-  const { geometries } = tipos[tipo].geometrias
+  if (esDeRelieve(tipo)) return catalogoDeRelieve(tipo)
+  const { geometries } = topologias[tipo].geometrias
   const vecinosPorIndice = neighbors(geometries)
   const provincias = tipo === 'provincias' ? contornos('provincias') : []
   const comunidades = tipo === 'provincias' ? contornos('comunidades') : []
@@ -123,9 +150,22 @@ export function catalogo(tipo: Tipo): Elemento[] {
   })
 }
 
-const contornosPorTipo: Partial<Record<Tipo, Feature<Geometry>[]>> = {}
+const contornosPorTipo: Partial<Record<TipoPolitico, Feature<Geometry>[]>> = {}
 
 export function contornos(tipo: Tipo): Feature<Geometry>[] {
-  const { topologia, geometrias } = tipos[tipo]
+  if (esDeRelieve(tipo)) return contornosDeRelieve(tipo)
+  const { topologia, geometrias } = topologias[tipo]
   return (contornosPorTipo[tipo] ??= (feature(topologia, geometrias) as FeatureCollection).features)
+}
+
+let contornoDeEspana: Feature<Geometry> | undefined
+
+// El relieve se juega sobre un mapa físico: contorno de España, ríos y, cuando no se tocan, las
+// cordilleras en tenue. Nada de eso se pregunta.
+export function contextoDe(tipo: Tipo): ContextoDeRelieve | null {
+  if (!esDeRelieve(tipo)) return null
+  const { topologia, geometrias } = topologias.comunidades
+  const poligonos = geometrias.geometries as MultiPolygon[]
+  contornoDeEspana ??= { type: 'Feature', properties: {}, geometry: merge(topologia, poligonos) }
+  return contextoDeRelieve(tipo, contornoDeEspana)
 }

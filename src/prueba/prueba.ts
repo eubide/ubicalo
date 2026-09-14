@@ -10,11 +10,33 @@ export interface Prueba {
 export const etiquetaDeTipo: Record<Tipo, string> = {
   comunidades: 'Comunidades autónomas',
   provincias: 'Provincias',
+  'cordilleras-y-sierras': 'Cordilleras y sierras',
+  picos: 'Picos',
+  jerarquia: 'Jerarquía',
+  alturas: 'Alturas',
+}
+
+export const gruposDeTipos: { grupo: string; tipos: Tipo[] }[] = [
+  { grupo: 'Político', tipos: ['comunidades', 'provincias'] },
+  { grupo: 'Relieve', tipos: ['cordilleras-y-sierras', 'picos', 'jerarquia', 'alturas'] },
+]
+
+// Los Tipos de apoyo solo tienen sentido en una dirección: el Modo no se elige.
+export const modoFijoDeTipo: Partial<Record<Tipo, Modo>> = {
+  jerarquia: 'nombre-ubicar',
+  alturas: 'ubicacion-nombre',
+}
+
+// En Alturas se escribe una cifra, no un nombre.
+export const indicacionDeRespuesta: Partial<Record<Tipo, string>> = { alturas: 'Metros' }
+
+export function pruebaDe(tipo: Tipo, modo: Modo): Prueba {
+  return { tipo, modo: modoFijoDeTipo[tipo] ?? modo }
 }
 
 export const etiquetaDeModo: Record<Modo, string> = {
-  'nombre-ubicar': 'Nombre → ubicar',
   'ubicacion-nombre': 'Ubicación → nombre',
+  'nombre-ubicar': 'Nombre → ubicar',
 }
 
 export function nombreDePrueba(prueba: Prueba): string {
