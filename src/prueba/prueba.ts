@@ -14,6 +14,7 @@ export const etiquetaDeTipo: Record<Tipo, string> = {
   picos: 'Picos',
   jerarquia: 'Jerarquía',
   alturas: 'Alturas',
+  simulacro: 'Simulacro',
 }
 
 export const gruposDeTipos: { grupo: string; tipos: Tipo[] }[] = [

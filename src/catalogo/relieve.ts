@@ -6,7 +6,7 @@ import picosGeo from '../datos/picos.json'
 import riosGeo from '../datos/rios.json'
 import type { Elemento } from './catalogo'
 
-export type TipoDeRelieve = 'cordilleras-y-sierras' | 'picos' | 'jerarquia' | 'alturas'
+export type TipoDeRelieve = 'cordilleras-y-sierras' | 'picos' | 'jerarquia' | 'alturas' | 'simulacro'
 
 export type Clase = 'cordillera' | 'sierra' | 'pico'
 
@@ -87,6 +87,7 @@ const CLASES_DEL_MAPA: Record<TipoDeRelieve, Clase[]> = {
   picos: ['pico'],
   jerarquia: ['cordillera', 'pico'],
   alturas: ['pico'],
+  simulacro: ['cordillera', 'sierra', 'pico'],
 }
 
 export function esDeRelieve(tipo: string): tipo is TipoDeRelieve {
@@ -157,33 +158,63 @@ function catalogoDeJerarquia(): Elemento[] {
 }
 
 // La cifra es la respuesta escrita: no se muestra ni en el nombre ni bajo el icono, solo en el Repaso.
+function elementoDeAltura(pico: Elemento, id: string): Elemento {
+  const altura = pico.altura
+  if (altura === undefined) throw new Error(`${pico.id} sin altura`)
+  return {
+    id,
+    nombre: String(altura),
+    nombreMostrado: alturaMostrada(altura),
+    alias: [conPuntoDeMillar(altura), `${altura} m`, alturaMostrada(altura)],
+    vecinos: [],
+    clase: 'pico',
+    ...(pico.cordillera && { cordillera: pico.cordillera }),
+    pregunta: `Altura del ${pico.nombre}`,
+    rotulo: `${pico.nombre} · ${alturaMostrada(altura)}`,
+  }
+}
+
 function catalogoDeAlturas(): Elemento[] {
-  return elementosDe(contornosDeRelieve('alturas')).map((elemento) => {
-    const altura = elemento.altura
-    if (altura === undefined) throw new Error(`${elemento.id} sin altura`)
-    const { altura: _sinAltura, ...sinAltura } = elemento
-    const cifra = String(altura)
-    return {
-      ...sinAltura,
-      nombre: cifra,
-      nombreMostrado: alturaMostrada(altura),
-      alias: [conPuntoDeMillar(altura), `${cifra} m`, alturaMostrada(altura)],
-      vecinos: [],
-      pregunta: `Altura del ${elemento.nombre}`,
-      rotulo: `${elemento.nombre} · ${alturaMostrada(altura)}`,
-    }
-  })
+  return elementosDe(contornosDeRelieve('alturas')).map((pico) => elementoDeAltura(pico, pico.id))
+}
+
+// Cada Elemento sabe qué debe estar Acertado antes de poder tocarse; las cordilleras no dependen de nada.
+function catalogoDeSimulacro(): Elemento[] {
+  const cordilleras = elementosDe(contornosPorClase.cordillera).map((elemento) => ({
+    ...elemento,
+    desbloqueaCon: [] as string[],
+  }))
+  const sierras = elementosDe(contornosPorClase.sierra).map((elemento) => ({
+    ...elemento,
+    desbloqueaCon: [elemento.cordillera!],
+  }))
+  const sierrasPorCordillera = new Map<string, string[]>()
+  for (const sierra of sierras) {
+    sierrasPorCordillera.set(sierra.cordillera!, [...(sierrasPorCordillera.get(sierra.cordillera!) ?? []), sierra.id])
+  }
+  const picos = elementosDe(contornosPorClase.pico).map((elemento) => ({
+    ...elemento,
+    desbloqueaCon: [elemento.cordillera!, ...(sierrasPorCordillera.get(elemento.cordillera!) ?? [])],
+  }))
+  const alturas = picos
+    .filter((pico) => pico.altura !== undefined)
+    .map((pico) => ({ ...elementoDeAltura(pico, `altura-${pico.id}`), desbloqueaCon: [pico.id] }))
+  return [...cordilleras, ...sierras, ...picos, ...alturas]
 }
 
 export function catalogoDeRelieve(tipo: TipoDeRelieve): Elemento[] {
   if (tipo === 'jerarquia') return catalogoDeJerarquia()
   if (tipo === 'alturas') return catalogoDeAlturas()
+  if (tipo === 'simulacro') return catalogoDeSimulacro()
   return elementosDeClases(CLASES_DEL_MAPA[tipo])
 }
 
-// Elementos que se tocan en el mapa, cada clase con sus propios vecinos.
+// Elementos que se tocan en el mapa, cada clase con sus propios vecinos; en Jerarquía y Simulacro no
+// coinciden con el catálogo de preguntas (Jerarquía pregunta sierras que no están en el mapa; Simulacro
+// pregunta también las cuatro alturas, que no tienen forma propia).
 export function tocablesDeRelieve(tipo: TipoDeRelieve): Elemento[] {
   if (tipo === 'jerarquia') return CLASES_DEL_MAPA.jerarquia.flatMap((clase) => elementosDe(contornosPorClase[clase]))
+  if (tipo === 'simulacro') return elementosDeClases(CLASES_DEL_MAPA.simulacro)
   return catalogoDeRelieve(tipo)
 }
 
