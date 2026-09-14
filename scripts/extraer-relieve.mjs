@@ -81,8 +81,9 @@ const ORDEN = [
   'montanas-de-canarias',
 ]
 
-// Las tres partes del Pirineo se cortan del polígono de Pirineos por dos meridianos y se guardan como
-// puntos en el centro de cada tercio, para que la mancha de Pirineos siga siendo tocable.
+// Las tres partes del Pirineo se cortan del polígono de Pirineos por dos meridianos (criterio editorial,
+// no tercios iguales) y se guardan como el centro de cada parte, para que la mancha de Pirineos siga
+// siendo tocable.
 const PARTES_DEL_PIRINEO = [
   { id: 'pirineo-navarro', nombre: 'Pirineo Navarro', hasta: -0.8 },
   { id: 'pirineo-aragones', nombre: 'Pirineo Aragonés', hasta: 0.72 },
@@ -112,17 +113,17 @@ const SIERRAS = [
 // Listado «Cumbres» de la Información Geográfica Destacada del IGN, CC-BY 4.0. Las coordenadas
 // son el centro del extent de su visor, contrastadas con Wikidata (diferencia máxima: 150 m).
 const PICOS = [
-  { id: 'aneto', nombre: 'Aneto', ngbe: 1814123, altitud: 3404, cordillera: 'pirineos', coordenadas: [0.6566, 42.6311] },
-  { id: 'torre-cerredo', nombre: 'Torre Cerredo', ngbe: 1697424, altitud: 2649, cordillera: 'cordillera-cantabrica', sierra: 'picos-de-europa', coordenadas: [-4.8529, 43.1978] },
-  { id: 'pena-trevinca', nombre: 'Peña Trevinca', ngbe: 1854852, altitud: 2127, cordillera: 'macizo-galaico-leones', coordenadas: [-6.7961, 42.2424] },
-  { id: 'aizkorri', nombre: 'Aizkorri', ngbe: 1761027, altitud: 1523, cordillera: 'montes-vascos', coordenadas: [-2.3253, 42.9513] },
-  { id: 'moncayo', nombre: 'Moncayo', ngbe: 1945743, altitud: 2314, cordillera: 'sistema-iberico', sierra: 'sierra-del-moncayo', coordenadas: [-1.8397, 41.7872] },
-  { id: 'almanzor', nombre: 'Almanzor', ngbe: 2098312, altitud: 2591, cordillera: 'sistema-central', sierra: 'sierra-de-gredos', coordenadas: [-5.2975, 40.2461] },
-  { id: 'rocigalgo', nombre: 'Rocigalgo', ngbe: 2166334, altitud: 1449, cordillera: 'montes-de-toledo', coordenadas: [-4.6156, 39.5277] },
-  { id: 'banuela', nombre: 'Bañuela', ngbe: 2278114, altitud: 1332, cordillera: 'sierra-morena', coordenadas: [-4.2373, 38.4194] },
-  { id: 'mulhacen', nombre: 'Mulhacén', ngbe: 2408142, altitud: 3479, cordillera: 'cordilleras-beticas', sierra: 'sierra-nevada', coordenadas: [-3.3115, 37.0534] },
-  { id: 'turo-de-l-home', nombre: "Turó de l'Home", ngbe: 1956991, altitud: 1706, cordillera: 'cordillera-costero-catalana', sierra: 'montseny', coordenadas: [2.4348, 41.7765] },
-  { id: 'teide', nombre: 'Teide', ngbe: 2638544, altitud: 3715, cordillera: 'montanas-de-canarias', coordenadas: [-16.6423, 28.2728] },
+  { id: 'aneto', nombre: 'Aneto', ngbe: 1814123, altura: 3404, cordillera: 'pirineos', coordenadas: [0.6566, 42.6311] },
+  { id: 'torre-cerredo', nombre: 'Torre Cerredo', ngbe: 1697424, altura: 2649, cordillera: 'cordillera-cantabrica', sierra: 'picos-de-europa', coordenadas: [-4.8529, 43.1978] },
+  { id: 'pena-trevinca', nombre: 'Peña Trevinca', ngbe: 1854852, altura: 2127, cordillera: 'macizo-galaico-leones', coordenadas: [-6.7961, 42.2424] },
+  { id: 'aizkorri', nombre: 'Aizkorri', ngbe: 1761027, altura: 1523, cordillera: 'montes-vascos', coordenadas: [-2.3253, 42.9513] },
+  { id: 'moncayo', nombre: 'Moncayo', ngbe: 1945743, altura: 2314, cordillera: 'sistema-iberico', sierra: 'sierra-del-moncayo', coordenadas: [-1.8397, 41.7872] },
+  { id: 'almanzor', nombre: 'Almanzor', ngbe: 2098312, altura: 2591, cordillera: 'sistema-central', sierra: 'sierra-de-gredos', coordenadas: [-5.2975, 40.2461] },
+  { id: 'rocigalgo', nombre: 'Rocigalgo', ngbe: 2166334, altura: 1449, cordillera: 'montes-de-toledo', coordenadas: [-4.6156, 39.5277] },
+  { id: 'banuela', nombre: 'Bañuela', ngbe: 2278114, altura: 1332, cordillera: 'sierra-morena', coordenadas: [-4.2373, 38.4194] },
+  { id: 'mulhacen', nombre: 'Mulhacén', ngbe: 2408142, altura: 3479, cordillera: 'cordilleras-beticas', sierra: 'sierra-nevada', coordenadas: [-3.3115, 37.0534] },
+  { id: 'turo-de-l-home', nombre: "Turó de l'Home", ngbe: 1956991, altura: 1706, cordillera: 'cordillera-costero-catalana', sierra: 'montseny', coordenadas: [2.4348, 41.7765] },
+  { id: 'teide', nombre: 'Teide', ngbe: 2638544, altura: 3715, cordillera: 'montanas-de-canarias', coordenadas: [-16.6423, 28.2728] },
 ]
 
 // Ríos del mapa físico de fondo, por el nombre que usa Natural Earth.
@@ -227,19 +228,23 @@ function unir(geometrias) {
   return { type: 'MultiPolygon', coordinates: poligonos }
 }
 
-function unidadesDe(capa) {
+function reconocerPartes(capa) {
   const partes = partesDe(capa)
   const unidades = new Map()
   for (const { clase, punto, todas, id, nombre } of PARTES) {
     if (todas) {
-      const delaClase = partes.filter((parte) => parte.clase === clase).map((parte) => parte.poligono)
-      unidades.set(id, { nombre, geometria: unir(delaClase) })
+      const poligonosDeLaClase = partes.filter((parte) => parte.clase === clase).map((parte) => parte.poligono)
+      unidades.set(id, { nombre, geometria: unir(poligonosDeLaClase) })
       continue
     }
     const parte = partes.find((candidata) => candidata.clase === clase && geoContains(candidata.poligono, punto))
     if (!parte) throw new Error(`No hay parte de «${clase}» que contenga ${punto}`)
     unidades.set(id, { nombre, geometria: parte.poligono })
   }
+  return unidades
+}
+
+function aplicarCortes(unidades) {
   for (const { de, recta, izquierda, derecha } of CORTES) {
     const { geometria } = unidades.get(de)
     unidades.delete(de)
@@ -252,11 +257,20 @@ function unidadesDe(capa) {
       unidades.set(lado.id, { nombre: lado.nombre, geometria: recortada })
     }
   }
+}
+
+function aplicarUniones(unidades) {
   for (const { de, id, nombre } of UNIONES) {
     const geometria = unir(de.map((parte) => unidades.get(parte).geometria))
     de.forEach((parte) => unidades.delete(parte))
     unidades.set(id, { nombre, geometria })
   }
+}
+
+function unidadesDe(capa) {
+  const unidades = reconocerPartes(capa)
+  aplicarCortes(unidades)
+  aplicarUniones(unidades)
   return unidades
 }
 
@@ -268,7 +282,7 @@ function cordillerasDe(unidades) {
   return ORDEN.map((id) => {
     const unidad = unidades.get(id)
     if (!unidad?.nombre) throw new Error(`Unidad sin resolver: ${id}`)
-    return elemento(id, { nombre: unidad.nombre }, simplificar(unidad.geometria, TOLERANCIA_EN_GRADOS))
+    return elemento(id, { nombre: unidad.nombre, clase: 'cordillera' }, simplificar(unidad.geometria, TOLERANCIA_EN_GRADOS))
   })
 }
 
@@ -296,10 +310,10 @@ function sierrasDe(unidades) {
 }
 
 function picos() {
-  return PICOS.map(({ id, nombre, altitud, cordillera, sierra, coordenadas }) =>
+  return PICOS.map(({ id, nombre, altura, cordillera, sierra, coordenadas }) =>
     elemento(
       id,
-      { nombre, clase: 'pico', altitud, cordillera, ...(sierra && { sierra }) },
+      { nombre, clase: 'pico', altura, cordillera, ...(sierra && { sierra }) },
       { type: 'Point', coordinates: coordenadas },
     ),
   )

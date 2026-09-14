@@ -63,7 +63,7 @@ tasks:
       - npm run datos:contexto
 
   datos:relieve:
-    desc: Regenera cordilleras y picos desde el Atlas Didáctico del IGN
+    desc: Regenera cordilleras, sierras, picos y ríos desde el IGN y Natural Earth
     cmds:
       - npm run datos:relieve
 

@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Feature, FeatureCollection, Geometry } from 'geojson'
-  import { catalogo, catalogoDelMapa, contornos, fondoDe, type Elemento, type Fondo } from './catalogo/catalogo'
+  import { catalogo, catalogoDelMapa, contextoDe, contornos, type Elemento } from './catalogo/catalogo'
+  import { etiquetaDeClase, textoDeAltura, type ContextoDeRelieve } from './catalogo/relieve'
   import contextoGeografico from './datos/contexto-geografico.json'
   import Mapa from './mapa/Mapa.svelte'
   import FinDePartida from './pantallas/FinDePartida.svelte'
@@ -32,7 +33,7 @@
     tiempoJugado,
     type Partida,
   } from './partida/partida'
-  import { pruebaDe, type Prueba } from './prueba/prueba'
+  import { indicacionDeRespuesta, pruebaDe, type Prueba } from './prueba/prueba'
   import SeleccionPrueba from './seleccion/SeleccionPrueba.svelte'
 
   const contexto = contextoGeografico as FeatureCollection
@@ -60,7 +61,7 @@
   let elementosDelMapa = $state.raw<Elemento[]>([])
   let totalElementos = $state(0)
   let contornosDelTipo = $state.raw<Feature<Geometry>[]>([])
-  let fondoDelTipo = $state.raw<Fondo | null>(null)
+  let contextoDelTipo = $state.raw<ContextoDeRelieve | null>(null)
   let ahora = $state(Date.now())
   let texto = $state('')
   let campoDeTexto = $state<HTMLInputElement | null>(null)
@@ -88,8 +89,24 @@
   const rotulos = $derived(
     repaso?.elementos
       .filter((elemento) => !repaso.marcados.includes(elemento.id))
-      .map((elemento) => ({ id: respuestaDe(elemento), texto: elemento.nombreMostrado })) ?? [],
+      .map((elemento) => ({ id: respuestaDe(elemento), texto: elemento.rotulo ?? elemento.nombreMostrado })) ?? [],
   )
+
+  const alturas = $derived(
+    elementosDelMapa.flatMap((elemento) =>
+      elemento.altura === undefined ? [] : [{ id: elemento.id, texto: textoDeAltura(elemento.altura) }],
+    ),
+  )
+
+  const enunciado = $derived.by(() => {
+    const preguntado = partida?.preguntado
+    if (!preguntado || correccion) return null
+    return preguntado.pregunta ?? (preguntado.clase && etiquetaDeClase[preguntado.clase]) ?? null
+  })
+
+  function nombreDeLaRespuesta(elemento: Elemento): string {
+    return elemento.respuesta === undefined ? '' : nombreDe(elemento.respuesta)
+  }
 
   const iluminados = $derived.by(() => {
     if (!escribeNombre) return []
@@ -129,7 +146,7 @@
     elementosDelMapa = catalogoDelMapa(elegida.tipo)
     totalElementos = elementos.length
     contornosDelTipo = contornos(elegida.tipo)
-    fondoDelTipo = fondoDe(elegida.tipo)
+    contextoDelTipo = contextoDe(elegida.tipo)
     ahora = Date.now()
     texto = ''
     partida = iniciarPartida(elegida, elementos, Math.random, Date.now, elementosDelMapa)
@@ -241,14 +258,14 @@
           <p class="pregunta">{escribeNombre ? 'Repaso: fíjate en dónde están' : 'Repaso: toca cada nombre'}</p>
         {:else if escribeNombre && !correccion}
           <form class="pregunta" onsubmit={enviarTexto}>
-            {#if partida.preguntado?.pregunta}
-              <span class="enunciado">{partida.preguntado.pregunta}</span>
+            {#if enunciado}
+              <span class="enunciado">{enunciado}</span>
             {/if}
             <input
               bind:this={campoDeTexto}
               bind:value={texto}
-              aria-label={partida.preguntado?.pregunta ?? 'Nombre del elemento iluminado'}
-              placeholder={prueba?.tipo === 'alturas' ? 'Metros' : '¿Cómo se llama?'}
+              aria-label={enunciado ?? 'Nombre del elemento iluminado'}
+              placeholder={(prueba && indicacionDeRespuesta[prueba.tipo]) ?? '¿Cómo se llama?'}
               autocomplete="off"
               autocapitalize="off"
               spellcheck="false"
@@ -258,7 +275,7 @@
         {:else}
           <p class="pregunta">
             {#if !correccion}
-              {#if partida.preguntado?.pregunta}<span class="enunciado">{partida.preguntado.pregunta}</span>{/if}
+              {#if enunciado}<span class="enunciado">{enunciado}</span>{/if}
               {partida.preguntado?.nombreMostrado}
             {/if}
           </p>
@@ -277,16 +294,17 @@
 
     <Mapa
       contornos={contornosDelTipo}
-      fondo={fondoDelTipo}
+      contextoDeRelieve={contextoDelTipo}
       {contexto}
       acertados={partida.acertados}
       tocado={correccion && !escribeNombre && correccionTrasFallo(correccion) ? correccion.elegido.id : null}
       correcto={correccion ? respuestaDe(correccion.correcto) : null}
       preguntado={correccion ? null : (partida.preguntado?.id ?? null)}
       {iluminados}
-      destacados={!escribeNombre && !correccion && partida.preguntado?.clase === 'cordillera' && partida.preguntado.respuesta ? [partida.preguntado.id] : []}
+      destacados={!correccion && partida.preguntado?.destacar ? [partida.preguntado.id] : []}
       pistaDeArea={partida.pistaDeArea ?? []}
       {rotulos}
+      {alturas}
       fallados={partida.terminada ? partida.fallados.map((elemento) => elemento.id) : []}
       alElegir={elegir}
       {nombreDe}
@@ -297,6 +315,8 @@
         <p>
           {#if !correccionTrasFallo(correccion)}
             Con pista: {correccion.correcto.nombreMostrado}
+          {:else if !escribeNombre && correccion.correcto.respuesta}
+            Tocaste {correccion.elegido.nombreMostrado} · {correccion.correcto.nombreMostrado} → {nombreDeLaRespuesta(correccion.correcto)}
           {:else if !escribeNombre}
             Tocaste {correccion.elegido.nombreMostrado} · {correccion.correcto.nombreMostrado} está aquí
           {:else}

@@ -2,7 +2,7 @@
   import type { Feature, FeatureCollection, Geometry, Polygon } from 'geojson'
   import { geoCentroid, geoPath } from 'd3-geo'
   import { geoConicConformalSpain } from 'd3-composite-projections'
-  import type { Fondo } from '../catalogo/catalogo'
+  import { propiedadesDe, type Clase, type ContextoDeRelieve } from '../catalogo/relieve'
   import RecuadroCeutaMelilla, { esCeutaOMelilla } from './RecuadroCeutaMelilla.svelte'
 
   export interface Rotulo {
@@ -12,7 +12,7 @@
 
   interface Props {
     contornos: Feature<Geometry>[]
-    fondo?: Fondo | null
+    contextoDeRelieve?: ContextoDeRelieve | null
     contexto: FeatureCollection
     acertados: string[]
     tocado?: string | null
@@ -22,6 +22,7 @@
     destacados?: string[]
     pistaDeArea?: string[]
     rotulos?: Rotulo[]
+    alturas?: Rotulo[]
     fallados?: string[]
     alElegir: (id: string) => void
     nombreDe: (id: string) => string
@@ -29,7 +30,7 @@
 
   let {
     contornos,
-    fondo = null,
+    contextoDeRelieve = null,
     contexto,
     acertados,
     tocado = null,
@@ -39,6 +40,7 @@
     destacados = [],
     pistaDeArea = [],
     rotulos = [],
+    alturas = [],
     fallados = [],
     alElegir,
     nombreDe,
@@ -56,7 +58,7 @@
         [margen, margen],
         [ancho - margen, alto - margen],
       ],
-      { type: 'FeatureCollection', features: fondo ? [fondo.contorno] : contornos },
+      { type: 'FeatureCollection', features: contextoDeRelieve ? [contextoDeRelieve.contorno] : contornos },
     ),
   )
   const trazado = $derived(geoPath(proyeccion).pointRadius(radioSierra))
@@ -81,9 +83,18 @@
   const conDiana = $derived([...ceutaYMelilla, ...puntos])
   const manchas = $derived(contornos.filter((contorno) => contorno.geometry.type !== 'Point'))
 
-  function claseDe(contorno: Feature<Geometry>): string {
-    return (contorno.properties as { clase?: string } | null)?.clase ?? 'sierra'
+  function claseDe(contorno: Feature<Geometry>): Clase {
+    return contorno.geometry.type === 'Point' ? propiedadesDe(contorno).clase : 'cordillera'
   }
+
+  // Solo las clases presentes, para que la leyenda no anuncie lo que el mapa no muestra.
+  const clasesEnElMapa = $derived(
+    (['cordillera', 'sierra', 'pico'] as Clase[]).filter(
+      (clase) =>
+        contornos.some((contorno) => claseDe(contorno) === clase) ||
+        (clase === 'cordillera' && (contextoDeRelieve?.tenues.length ?? 0) > 0),
+    ),
+  )
 
   // Sierra: círculo; pico: triángulo, como en los mapas físicos. Las manchas ya se distinguen solas.
   function marcador(contorno: Feature<Geometry>): string | null {
@@ -256,18 +267,18 @@
           <path d={trazado(pais)} />
         {/each}
       </g>
-      {#if fondo}
-        <path class="fondo" d={trazado(fondo.contorno)} />
-        {#each fondo.relieve as unidad (unidad.id)}
-          <path class="fondo relieve" class:destacado={destacados.includes(String(unidad.id))} d={trazado(unidad)} />
+      {#if contextoDeRelieve}
+        <path class="contorno" d={trazado(contextoDeRelieve.contorno)} />
+        {#each contextoDeRelieve.tenues as cordillera (cordillera.id)}
+          <path class="tenue" d={trazado(cordillera)} />
         {/each}
-        {#each fondo.rios as rio (rio.id)}
+        {#each contextoDeRelieve.rios as rio (rio.id)}
           <path class="rio" d={trazado(rio)} />
         {/each}
       {/if}
       <!-- El MVP se juega con ratón o dedo; jugar con teclado no está en la spec. -->
       <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-      <g class="elementos" class:relieve={fondo !== null}>
+      <g class="elementos" class:relieve={contextoDeRelieve !== null}>
         {#each [...manchas, ...puntos.map(({ contorno }) => contorno)] as contorno (contorno.id)}
           {@const id = String(contorno.id)}
           <path
@@ -302,6 +313,15 @@
         <!-- Encima de todos los elementos para que los vecinos no tapen el contorno grueso. -->
         <path class="correcto" d={trazado(contornoCorrecto)} />
       {/if}
+      {#each alturas as altura (altura.id)}
+        {@const contorno = contornos.find((candidato) => String(candidato.id) === altura.id)}
+        {#if contorno}
+          {@const [x, y] = centroDelRotulo(contorno)}
+          <text class="altura" {x} y={y + radioDiana + tamañoRotulo * 0.6} text-anchor="middle" font-size={(tamañoRotulo * 0.8) / vista.escala}>
+            {altura.texto}
+          </text>
+        {/if}
+      {/each}
       {#each rotulosConPosicion as { rotulo, x, y, enRecuadro } (rotulo.id + rotulo.texto)}
         <text
           class="rotulo"
@@ -337,11 +357,17 @@
       />
     {/if}
   </svg>
-  {#if fondo}
+  {#if contextoDeRelieve}
     <ul class="leyenda">
-      <li><svg viewBox="0 0 20 14" aria-hidden="true"><path class="mancha" d="M1,9C4,3 8,2 12,5S18,6 19,3V13H1Z" /></svg> Cordillera o macizo</li>
-      <li><svg viewBox="0 0 20 14" aria-hidden="true"><circle class="sierra" cx="10" cy="7" r="5" /></svg> Sierra</li>
-      <li><svg viewBox="0 0 20 14" aria-hidden="true"><path class="pico" d="M10,1L16,12H4Z" /></svg> Pico</li>
+      {#if clasesEnElMapa.includes('cordillera')}
+        <li><svg viewBox="0 0 20 14" aria-hidden="true"><path class="mancha" d="M1,9C4,3 8,2 12,5S18,6 19,3V13H1Z" /></svg> Cordillera o macizo</li>
+      {/if}
+      {#if clasesEnElMapa.includes('sierra')}
+        <li><svg viewBox="0 0 20 14" aria-hidden="true"><circle class="sierra" cx="10" cy="7" r="5" /></svg> Sierra</li>
+      {/if}
+      {#if clasesEnElMapa.includes('pico')}
+        <li><svg viewBox="0 0 20 14" aria-hidden="true"><path class="pico" d="M10,1L16,12H4Z" /></svg> Pico</li>
+      {/if}
     </ul>
   {/if}
   {#if seleccionado !== null}
@@ -377,20 +403,15 @@
     stroke-width: 0.8;
   }
 
-  .fondo {
+  .contorno {
     fill: #fdfdfb;
     stroke: #9aa0a6;
     stroke-width: 0.8;
   }
 
-  .fondo.relieve {
+  .tenue {
     fill: #efece4;
     stroke: #d6d2c6;
-  }
-
-  .fondo.relieve.destacado {
-    fill: #f6d365;
-    stroke: #8a6d1f;
   }
 
   .rio {
@@ -484,6 +505,16 @@
     fill: none;
     stroke: #9aa0a6;
     stroke-width: 0.8;
+  }
+
+  .altura {
+    font-weight: 600;
+    fill: #4b5563;
+    stroke: #fdfdfb;
+    stroke-width: 3;
+    paint-order: stroke;
+    vector-effect: non-scaling-stroke;
+    pointer-events: none;
   }
 
   .rotulo {

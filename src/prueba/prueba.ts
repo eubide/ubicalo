@@ -27,6 +27,9 @@ export const modoFijoDeTipo: Partial<Record<Tipo, Modo>> = {
   alturas: 'ubicacion-nombre',
 }
 
+// En Alturas se escribe una cifra, no un nombre.
+export const indicacionDeRespuesta: Partial<Record<Tipo, string>> = { alturas: 'Metros' }
+
 export function pruebaDe(tipo: Tipo, modo: Modo): Prueba {
   return { tipo, modo: modoFijoDeTipo[tipo] ?? modo }
 }

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { catalogo, catalogoDelMapa, contornos, fondoDe, type Tipo } from './catalogo'
+import { catalogo, catalogoDelMapa, contextoDe, contornos, type Tipo } from './catalogo'
 
 function nombresDelCatalogo(tipo: Tipo) {
-  return catalogo(tipo).map(({ vecinos: _v, comunidad: _c, cordillera: _cord, clase: _cl, pregunta: _p, ...nombres }) => nombres)
+  return catalogo(tipo).map(({ vecinos: _v, comunidad: _c, cordillera: _cord, clase: _cl, altura: _a, ...nombres }) => nombres)
 }
 
 describe('Catálogo de comunidades autónomas', () => {
@@ -238,7 +238,7 @@ describe('Catálogo de cordilleras y sierras', () => {
     expect(cordilleraDe('Pirineos')).toBeUndefined()
   })
 
-  it('muestra el nombre tal cual, con la clase como enunciado, y acepta las formas de los libros como alias', () => {
+  it('muestra el nombre tal cual, con su clase, y acepta las formas de los libros como alias', () => {
     const elementos = catalogo('cordilleras-y-sierras')
     const porId = (id: string) => elementos.find((elemento) => elemento.id === id)!
 
@@ -246,10 +246,10 @@ describe('Catálogo de cordilleras y sierras', () => {
       nombre: 'Cordillera Cantábrica',
       nombreMostrado: 'Cordillera Cantábrica',
       alias: ['Cantábrica', 'Montes Cantábricos'],
-      pregunta: 'Cordillera o macizo',
+      clase: 'cordillera',
     })
     expect(porId('cordilleras-beticas').alias).toEqual(['Béticas', 'Sistema Bético', 'Sistemas Béticos'])
-    expect(porId('sierra-de-gredos')).toMatchObject({ nombreMostrado: 'Sierra de Gredos', alias: ['Gredos'], pregunta: 'Sierra' })
+    expect(porId('sierra-de-gredos')).toMatchObject({ nombreMostrado: 'Sierra de Gredos', alias: ['Gredos'], clase: 'sierra' })
     expect(porId('pirineo-aragones').alias).toEqual(['Aragonés'])
     expect(porId('montes-vascos').alias).toEqual([])
   })
@@ -286,7 +286,18 @@ describe('Catálogo de picos', () => {
       'Teide',
     ])
     expect(picos.map((elemento) => elemento.cordillera)).toEqual(cordilleras.map((elemento) => elemento.id))
-    expect(picos.every((elemento) => elemento.clase === 'pico' && elemento.pregunta === 'Pico')).toBe(true)
+    expect(picos.every((elemento) => elemento.clase === 'pico' && elemento.pregunta === undefined)).toBe(true)
+  })
+
+  it('solo los cuatro picos examinados llevan su altura, para escribirla bajo el icono', () => {
+    const conAltura = catalogo('picos').filter((elemento) => elemento.altura !== undefined)
+
+    expect(conAltura.map((elemento) => [elemento.id, elemento.altura])).toEqual([
+      ['aneto', 3404],
+      ['moncayo', 2314],
+      ['mulhacen', 3479],
+      ['teide', 3715],
+    ])
   })
 
   it('acepta las otras formas habituales como alias', () => {
@@ -325,7 +336,13 @@ describe('Catálogo de jerarquía', () => {
     expect(porNombre('Pirineo Catalán').nombreMostrado).toBe('Pirineo Catalán (sierra)')
     expect(porNombre('Rocigalgo')).toMatchObject({ nombreMostrado: 'Rocigalgo (pico)', respuesta: 'montes-de-toledo' })
     expect(porNombre('Teide').respuesta).toBe('montanas-de-canarias')
-    expect(porNombre('Pirineos')).toMatchObject({ nombreMostrado: 'Pirineos', respuesta: 'aneto', pregunta: 'Toca su pico' })
+    expect(porNombre('Pirineos')).toMatchObject({
+      nombreMostrado: 'Pirineos',
+      respuesta: 'aneto',
+      pregunta: 'Toca su pico',
+      destacar: true,
+    })
+    expect(porNombre('Sierra de Gredos').destacar).toBeUndefined()
   })
 
   it('los vecinos son los del elemento que se toca, para que la Pista de área ilumine lo tocable', () => {
@@ -352,40 +369,41 @@ describe('Catálogo de alturas', () => {
     const elementos = catalogo('alturas')
 
     expect(elementos.map((elemento) => elemento.pregunta)).toEqual([
-      'Altura del Aneto',
       'Altura del Moncayo',
-      'Altura del Mulhacén',
+      'Altura del Aneto',
       'Altura del Teide',
+      'Altura del Mulhacén',
     ])
     expect(elementos.find((elemento) => elemento.id === 'aneto')).toEqual({
       id: 'aneto',
       nombre: '3404',
       nombreMostrado: '3.404 m',
       alias: ['3.404', '3404 m', '3.404 m'],
-      vecinos: ['moncayo', 'mulhacen', 'teide'],
+      vecinos: [],
       clase: 'pico',
       cordillera: 'pirineos',
       pregunta: 'Altura del Aneto',
+      rotulo: 'Aneto · 3.404 m',
     })
   })
 })
 
-describe('Fondo del mapa', () => {
-  it('provincias y comunidades no llevan fondo', () => {
-    expect(fondoDe('provincias')).toBeNull()
-    expect(fondoDe('comunidades')).toBeNull()
+describe('Contexto geográfico del relieve', () => {
+  it('provincias y comunidades no llevan contexto de relieve', () => {
+    expect(contextoDe('provincias')).toBeNull()
+    expect(contextoDe('comunidades')).toBeNull()
   })
 
   it('el relieve lleva el contorno de España y los ríos; picos y alturas además las cordilleras en tenue', () => {
-    expect(fondoDe('cordilleras-y-sierras')?.contorno.geometry.type).toBe('MultiPolygon')
-    expect(fondoDe('cordilleras-y-sierras')?.rios.length).toBeGreaterThan(20)
-    expect(fondoDe('cordilleras-y-sierras')?.relieve).toEqual([])
-    expect(fondoDe('jerarquia')?.relieve).toEqual([])
-    expect(fondoDe('picos')?.relieve).toHaveLength(11)
-    expect(fondoDe('alturas')?.relieve).toHaveLength(11)
+    expect(contextoDe('cordilleras-y-sierras')?.contorno.geometry.type).toBe('MultiPolygon')
+    expect(contextoDe('cordilleras-y-sierras')?.rios.length).toBeGreaterThan(20)
+    expect(contextoDe('cordilleras-y-sierras')?.tenues).toEqual([])
+    expect(contextoDe('jerarquia')?.tenues).toEqual([])
+    expect(contextoDe('picos')?.tenues).toHaveLength(11)
+    expect(contextoDe('alturas')?.tenues).toHaveLength(11)
   })
 
-  it('los contornos de alturas son los cuatro picos examinados', () => {
-    expect(contornos('alturas').map((contorno) => contorno.id)).toEqual(['aneto', 'moncayo', 'mulhacen', 'teide'])
+  it('los contornos de alturas son los cuatro picos examinados, en el orden de los apuntes', () => {
+    expect(contornos('alturas').map((contorno) => contorno.id)).toEqual(['moncayo', 'aneto', 'teide', 'mulhacen'])
   })
 })

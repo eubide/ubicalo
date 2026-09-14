@@ -42,7 +42,7 @@ export const DURACION_REPASO_UBICACION_NOMBRE = 4_000
 export interface Partida {
   prueba: Prueba
   elementos: Elemento[]
-  mapa: Elemento[]
+  tocables: Elemento[]
   azar: Azar
   reloj: Reloj
   inicio: number
@@ -109,14 +109,14 @@ export function iniciarPartida(
   elementos: Elemento[],
   azar: Azar,
   reloj: Reloj,
-  mapa: Elemento[] = elementos,
+  tocables: Elemento[] = elementos,
 ): Partida {
   const ahora = reloj()
   return construir(
     {
       prueba,
       elementos,
-      mapa,
+      tocables,
       azar,
       reloj,
       inicio: ahora,
@@ -150,7 +150,7 @@ export function responder(partida: Partida, idElegido: string): Partida {
   if (!esperandoRespuesta(partida)) return partida
   const correcto = partida.cola[0]
   if (idElegido === respuestaDe(correcto)) return resolver(partida, true)
-  const elegido = partida.mapa.find((elemento) => elemento.id === idElegido)
+  const elegido = partida.tocables.find((elemento) => elemento.id === idElegido)
   if (!elegido) return partida
   return abrirCorreccion(resolver(partida, false), elegido, correcto)
 }
