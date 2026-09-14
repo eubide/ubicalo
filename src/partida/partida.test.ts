@@ -734,6 +734,11 @@ describe('Pista de área', () => {
     expect(trasElRepaso(catalogoDePrueba(), comunidadesNombreUbicar).pistaDeArea).toEqual(['d', 'f'])
   })
 
+  it('con cordilleras y picos, la pregunta siguiente al Repaso ilumina sus Vecinos', () => {
+    expect(trasElRepaso(catalogoDePrueba(), { tipo: 'cordilleras', modo: 'nombre-ubicar' }).pistaDeArea).toEqual(['d', 'f'])
+    expect(trasElRepaso(catalogoDePrueba(), { tipo: 'picos', modo: 'nombre-ubicar' }).pistaDeArea).toEqual(['d', 'f'])
+  })
+
   it('una comunidad sin Vecinos se ilumina a sí misma', () => {
     expect(trasElRepaso(catalogoDePrueba({ vecinos: [] }), comunidadesNombreUbicar).pistaDeArea).toEqual(['e'])
   })
@@ -1009,5 +1014,53 @@ describe('Abandono', () => {
     expect(tras.abandonada).toBe(false)
     expect(tras.terminada).toBe(true)
     expect(tiempoJugado(tras, 60_000)).toBe(3_000)
+  })
+})
+
+describe('Jerarquía: elementos que se responden tocando otro elemento del mapa', () => {
+  const jerarquia: Prueba = { tipo: 'jerarquia', modo: 'nombre-ubicar' }
+  const cordilleras: Elemento[] = [
+    { id: 'central', nombre: 'Sistema Central', nombreMostrado: 'Sistema Central', alias: [], vecinos: ['iberico'] },
+    { id: 'iberico', nombre: 'Sistema Ibérico', nombreMostrado: 'Sistema Ibérico', alias: [], vecinos: ['central'] },
+  ]
+  const sierras: Elemento[] = [
+    { id: 'gredos', nombre: 'Sierra de Gredos', nombreMostrado: 'Sierra de Gredos', alias: [], vecinos: ['iberico'], respuesta: 'central' },
+    { id: 'gata', nombre: 'Sierra de Gata', nombreMostrado: 'Sierra de Gata', alias: [], vecinos: ['iberico'], respuesta: 'central' },
+    { id: 'urbion', nombre: 'Picos de Urbión', nombreMostrado: 'Picos de Urbión', alias: [], vecinos: ['central'], respuesta: 'iberico' },
+    { id: 'demanda', nombre: 'Sierra de la Demanda', nombreMostrado: 'Sierra de la Demanda', alias: [], vecinos: ['central'], respuesta: 'iberico' },
+  ]
+  const azarSinBarajar = () => 0.99
+
+  it('tocar la cordillera madre es acierto y tocar otra es fallo con Corrección sobre la cordillera tocada', () => {
+    let partida = iniciarPartida(jerarquia, sierras, azarSinBarajar, reloj, cordilleras)
+    expect(partida.preguntado?.id).toBe('gredos')
+
+    partida = responder(partida, 'central')
+    expect(partida.ultimaRespuesta?.acierto).toBe(true)
+    expect(partida.puntuacion).toBe(150)
+
+    expect(partida.preguntado?.id).toBe('gata')
+    partida = responder(partida, 'iberico')
+    expect(partida.correccion?.elegido.id).toBe('iberico')
+    expect(partida.correccion?.correcto.id).toBe('gata')
+    expect(correccionTrasFallo(partida.correccion!)).toBe(true)
+  })
+
+  it('tocar un id que no está en el mapa no cambia nada', () => {
+    const partida = iniciarPartida(jerarquia, sierras, azarSinBarajar, reloj, cordilleras)
+    expect(responder(partida, 'gata')).toBe(partida)
+  })
+
+  it('en el Repaso, tocar una cordillera marca todos los elementos fallados que responden a ella', () => {
+    let partida = iniciarPartida(jerarquia, sierras, azarSinBarajar, reloj, cordilleras)
+    for (let i = 0; i < 3; i++) partida = cerrarCorreccion(responder(partida, partida.preguntado!.respuesta === 'central' ? 'iberico' : 'central'))
+    expect(partida.repaso?.elementos.map((elemento) => elemento.id)).toEqual(['gredos', 'gata', 'urbion'])
+
+    partida = marcarEnRepaso(partida, 'central')
+    expect(partida.repaso?.marcados).toEqual(['gredos', 'gata'])
+
+    partida = marcarEnRepaso(partida, 'iberico')
+    expect(partida.repaso).toBeNull()
+    expect(partida.pistaDeArea).toEqual(['central'])
   })
 })

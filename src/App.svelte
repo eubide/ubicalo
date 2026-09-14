@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Feature, FeatureCollection, Geometry } from 'geojson'
-  import { catalogo, contornos, type Elemento } from './catalogo/catalogo'
+  import { catalogo, catalogoDelMapa, contornos, fondoDe, type Elemento, type Fondo } from './catalogo/catalogo'
   import contextoGeografico from './datos/contexto-geografico.json'
   import Mapa from './mapa/Mapa.svelte'
   import FinDePartida from './pantallas/FinDePartida.svelte'
@@ -27,11 +27,12 @@
     marcarEnRepaso,
     responder,
     responderConTexto,
+    respuestaDe,
     resumirPartida,
     tiempoJugado,
     type Partida,
   } from './partida/partida'
-  import type { Prueba } from './prueba/prueba'
+  import { pruebaDe, type Prueba } from './prueba/prueba'
   import SeleccionPrueba from './seleccion/SeleccionPrueba.svelte'
 
   const contexto = contextoGeografico as FeatureCollection
@@ -56,8 +57,10 @@
   let partida = $state<Partida | null>(null)
   let prueba = $state<Prueba | null>(null)
   let elementosDelTipo = $state.raw<Elemento[]>([])
+  let elementosDelMapa = $state.raw<Elemento[]>([])
   let totalElementos = $state(0)
   let contornosDelTipo = $state.raw<Feature<Geometry>[]>([])
+  let fondoDelTipo = $state.raw<Fondo | null>(null)
   let ahora = $state(Date.now())
   let texto = $state('')
   let campoDeTexto = $state<HTMLInputElement | null>(null)
@@ -82,13 +85,15 @@
   const pista = $derived(partida?.pista ?? null)
   const correccion = $derived(partida?.correccion ?? null)
   const repaso = $derived(partida?.repaso ?? null)
-  const rotulados = $derived(
-    repaso?.elementos.map((elemento) => elemento.id).filter((id) => !repaso.marcados.includes(id)) ?? [],
+  const rotulos = $derived(
+    repaso?.elementos
+      .filter((elemento) => !repaso.marcados.includes(elemento.id))
+      .map((elemento) => ({ id: respuestaDe(elemento), texto: elemento.nombreMostrado })) ?? [],
   )
 
   const iluminados = $derived.by(() => {
     if (!escribeNombre) return []
-    if (repaso) return rotulados
+    if (repaso) return rotulos.map((rotulo) => rotulo.id)
     const id = (correccion?.correcto ?? partida?.preguntado)?.id
     return id === undefined ? [] : [id]
   })
@@ -111,7 +116,8 @@
     return cerrarAlCabo(DURACION_REPASO_UBICACION_NOMBRE, cerrarRepaso)
   })
 
-  function empezar(elegida: Prueba) {
+  function empezar(pedida: Prueba) {
+    const elegida = pruebaDe(pedida.tipo, pedida.modo)
     const elementos = catalogo(elegida.tipo)
     prueba = elegida
     resultado = null
@@ -120,15 +126,17 @@
     aBatir =
       retoRecibido?.prueba.tipo === elegida.tipo && retoRecibido.prueba.modo === elegida.modo ? retoRecibido : null
     elementosDelTipo = elementos
+    elementosDelMapa = catalogoDelMapa(elegida.tipo)
     totalElementos = elementos.length
     contornosDelTipo = contornos(elegida.tipo)
+    fondoDelTipo = fondoDe(elegida.tipo)
     ahora = Date.now()
     texto = ''
-    partida = iniciarPartida(elegida, elementos, Math.random, Date.now)
+    partida = iniciarPartida(elegida, elementos, Math.random, Date.now, elementosDelMapa)
   }
 
   function nombreDe(id: string): string {
-    return elementosDelTipo.find((elemento) => elemento.id === id)?.nombreMostrado ?? ''
+    return elementosDelMapa.find((elemento) => elemento.id === id)?.nombreMostrado ?? ''
   }
 
   function elegir(id: string) {
@@ -233,11 +241,14 @@
           <p class="pregunta">{escribeNombre ? 'Repaso: fíjate en dónde están' : 'Repaso: toca cada nombre'}</p>
         {:else if escribeNombre && !correccion}
           <form class="pregunta" onsubmit={enviarTexto}>
+            {#if partida.preguntado?.pregunta}
+              <span class="enunciado">{partida.preguntado.pregunta}</span>
+            {/if}
             <input
               bind:this={campoDeTexto}
               bind:value={texto}
-              aria-label="Nombre del elemento iluminado"
-              placeholder="¿Cómo se llama?"
+              aria-label={partida.preguntado?.pregunta ?? 'Nombre del elemento iluminado'}
+              placeholder={partida.preguntado?.pregunta ? 'Metros' : '¿Cómo se llama?'}
               autocomplete="off"
               autocapitalize="off"
               spellcheck="false"
@@ -246,7 +257,10 @@
           </form>
         {:else}
           <p class="pregunta">
-            {#if !correccion}{partida.preguntado?.nombreMostrado}{/if}
+            {#if !correccion}
+              {#if partida.preguntado?.pregunta}<span class="enunciado">{partida.preguntado.pregunta}</span>{/if}
+              {partida.preguntado?.nombreMostrado}
+            {/if}
           </p>
         {/if}
         <PuntuacionYTiempo puntuacion={partida.puntuacion} tiempo={tiempoJugado(partida, ahora)} {aBatir} />
@@ -263,14 +277,16 @@
 
     <Mapa
       contornos={contornosDelTipo}
+      fondo={fondoDelTipo}
       {contexto}
       acertados={partida.acertados}
       tocado={correccion && !escribeNombre && correccionTrasFallo(correccion) ? correccion.elegido.id : null}
-      correcto={correccion?.correcto.id ?? null}
+      correcto={correccion ? respuestaDe(correccion.correcto) : null}
       preguntado={correccion ? null : (partida.preguntado?.id ?? null)}
       {iluminados}
+      destacados={!escribeNombre && !correccion && partida.preguntado ? [partida.preguntado.id] : []}
       pistaDeArea={partida.pistaDeArea ?? []}
-      {rotulados}
+      {rotulos}
       fallados={partida.terminada ? partida.fallados.map((elemento) => elemento.id) : []}
       alElegir={elegir}
       {nombreDe}
@@ -324,7 +340,20 @@
 
   form.pregunta {
     display: flex;
+    flex-wrap: wrap;
+    align-items: center;
     gap: 0.5rem;
+  }
+
+  .pregunta .enunciado {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 400;
+    color: #6b7280;
+  }
+
+  form.pregunta .enunciado {
+    flex-basis: 100%;
   }
 
   form.pregunta input,

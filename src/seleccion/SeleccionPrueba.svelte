@@ -1,9 +1,17 @@
 <script lang="ts">
   import { untrack } from 'svelte'
-  import type { Tipo } from '../catalogo/catalogo'
   import type { Marca, Reto } from '../competicion/competicion'
   import { formatearTiempo } from '../pantallas/tiempo'
-  import { etiquetaDeModo, etiquetaDeTipo, nombreDePrueba, type Modo, type Prueba } from '../prueba/prueba'
+  import {
+    etiquetaDeModo,
+    etiquetaDeTipo,
+    gruposDeTipos,
+    modoFijoDeTipo,
+    nombreDePrueba,
+    pruebaDe,
+    type Modo,
+    type Prueba,
+  } from '../prueba/prueba'
 
   interface Props {
     alElegir: (prueba: Prueba) => void
@@ -16,11 +24,6 @@
   const modos: { modo: Modo; etiqueta: string }[] = [
     { modo: 'nombre-ubicar', etiqueta: etiquetaDeModo['nombre-ubicar'] },
     { modo: 'ubicacion-nombre', etiqueta: etiquetaDeModo['ubicacion-nombre'] },
-  ]
-
-  const tipos: { tipo: Tipo; etiqueta: string }[] = [
-    { tipo: 'comunidades', etiqueta: etiquetaDeTipo.comunidades },
-    { tipo: 'provincias', etiqueta: etiquetaDeTipo.provincias },
   ]
 
   let modoElegido = $state<Modo>(untrack(() => reto?.prueba.modo ?? 'nombre-ubicar'))
@@ -46,17 +49,25 @@
       </label>
     {/each}
   </fieldset>
-  <div class="tipos">
-    {#each tipos as { tipo, etiqueta } (tipo)}
-      {@const marca = marcaDe({ tipo, modo: modoElegido })}
-      <button type="button" onclick={() => alElegir({ tipo, modo: modoElegido })}>
-        {etiqueta}
-        <span class="marca">
-          {marca ? `Marca: ${marca.puntuacion} puntos en ${formatearTiempo(marca.tiempo)}` : 'Sin marca'}
-        </span>
-      </button>
-    {/each}
-  </div>
+  {#each gruposDeTipos as { grupo, tipos } (grupo)}
+    <h2>{grupo}</h2>
+    <div class="tipos">
+      {#each tipos as tipo (tipo)}
+        {@const prueba = pruebaDe(tipo, modoElegido)}
+        {@const marca = marcaDe(prueba)}
+        {@const modoFijo = modoFijoDeTipo[tipo]}
+        <button type="button" onclick={() => alElegir(prueba)}>
+          {etiquetaDeTipo[tipo]}
+          {#if modoFijo}
+            <span class="modoFijo">{etiquetaDeModo[modoFijo]}</span>
+          {/if}
+          <span class="marca">
+            {marca ? `Marca: ${marca.puntuacion} puntos en ${formatearTiempo(marca.tiempo)}` : 'Sin marca'}
+          </span>
+        </button>
+      {/each}
+    </div>
+  {/each}
 </section>
 
 <style>
@@ -84,10 +95,23 @@
     cursor: pointer;
   }
 
+  h2 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #6b7280;
+    margin: 1rem 0 0.5rem;
+  }
+
   .tipos {
     display: flex;
     flex-wrap: wrap;
     gap: 0.75rem;
+  }
+
+  .modoFijo {
+    display: block;
+    font-size: 0.8rem;
+    color: #2f7a4a;
   }
 
   button {

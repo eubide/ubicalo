@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { catalogo, type Tipo } from './catalogo'
+import { catalogo, catalogoDelMapa, contornos, fondoDe, type Tipo } from './catalogo'
 
 function nombresDelCatalogo(tipo: Tipo) {
-  return catalogo(tipo).map(({ vecinos: _vecinos, comunidad: _comunidad, ...nombres }) => nombres)
+  return catalogo(tipo).map(({ vecinos: _vecinos, comunidad: _comunidad, cordillera: _cordillera, ...nombres }) => nombres)
 }
 
 describe('Catálogo de comunidades autónomas', () => {
@@ -201,5 +201,224 @@ describe('Catálogo de provincias', () => {
     expect(comunidadesDeProvincias).toHaveLength(52)
     expect(comunidadesDeProvincias.every((comunidad) => idsDeComunidades.includes(comunidad!))).toBe(true)
     expect(new Set(comunidadesDeProvincias).size).toBe(19)
+  })
+})
+
+describe('Catálogo de cordilleras', () => {
+  it('entrega las 11 unidades de los apuntes con el nombre de los libros de texto', () => {
+    const nombres = catalogo('cordilleras').map((elemento) => elemento.nombre)
+
+    expect(nombres).toEqual([
+      'Pirineos',
+      'Cordillera Cantábrica',
+      'Macizo Galaico-Leonés',
+      'Montes Vascos',
+      'Sistema Ibérico',
+      'Sistema Central',
+      'Montes de Toledo',
+      'Sierra Morena',
+      'Cordilleras Béticas',
+      'Cordillera Costero-Catalana',
+      'Montañas de Canarias',
+    ])
+  })
+
+  it('muestra el nombre tal cual y acepta las formas de los libros como alias', () => {
+    const elementos = nombresDelCatalogo('cordilleras')
+
+    expect(elementos).toContainEqual({
+      id: 'cordillera-cantabrica',
+      nombre: 'Cordillera Cantábrica',
+      nombreMostrado: 'Cordillera Cantábrica',
+      alias: ['Cantábrica', 'Montes Cantábricos'],
+    })
+    expect(elementos).toContainEqual({
+      id: 'cordilleras-beticas',
+      nombre: 'Cordilleras Béticas',
+      nombreMostrado: 'Cordilleras Béticas',
+      alias: ['Béticas', 'Sistema Bético', 'Sistemas Béticos'],
+    })
+    expect(elementos).toContainEqual({ id: 'montes-vascos', nombre: 'Montes Vascos', nombreMostrado: 'Montes Vascos', alias: [] })
+  })
+
+  it('los vecinos de una cordillera son las tres más cercanas', () => {
+    const elementos = catalogo('cordilleras')
+    const vecinosDe = (nombre: string) =>
+      elementos
+        .find((elemento) => elemento.nombre === nombre)!
+        .vecinos.map((id) => elementos.find((elemento) => elemento.id === id)!.nombre)
+
+    expect(vecinosDe('Montes de Toledo')).toEqual(['Sistema Central', 'Sierra Morena', 'Cordilleras Béticas'])
+    expect(vecinosDe('Pirineos')).toEqual(['Cordillera Costero-Catalana', 'Montes Vascos', 'Sistema Ibérico'])
+    expect(elementos.every((elemento) => elemento.vecinos.length === 3)).toBe(true)
+  })
+})
+
+describe('Catálogo de sierras', () => {
+  it('entrega las 15 sierras y las 3 partes del Pirineo, cada una con su cordillera', () => {
+    const elementos = catalogo('sierras')
+    const cordilleraDe = (nombre: string) => elementos.find((elemento) => elemento.nombre === nombre)!.cordillera
+
+    expect(elementos).toHaveLength(18)
+    expect(cordilleraDe('Sierra de Gredos')).toBe('sistema-central')
+    expect(cordilleraDe('Picos de Europa')).toBe('cordillera-cantabrica')
+    expect(cordilleraDe('Montserrat')).toBe('cordillera-costero-catalana')
+    expect(cordilleraDe('Pirineo Aragonés')).toBe('pirineos')
+  })
+
+  it('acepta la forma corta como alias', () => {
+    const elementos = nombresDelCatalogo('sierras')
+
+    expect(elementos).toContainEqual({
+      id: 'sierra-de-gredos',
+      nombre: 'Sierra de Gredos',
+      nombreMostrado: 'Sierra de Gredos',
+      alias: ['Gredos'],
+    })
+    expect(elementos).toContainEqual({
+      id: 'pirineo-aragones',
+      nombre: 'Pirineo Aragonés',
+      nombreMostrado: 'Pirineo Aragonés',
+      alias: ['Aragonés'],
+    })
+    expect(elementos).toContainEqual({ id: 'montseny', nombre: 'Montseny', nombreMostrado: 'Montseny', alias: [] })
+  })
+
+  it('los vecinos de una sierra son las tres más cercanas', () => {
+    const elementos = catalogo('sierras')
+    const gredos = elementos.find((elemento) => elemento.nombre === 'Sierra de Gredos')!
+    const nombres = gredos.vecinos.map((id) => elementos.find((elemento) => elemento.id === id)!.nombre)
+
+    expect(nombres).toEqual(['Sierra de Béjar', 'Sierra de Guadarrama', 'Sierra de Gata'])
+  })
+})
+
+describe('Catálogo de picos', () => {
+  it('entrega un pico por cordillera, en el orden de las cordilleras', () => {
+    const picos = catalogo('picos')
+
+    expect(picos.map((elemento) => elemento.nombre)).toEqual([
+      'Aneto',
+      'Torre Cerredo',
+      'Peña Trevinca',
+      'Aizkorri',
+      'Moncayo',
+      'Almanzor',
+      'Rocigalgo',
+      'Bañuela',
+      'Mulhacén',
+      "Turó de l'Home",
+      'Teide',
+    ])
+    expect(picos.map((elemento) => elemento.cordillera)).toEqual(catalogo('cordilleras').map((elemento) => elemento.id))
+  })
+
+  it('acepta las otras formas habituales como alias', () => {
+    const elementos = nombresDelCatalogo('picos')
+
+    expect(elementos).toContainEqual({
+      id: 'torre-cerredo',
+      nombre: 'Torre Cerredo',
+      nombreMostrado: 'Torre Cerredo',
+      alias: ['Torrecerredo', 'Torre de Cerredo'],
+    })
+    expect(elementos).toContainEqual({ id: 'aizkorri', nombre: 'Aizkorri', nombreMostrado: 'Aizkorri', alias: ['Aketegi'] })
+    expect(elementos).toContainEqual({ id: 'aneto', nombre: 'Aneto', nombreMostrado: 'Aneto', alias: [] })
+  })
+
+  it('los vecinos de un pico son los tres más cercanos', () => {
+    const elementos = catalogo('picos')
+    const almanzor = elementos.find((elemento) => elemento.nombre === 'Almanzor')!
+    const nombres = almanzor.vecinos.map((id) => elementos.find((elemento) => elemento.id === id)!.nombre)
+
+    expect(nombres).toEqual(['Rocigalgo', 'Bañuela', 'Peña Trevinca'])
+  })
+})
+
+describe('Catálogo de jerarquía', () => {
+  it('pregunta sierras, partes del Pirineo y picos, y cada uno se responde tocando su cordillera', () => {
+    const elementos = catalogo('jerarquia')
+    const respuestaDe = (nombre: string) => elementos.find((elemento) => elemento.nombre === nombre)!.respuesta
+
+    expect(elementos).toHaveLength(29)
+    expect(elementos.map((elemento) => elemento.nombreMostrado)).toEqual(
+      expect.arrayContaining(['Sierra de Gredos (sierra)', 'Pirineo Catalán (parte del Pirineo)', 'Rocigalgo (pico)']),
+    )
+    expect(respuestaDe('Sierra de Gredos')).toBe('sistema-central')
+    expect(respuestaDe('Pirineo Catalán')).toBe('pirineos')
+    expect(respuestaDe('Mulhacén')).toBe('cordilleras-beticas')
+    expect(respuestaDe('Teide')).toBe('montanas-de-canarias')
+  })
+
+  it('los vecinos son los de la cordillera madre, para que la Pista de área ilumine cordilleras', () => {
+    const gredos = catalogo('jerarquia').find((elemento) => elemento.nombre === 'Sierra de Gredos')!
+    const central = catalogo('cordilleras').find((elemento) => elemento.id === 'sistema-central')!
+
+    expect(gredos.vecinos).toEqual(central.vecinos)
+  })
+
+  it('el mapa de la jerarquía son las cordilleras', () => {
+    expect(catalogoDelMapa('jerarquia')).toEqual(catalogo('cordilleras'))
+    expect(catalogoDelMapa('picos')).toEqual(catalogo('picos'))
+  })
+})
+
+describe('Catálogo de cordillera → pico', () => {
+  it('pregunta cada cordillera y se responde tocando su pico; los vecinos son los del pico', () => {
+    const elementos = catalogo('cordillera-pico')
+    const picos = catalogo('picos')
+    const pirineos = elementos.find((elemento) => elemento.id === 'pirineos')!
+    const aneto = picos.find((pico) => pico.id === 'aneto')!
+
+    expect(elementos.map((elemento) => elemento.respuesta)).toEqual(picos.map((pico) => pico.id))
+    expect(pirineos.pregunta).toBe('Toca su pico')
+    expect(pirineos.vecinos).toEqual(aneto.vecinos)
+    expect(catalogoDelMapa('cordillera-pico')).toEqual(picos)
+    expect(contornos('cordillera-pico')).toBe(contornos('picos'))
+    expect(fondoDe('cordillera-pico')?.relieve).toHaveLength(11)
+  })
+})
+
+describe('Catálogo de alturas', () => {
+  it('pregunta la altura de Moncayo, Aneto, Teide y Mulhacén y acepta la cifra con o sin punto', () => {
+    const elementos = catalogo('alturas')
+
+    expect(elementos.map((elemento) => elemento.pregunta)).toEqual([
+      'Altura del Aneto',
+      'Altura del Moncayo',
+      'Altura del Mulhacén',
+      'Altura del Teide',
+    ])
+    expect(elementos.find((elemento) => elemento.id === 'aneto')).toEqual({
+      id: 'aneto',
+      nombre: '3404',
+      nombreMostrado: '3.404 m',
+      alias: ['3.404', '3404 m', '3.404 m'],
+      vecinos: ['moncayo', 'mulhacen', 'teide'],
+      cordillera: 'pirineos',
+      pregunta: 'Altura del Aneto',
+    })
+  })
+})
+
+describe('Fondo del mapa', () => {
+  it('provincias y comunidades no llevan fondo', () => {
+    expect(fondoDe('provincias')).toBeNull()
+    expect(fondoDe('comunidades')).toBeNull()
+  })
+
+  it('el relieve lleva el contorno de España y los ríos; sierras, picos y alturas además las cordilleras en tenue', () => {
+    expect(fondoDe('cordilleras')?.contorno.geometry.type).toBe('MultiPolygon')
+    expect(fondoDe('cordilleras')?.rios.length).toBeGreaterThan(20)
+    expect(fondoDe('cordilleras')?.relieve).toEqual([])
+    expect(fondoDe('jerarquia')?.relieve).toEqual([])
+    expect(fondoDe('sierras')?.relieve).toHaveLength(11)
+    expect(fondoDe('picos')?.relieve).toHaveLength(11)
+    expect(fondoDe('alturas')?.relieve).toHaveLength(11)
+  })
+
+  it('los contornos de la jerarquía son las cordilleras y los de alturas los cuatro picos examinados', () => {
+    expect(contornos('jerarquia')).toBe(contornos('cordilleras'))
+    expect(contornos('alturas').map((contorno) => contorno.id)).toEqual(['aneto', 'moncayo', 'mulhacen', 'teide'])
   })
 })

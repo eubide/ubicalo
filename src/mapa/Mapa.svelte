@@ -2,18 +2,26 @@
   import type { Feature, FeatureCollection, Geometry, Polygon } from 'geojson'
   import { geoCentroid, geoPath } from 'd3-geo'
   import { geoConicConformalSpain } from 'd3-composite-projections'
+  import type { Fondo } from '../catalogo/catalogo'
   import RecuadroCeutaMelilla, { esCeutaOMelilla } from './RecuadroCeutaMelilla.svelte'
+
+  export interface Rotulo {
+    id: string
+    texto: string
+  }
 
   interface Props {
     contornos: Feature<Geometry>[]
+    fondo?: Fondo | null
     contexto: FeatureCollection
     acertados: string[]
     tocado?: string | null
     correcto?: string | null
     preguntado: string | null
     iluminados?: string[]
+    destacados?: string[]
     pistaDeArea?: string[]
-    rotulados?: string[]
+    rotulos?: Rotulo[]
     fallados?: string[]
     alElegir: (id: string) => void
     nombreDe: (id: string) => string
@@ -21,14 +29,16 @@
 
   let {
     contornos,
+    fondo = null,
     contexto,
     acertados,
     tocado = null,
     correcto = null,
     preguntado,
     iluminados = [],
+    destacados = [],
     pistaDeArea = [],
-    rotulados = [],
+    rotulos = [],
     fallados = [],
     alElegir,
     nombreDe,
@@ -37,6 +47,7 @@
   const ancho = 960
   const alto = 620
   const margen = 12
+  const radioPunto = 5
 
   const proyeccion = $derived(
     geoConicConformalSpain().fitExtent(
@@ -44,10 +55,10 @@
         [margen, margen],
         [ancho - margen, alto - margen],
       ],
-      { type: 'FeatureCollection', features: contornos },
+      { type: 'FeatureCollection', features: fondo ? [fondo.contorno] : contornos },
     ),
   )
-  const trazado = $derived(geoPath(proyeccion))
+  const trazado = $derived(geoPath(proyeccion).pointRadius(radioPunto))
   const contornoCorrecto = $derived(contornos.find((contorno) => String(contorno.id) === correcto))
   const anchoRecuadro = 232
   const altoRecuadro = 150
@@ -61,6 +72,12 @@
       .map((contorno) => ({ contorno, centro: geoCentroid(contorno) }))
       .filter(({ centro }) => esCeutaOMelilla(centro)),
   )
+  const puntos = $derived(
+    contornos
+      .filter((contorno) => contorno.geometry.type === 'Point')
+      .map((contorno) => ({ contorno, centro: geoCentroid(contorno) })),
+  )
+  const conDiana = $derived([...ceutaYMelilla, ...puntos])
 
   interface Punto {
     x: number
@@ -169,6 +186,22 @@
     return trazado.centroid(mayor)
   }
 
+  const rotulados = $derived(rotulos.map((rotulo) => rotulo.id))
+
+  // Varios rótulos sobre el mismo elemento (Jerarquía) se apilan hacia abajo.
+  const rotulosConPosicion = $derived(
+    rotulos.flatMap((rotulo) => {
+      const contorno = contornos.find((candidato) => String(candidato.id) === rotulo.id)
+      if (!contorno) return []
+      const [x, y] = centroDelRotulo(contorno)
+      const enRecuadro = ceutaYMelilla.some((elemento) => elemento.contorno === contorno)
+      const esPunto = contorno.geometry.type === 'Point'
+      const apilados = rotulos.filter((otro) => otro.id === rotulo.id)
+      const desplazamiento = apilados.indexOf(rotulo) - (apilados.length - 1) / 2
+      return [{ rotulo, x: enRecuadro ? x - radioDiana : x, y: (esPunto ? y - radioDiana : y) + desplazamiento * tamañoRotulo * 1.2, enRecuadro }]
+    }),
+  )
+
   function pulsarElemento(id: string) {
     if (iluminados.length > 0) return
     if (rotulados.length > 0) {
@@ -207,10 +240,19 @@
           <path d={trazado(pais)} />
         {/each}
       </g>
+      {#if fondo}
+        <path class="fondo" d={trazado(fondo.contorno)} />
+        {#each fondo.relieve as unidad (unidad.id)}
+          <path class="fondo relieve" class:destacado={destacados.includes(String(unidad.id))} d={trazado(unidad)} />
+        {/each}
+        {#each fondo.rios as rio (rio.id)}
+          <path class="rio" d={trazado(rio)} />
+        {/each}
+      {/if}
       <!-- El MVP se juega con ratón o dedo; jugar con teclado no está en la spec. -->
       <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-      <g class="elementos">
-        {#each ceutaYMelilla as { contorno, centro } (contorno.id)}
+      <g class="elementos" class:relieve={fondo !== null}>
+        {#each conDiana as { contorno, centro } (contorno.id)}
           {@const punto = proyeccion(centro)}
           {#if punto}
             <circle
@@ -241,40 +283,40 @@
         <!-- Encima de todos los elementos para que los vecinos no tapen el contorno grueso. -->
         <path class="correcto" d={trazado(contornoCorrecto)} />
       {/if}
-      {#each contornos.filter((contorno) => rotulados.includes(String(contorno.id))) as contorno (contorno.id)}
-        {@const [x, y] = centroDelRotulo(contorno)}
-        {@const enRecuadro = ceutaYMelilla.some((elemento) => elemento.contorno === contorno)}
+      {#each rotulosConPosicion as { rotulo, x, y, enRecuadro } (rotulo.id + rotulo.texto)}
         <text
           class="rotulo"
-          x={enRecuadro ? x - radioDiana : x}
+          {x}
           {y}
           text-anchor={enRecuadro ? 'end' : 'middle'}
           font-size={tamañoRotulo / vista.escala}
         >
-          {nombreDe(String(contorno.id))}
+          {rotulo.texto}
         </text>
       {/each}
       <path class="marcos" d={proyeccion.getCompositionBorders()} />
     </g>
-    <RecuadroCeutaMelilla
-      elementos={ceutaYMelilla}
-      {contexto}
-      {acertados}
-      {tocado}
-      {correcto}
-      {iluminados}
-      {pistaDeArea}
-      {rotulados}
-      {tamañoRotulo}
-      {nombreDe}
-      {fallados}
-      {seleccionado}
-      alElegir={pulsarElemento}
-      x={ancho - anchoRecuadro}
-      y={alto - altoRecuadro}
-      ancho={anchoRecuadro}
-      alto={altoRecuadro}
-    />
+    {#if ceutaYMelilla.length > 0}
+      <RecuadroCeutaMelilla
+        elementos={ceutaYMelilla}
+        {contexto}
+        {acertados}
+        {tocado}
+        {correcto}
+        {iluminados}
+        {pistaDeArea}
+        {rotulados}
+        {tamañoRotulo}
+        {nombreDe}
+        {fallados}
+        {seleccionado}
+        alElegir={pulsarElemento}
+        x={ancho - anchoRecuadro}
+        y={alto - altoRecuadro}
+        ancho={anchoRecuadro}
+        alto={altoRecuadro}
+      />
+    {/if}
   </svg>
   {#if seleccionado !== null}
     <div class="seleccion">
@@ -309,11 +351,41 @@
     stroke-width: 0.8;
   }
 
+  .fondo {
+    fill: #fdfdfb;
+    stroke: #9aa0a6;
+    stroke-width: 0.8;
+  }
+
+  .fondo.relieve {
+    fill: #efece4;
+    stroke: #d6d2c6;
+  }
+
+  .fondo.relieve.destacado {
+    fill: #f6d365;
+    stroke: #8a6d1f;
+  }
+
+  .rio {
+    fill: none;
+    stroke: #7fb3d5;
+    stroke-width: 0.9;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+    pointer-events: none;
+  }
+
   .elementos path {
     fill: #fdfdfb;
     stroke: #9aa0a6;
     stroke-width: 0.8;
     cursor: pointer;
+  }
+
+  .elementos.relieve path {
+    fill: #d8d2c2;
+    stroke: #8b8578;
   }
 
   .elementos .diana {
