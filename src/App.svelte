@@ -128,11 +128,15 @@
       .map((elemento) => ({ id: respuestaDe(elemento), texto: elemento.rotulo ?? elemento.nombreMostrado })) ?? [],
   )
 
-  // En el Simulacro la altura es una pregunta: no se muestra como etiqueta hasta acertarla.
+  // En el Simulacro la cifra no se muestra hasta acertarla; antes, si el pico ya está nombrado,
+  // se avisa de que le falta la altura, para que "por qué sigue en naranja" tenga respuesta a la vista.
   const alturas = $derived(
     elementosDelMapa.flatMap((elemento) => {
       if (elemento.altura === undefined) return []
-      if (esSimulacro && !(partida?.acertados.includes(idDeAltura(elemento.id)) ?? false)) return []
+      if (esSimulacro && !(partida?.acertados.includes(idDeAltura(elemento.id)) ?? false)) {
+        const picoAcertado = partida?.acertados.includes(elemento.id) ?? false
+        return picoAcertado ? [{ id: elemento.id, texto: 'Falta la altura' }] : []
+      }
       return [{ id: elemento.id, texto: textoDeAltura(elemento.altura) }]
     }),
   )
@@ -366,9 +370,11 @@
       {/if}
     </header>
 
-    {#if mostrarCorrecto && respuesta?.acierto && !partida.terminada && !pista}
-      <p class="respuesta">Correcto: {respuesta.correcto.nombreMostrado}</p>
-    {/if}
+    <p class="respuesta">
+      {#if mostrarCorrecto && respuesta?.acierto && !partida.terminada && !pista}
+        Correcto: {respuesta.correcto.nombreMostrado}
+      {/if}
+    </p>
 
     <Mapa
       contornos={contornosVisibles}
