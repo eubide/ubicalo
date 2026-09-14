@@ -1,5 +1,5 @@
 import { mkdirSync, writeFileSync } from 'node:fs'
-import { geoArea, geoContains } from 'd3-geo'
+import { geoArea, geoCentroid, geoContains } from 'd3-geo'
 
 // Capa «Unidades del relieve» del Atlas Didáctico del IGN, CC BY 4.0 (ADR-0003).
 const CAPA_IGN =
@@ -81,7 +81,8 @@ const ORDEN = [
   'montanas-de-canarias',
 ]
 
-// Las tres partes del Pirineo se cortan del polígono de Pirineos por dos meridianos.
+// Las tres partes del Pirineo se cortan del polígono de Pirineos por dos meridianos y se guardan como
+// puntos en el centro de cada tercio, para que la mancha de Pirineos siga siendo tocable.
 const PARTES_DEL_PIRINEO = [
   { id: 'pirineo-navarro', nombre: 'Pirineo Navarro', hasta: -0.8 },
   { id: 'pirineo-aragones', nombre: 'Pirineo Aragonés', hasta: 0.72 },
@@ -283,20 +284,24 @@ function partesDelPirineo(unidades) {
       geometria = recortarPoligono(resto, meridiano, -1)
       resto = recortarPoligono(resto, meridiano, 1)
     }
-    return elemento(id, { nombre, cordillera: 'pirineos' }, simplificar(geometria, TOLERANCIA_EN_GRADOS))
+    return elemento(id, { nombre, clase: 'sierra', cordillera: 'pirineos' }, { type: 'Point', coordinates: geoCentroid(geometria) })
   })
 }
 
 function sierrasDe(unidades) {
   const puntos = SIERRAS.map(({ id, nombre, cordillera, coordenadas }) =>
-    elemento(id, { nombre, cordillera }, { type: 'Point', coordinates: coordenadas }),
+    elemento(id, { nombre, clase: 'sierra', cordillera }, { type: 'Point', coordinates: coordenadas }),
   )
   return [...puntos, ...partesDelPirineo(unidades)]
 }
 
 function picos() {
   return PICOS.map(({ id, nombre, altitud, cordillera, sierra, coordenadas }) =>
-    elemento(id, { nombre, altitud, cordillera, ...(sierra && { sierra }) }, { type: 'Point', coordinates: coordenadas }),
+    elemento(
+      id,
+      { nombre, clase: 'pico', altitud, cordillera, ...(sierra && { sierra }) },
+      { type: 'Point', coordinates: coordenadas },
+    ),
   )
 }
 

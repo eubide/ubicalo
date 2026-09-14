@@ -248,7 +248,7 @@
               bind:this={campoDeTexto}
               bind:value={texto}
               aria-label={partida.preguntado?.pregunta ?? 'Nombre del elemento iluminado'}
-              placeholder={partida.preguntado?.pregunta ? 'Metros' : '¿Cómo se llama?'}
+              placeholder={prueba?.tipo === 'alturas' ? 'Metros' : '¿Cómo se llama?'}
               autocomplete="off"
               autocapitalize="off"
               spellcheck="false"
@@ -284,7 +284,7 @@
       correcto={correccion ? respuestaDe(correccion.correcto) : null}
       preguntado={correccion ? null : (partida.preguntado?.id ?? null)}
       {iluminados}
-      destacados={!escribeNombre && !correccion && partida.preguntado ? [partida.preguntado.id] : []}
+      destacados={!escribeNombre && !correccion && partida.preguntado?.clase === 'cordillera' && partida.preguntado.respuesta ? [partida.preguntado.id] : []}
       pistaDeArea={partida.pistaDeArea ?? []}
       {rotulos}
       fallados={partida.terminada ? partida.fallados.map((elemento) => elemento.id) : []}

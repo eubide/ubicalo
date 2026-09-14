@@ -22,11 +22,11 @@
   let { alElegir, marcaDe, reto }: Props = $props()
 
   const modos: { modo: Modo; etiqueta: string }[] = [
-    { modo: 'nombre-ubicar', etiqueta: etiquetaDeModo['nombre-ubicar'] },
     { modo: 'ubicacion-nombre', etiqueta: etiquetaDeModo['ubicacion-nombre'] },
+    { modo: 'nombre-ubicar', etiqueta: etiquetaDeModo['nombre-ubicar'] },
   ]
 
-  let modoElegido = $state<Modo>(untrack(() => reto?.prueba.modo ?? 'nombre-ubicar'))
+  let modoElegido = $state<Modo>(untrack(() => reto?.prueba.modo ?? 'ubicacion-nombre'))
 </script>
 
 <section>

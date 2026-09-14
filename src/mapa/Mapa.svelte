@@ -47,7 +47,8 @@
   const ancho = 960
   const alto = 620
   const margen = 12
-  const radioPunto = 5
+  const radioSierra = 7
+  const radioPico = 6
 
   const proyeccion = $derived(
     geoConicConformalSpain().fitExtent(
@@ -58,7 +59,7 @@
       { type: 'FeatureCollection', features: fondo ? [fondo.contorno] : contornos },
     ),
   )
-  const trazado = $derived(geoPath(proyeccion).pointRadius(radioPunto))
+  const trazado = $derived(geoPath(proyeccion).pointRadius(radioSierra))
   const contornoCorrecto = $derived(contornos.find((contorno) => String(contorno.id) === correcto))
   const anchoRecuadro = 232
   const altoRecuadro = 150
@@ -78,6 +79,21 @@
       .map((contorno) => ({ contorno, centro: geoCentroid(contorno) })),
   )
   const conDiana = $derived([...ceutaYMelilla, ...puntos])
+  const manchas = $derived(contornos.filter((contorno) => contorno.geometry.type !== 'Point'))
+
+  function claseDe(contorno: Feature<Geometry>): string {
+    return (contorno.properties as { clase?: string } | null)?.clase ?? 'sierra'
+  }
+
+  // Sierra: círculo; pico: triángulo, como en los mapas físicos. Las manchas ya se distinguen solas.
+  function marcador(contorno: Feature<Geometry>): string | null {
+    if (contorno.geometry.type !== 'Point') return trazado(contorno)
+    if (claseDe(contorno) !== 'pico') return trazado(contorno)
+    const punto = proyeccion(contorno.geometry.coordinates as [number, number])
+    if (!punto) return null
+    const [x, y] = punto
+    return `M${x},${y - radioPico}L${x + radioPico * 0.9},${y + radioPico * 0.6}L${x - radioPico * 0.9},${y + radioPico * 0.6}Z`
+  }
 
   interface Punto {
     x: number
@@ -252,6 +268,22 @@
       <!-- El MVP se juega con ratón o dedo; jugar con teclado no está en la spec. -->
       <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
       <g class="elementos" class:relieve={fondo !== null}>
+        {#each [...manchas, ...puntos.map(({ contorno }) => contorno)] as contorno (contorno.id)}
+          {@const id = String(contorno.id)}
+          <path
+            d={marcador(contorno)}
+            class={contorno.geometry.type === 'Point' ? claseDe(contorno) : ''}
+            class:acertado={acertados.includes(id)}
+            class:fallado={fallados.includes(id)}
+            class:pistaDeArea={pistaDeArea.includes(id)}
+            class:seleccionado={seleccionado === id}
+            class:iluminado={iluminados.includes(id)}
+            class:destacado={destacados.includes(id)}
+            class:tocado={tocado === id}
+            onclick={() => pulsarElemento(id)}
+          />
+        {/each}
+        <!-- Las dianas van encima de todo para que una mancha no robe el toque a un punto. -->
         {#each conDiana as { contorno, centro } (contorno.id)}
           {@const punto = proyeccion(centro)}
           {#if punto}
@@ -264,19 +296,6 @@
               onclick={() => pulsarElemento(String(contorno.id))}
             />
           {/if}
-        {/each}
-        {#each contornos as contorno (contorno.id)}
-          {@const id = String(contorno.id)}
-          <path
-            d={trazado(contorno)}
-            class:acertado={acertados.includes(id)}
-            class:fallado={fallados.includes(id)}
-            class:pistaDeArea={pistaDeArea.includes(id)}
-            class:seleccionado={seleccionado === id}
-            class:iluminado={iluminados.includes(id)}
-            class:tocado={tocado === id}
-            onclick={() => pulsarElemento(id)}
-          />
         {/each}
       </g>
       {#if contornoCorrecto}
@@ -318,6 +337,13 @@
       />
     {/if}
   </svg>
+  {#if fondo}
+    <ul class="leyenda">
+      <li><svg viewBox="0 0 20 14" aria-hidden="true"><path class="mancha" d="M1,9C4,3 8,2 12,5S18,6 19,3V13H1Z" /></svg> Cordillera o macizo</li>
+      <li><svg viewBox="0 0 20 14" aria-hidden="true"><circle class="sierra" cx="10" cy="7" r="5" /></svg> Sierra</li>
+      <li><svg viewBox="0 0 20 14" aria-hidden="true"><path class="pico" d="M10,1L16,12H4Z" /></svg> Pico</li>
+    </ul>
+  {/if}
   {#if seleccionado !== null}
     <div class="seleccion">
       <span>{nombreDe(seleccionado)}</span>
@@ -383,9 +409,29 @@
     cursor: pointer;
   }
 
-  .elementos.relieve path {
+  .elementos.relieve path,
+  .leyenda .mancha {
     fill: #d8d2c2;
     stroke: #8b8578;
+  }
+
+  .elementos path.sierra,
+  .leyenda .sierra {
+    fill: #fbf9f3;
+    stroke: #6f6552;
+    stroke-width: 1.2;
+  }
+
+  .elementos path.pico,
+  .leyenda .pico {
+    fill: #6f6552;
+    stroke: #3f3a30;
+    stroke-width: 0.8;
+  }
+
+  .elementos path.destacado {
+    fill: #f6d365;
+    stroke: #8a6d1f;
   }
 
   .elementos .diana {
@@ -471,6 +517,28 @@
     border-radius: 0.375rem;
     background: #fdfdfb;
     color: inherit;
+  }
+
+  .leyenda {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    list-style: none;
+    margin: 0;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+    color: #4b5563;
+  }
+
+  .leyenda li {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  .leyenda svg {
+    width: 1.5rem;
+    height: 1rem;
   }
 
   figcaption {

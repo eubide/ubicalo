@@ -734,8 +734,8 @@ describe('Pista de área', () => {
     expect(trasElRepaso(catalogoDePrueba(), comunidadesNombreUbicar).pistaDeArea).toEqual(['d', 'f'])
   })
 
-  it('con cordilleras y picos, la pregunta siguiente al Repaso ilumina sus Vecinos', () => {
-    expect(trasElRepaso(catalogoDePrueba(), { tipo: 'cordilleras', modo: 'nombre-ubicar' }).pistaDeArea).toEqual(['d', 'f'])
+  it('en el relieve, la pregunta siguiente al Repaso ilumina sus Vecinos', () => {
+    expect(trasElRepaso(catalogoDePrueba(), { tipo: 'cordilleras-y-sierras', modo: 'nombre-ubicar' }).pistaDeArea).toEqual(['d', 'f'])
     expect(trasElRepaso(catalogoDePrueba(), { tipo: 'picos', modo: 'nombre-ubicar' }).pistaDeArea).toEqual(['d', 'f'])
   })
 

@@ -11,7 +11,7 @@ Lugar concreto del mapa que se pregunta: una provincia, una comunidad autónoma,
 _Evitar_: accidente, lugar, zona, área
 
 **Tipo**:
-Categoría de elementos que se juega por separado: comunidades autónomas, provincias, cordilleras, sierras, picos, jerarquía, cordillera → pico, alturas y, más adelante, ríos, cabos y golfos.
+Categoría de elementos que se juega por separado: comunidades autónomas, provincias, cordilleras y sierras, picos, jerarquía, alturas y, más adelante, ríos, cabos y golfos.
 _Evitar_: tipo de prueba, categoría, capa
 
 **Cordillera**:
@@ -19,20 +19,20 @@ Unidad montañosa de primer nivel de los apuntes (Pirineos, Sistema Ibérico, Mo
 _Evitar_: sistema montañoso, montaña, unidad de relieve
 
 **Sierra**:
-Unidad montañosa que pertenece a una Cordillera (Gredos, Picos de Europa, Montseny); se pulsa como un punto, salvo las tres partes del Pirineo, que son manchas.
+Unidad montañosa que pertenece a una Cordillera (Gredos, Picos de Europa, Montseny, las tres partes del Pirineo); en el mapa es un círculo y se juega junto a las cordilleras.
 _Evitar_: subunidad, macizo, montaña
 
 **Pico**:
-Cumbre concreta que pertenece a una Cordillera y se pregunta como un punto del mapa (Aneto, Mulhacén, Teide).
+Cumbre concreta que pertenece a una Cordillera; en el mapa es un triángulo (Aneto, Mulhacén, Teide).
 _Evitar_: cima, cumbre, montaña
 
-**Jerarquía**:
-Tipo de apoyo en el que se muestra el nombre de una Sierra o un Pico y el alumno toca la Cordillera a la que pertenece. Se juega siempre en Nombre → ubicar.
-_Evitar_: árbol, clasificación, pertenencia
+**Clase**:
+Lo que es un elemento de relieve: cordillera o macizo, sierra o pico. Se ve en el icono, en la leyenda y en el enunciado de la pregunta.
+_Evitar_: tipo, categoría, nivel
 
-**Cordillera → pico**:
-Tipo de apoyo en el que se muestra y destaca una Cordillera y el alumno toca su Pico. Se juega siempre en Nombre → ubicar.
-_Evitar_: inverso, pico de la cordillera
+**Jerarquía**:
+Tipo de apoyo que pregunta en los dos sentidos, barajados: se muestra una Sierra o un Pico y se toca su Cordillera, o se muestra y destaca una Cordillera y se toca su Pico. Se juega siempre en Nombre → ubicar.
+_Evitar_: árbol, clasificación, pertenencia
 
 **Altura**:
 Tipo de apoyo en el que se muestra un Pico y el alumno escribe sus metros; solo se preguntan Moncayo, Aneto, Teide y Mulhacén. Se juega siempre en Ubicación → nombre.
@@ -105,7 +105,7 @@ Las cuatro opciones que se ofrecen en Ubicación → nombre, a petición del alu
 _Evitar_: ayuda, opciones
 
 **Pista de área**:
-Ayuda sobre el mapa que acompaña a una pregunta tras un Repaso: se iluminan la comunidad autónoma que contiene la provincia o los Vecinos del elemento en los demás tipos. Resolver con ella cuenta como acierto con pista.
+Ayuda sobre el mapa que acompaña a una pregunta tras un Repaso: se iluminan la comunidad autónoma que contiene la provincia o los Vecinos del elemento en los demás tipos; en Jerarquía, los Vecinos de lo que hay que tocar. Resolver con ella cuenta como acierto con pista.
 _Evitar_: ayuda, zona
 
 **Corrección**:
@@ -153,6 +153,6 @@ _Evitar_: desafío, challenge
 ## Ambigüedades resueltas
 
 - "Regiones" en la idea original significa comunidades autónomas, no regiones naturales.
-- "Montañas" en la idea original son los tipos de relieve: **Cordilleras**, **Sierras** y **Picos** sobre el mapa, más **Jerarquía**, **Cordillera → pico** y **Altura** como apoyo. La Meseta y las depresiones no son montañas y quedan para otro tipo.
+- "Montañas" en la idea original son los tipos de relieve: **Cordilleras**, **Sierras** y **Picos** sobre el mapa, más **Jerarquía** y **Altura** como apoyo. La Meseta y las depresiones no son montañas y quedan para otro tipo.
 - El listado de relieve son los apuntes del alumno desde "Macizo / sierra", con un pico por cordillera para darle simetría; el examen es rellenar un mapa mudo físico con ríos.
 - "Tipo de prueba" mezclaba dos conceptos: el **Tipo** (qué se pregunta) y la **Prueba** (tipo más modo).

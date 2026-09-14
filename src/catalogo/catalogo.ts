@@ -10,9 +10,10 @@ import picosGeo from '../datos/picos.json'
 import riosGeo from '../datos/rios.json'
 
 type TipoAdministrativo = 'comunidades' | 'provincias'
-type TipoConGeometria = 'cordilleras' | 'sierras' | 'picos'
-type TipoDeRelieve = TipoConGeometria | 'jerarquia' | 'cordillera-pico' | 'alturas'
+type TipoDeRelieve = 'cordilleras-y-sierras' | 'picos' | 'jerarquia' | 'alturas'
 export type Tipo = TipoAdministrativo | TipoDeRelieve
+
+type Capa = 'cordilleras' | 'sierras' | 'picos'
 
 export interface Fondo {
   contorno: Feature<Geometry>
@@ -31,6 +32,15 @@ export interface Elemento {
   cordillera?: string
   respuesta?: string
   pregunta?: string
+  clase?: Clase
+}
+
+export type Clase = 'cordillera' | 'sierra' | 'pico'
+
+export const etiquetaDeClase: Record<Clase, string> = {
+  cordillera: 'Cordillera o macizo',
+  sierra: 'Sierra',
+  pico: 'Pico',
 }
 
 type Nombres = Pick<Elemento, 'nombre' | 'nombreMostrado' | 'alias'>
@@ -146,7 +156,7 @@ const topologias: Record<TipoAdministrativo, ReturnType<typeof geometriasSinGibr
   provincias: geometriasSinGibraltar(provinciasTopo as unknown as Topology, 'provinces', GIBRALTAR_PROVINCIAS),
 }
 
-const relieve: Record<TipoConGeometria, FeatureCollection> = {
+const relieve: Record<Capa, FeatureCollection> = {
   cordilleras: cordillerasGeo as FeatureCollection,
   sierras: sierrasGeo as FeatureCollection,
   picos: picosGeo as FeatureCollection,
@@ -154,14 +164,18 @@ const relieve: Record<TipoConGeometria, FeatureCollection> = {
 
 const rios = (riosGeo as FeatureCollection).features
 
-const TIPOS_DE_RELIEVE: TipoDeRelieve[] = ['cordilleras', 'sierras', 'picos', 'jerarquia', 'cordillera-pico', 'alturas']
+const TIPOS_DE_RELIEVE: TipoDeRelieve[] = ['cordilleras-y-sierras', 'picos', 'jerarquia', 'alturas']
 
 function esDeRelieve(tipo: Tipo): tipo is TipoDeRelieve {
   return (TIPOS_DE_RELIEVE as Tipo[]).includes(tipo)
 }
 
-function tieneGeometria(tipo: TipoDeRelieve): tipo is TipoConGeometria {
-  return tipo in relieve
+// Capas que se dibujan y se tocan en cada tipo de relieve.
+const CAPAS_DEL_MAPA: Record<TipoDeRelieve, Capa[]> = {
+  'cordilleras-y-sierras': ['cordilleras', 'sierras'],
+  picos: ['picos'],
+  jerarquia: ['cordilleras', 'picos'],
+  alturas: ['picos'],
 }
 
 function poligonoMayor(geometria: Geometry): Polygon {
@@ -192,50 +206,49 @@ function vecinosPorCercania(contornos: Feature<Geometry>[]): string[][] {
   )
 }
 
-function catalogoConGeometria(tipo: TipoConGeometria): Elemento[] {
-  const contornosDelTipo = contornos(tipo)
-  const vecinosPorIndice = vecinosPorCercania(contornosDelTipo)
-  return contornosDelTipo.map((contorno, indice) => {
+function elementosDe(contornosDeCapa: Feature<Geometry>[], claseFija?: Clase): Elemento[] {
+  const vecinosPorIndice = vecinosPorCercania(contornosDeCapa)
+  return contornosDeCapa.map((contorno, indice) => {
     const id = String(contorno.id)
-    const { nombre, cordillera } = contorno.properties as { nombre: string; cordillera?: string }
+    const { nombre, cordillera, clase } = contorno.properties as { nombre: string; cordillera?: string; clase?: Clase }
     return {
       id,
       nombre,
       nombreMostrado: nombre,
       alias: ALIAS_DE_RELIEVE[id] ?? [],
       vecinos: vecinosPorIndice[indice],
+      clase: claseFija ?? clase ?? 'cordillera',
       ...(cordillera && { cordillera }),
     }
   })
 }
 
-// En Jerarquía el alumno ve solo un nombre: la clase le dice qué está buscando.
-function claseDe(tipo: TipoConGeometria, contorno: Feature<Geometry>): string {
-  if (tipo === 'picos') return 'pico'
-  return contorno.geometry.type === 'Point' ? 'sierra' : 'parte del Pirineo'
+function contornosDeCapas(capas: Capa[]): Feature<Geometry>[] {
+  return capas.flatMap((capa) => relieve[capa].features)
 }
 
-// Cada sierra, parte del Pirineo y pico se responde tocando su cordillera; sus vecinos son los de ella.
+// El enunciado dice qué clase de elemento se busca; en el mapa cada clase tiene su icono.
+function conEnunciadoDeClase(elementos: Elemento[]): Elemento[] {
+  return elementos.map((elemento) => ({ ...elemento, pregunta: etiquetaDeClase[elemento.clase ?? 'cordillera'] }))
+}
+
+// Cada sierra y cada pico se responde tocando su cordillera, y cada cordillera tocando su pico; los
+// vecinos son los del elemento que se toca, para que la Pista de área ilumine lo tocable.
 function catalogoDeJerarquia(): Elemento[] {
-  const cordilleras = catalogoConGeometria('cordilleras')
-  return (['sierras', 'picos'] as const).flatMap((tipo) =>
-    catalogoConGeometria(tipo).map((elemento, indice) => {
-      const madre = cordilleras.find((cordillera) => cordillera.id === elemento.cordillera)
-      if (!madre) throw new Error(`${elemento.id} sin cordillera madre`)
-      const nombreMostrado = `${elemento.nombre} (${claseDe(tipo, contornos(tipo)[indice])})`
-      return { ...elemento, nombreMostrado, vecinos: madre.vecinos, respuesta: madre.id, pregunta: 'Toca su cordillera' }
-    }),
-  )
-}
-
-// El sentido inverso: se muestra la cordillera y se toca su pico; los vecinos son los del pico.
-function catalogoDeCordilleraAPico(): Elemento[] {
-  const picos = catalogoConGeometria('picos')
-  return catalogoConGeometria('cordilleras').map((cordillera) => {
+  const cordilleras = elementosDe(relieve.cordilleras.features)
+  const picos = elementosDe(relieve.picos.features)
+  const hijos = [...elementosDe(relieve.sierras.features), ...picos].map((elemento) => {
+    const madre = cordilleras.find((cordillera) => cordillera.id === elemento.cordillera)
+    if (!madre) throw new Error(`${elemento.id} sin cordillera madre`)
+    const nombreMostrado = `${elemento.nombre} (${elemento.clase})`
+    return { ...elemento, nombreMostrado, vecinos: madre.vecinos, respuesta: madre.id, pregunta: 'Toca su cordillera' }
+  })
+  const madres = cordilleras.map((cordillera) => {
     const pico = picos.find((candidato) => candidato.cordillera === cordillera.id)
     if (!pico) throw new Error(`${cordillera.id} sin pico`)
     return { ...cordillera, vecinos: pico.vecinos, respuesta: pico.id, pregunta: 'Toca su pico' }
   })
+  return [...hijos, ...madres]
 }
 
 function conPuntoDeMillar(altitud: number): string {
@@ -255,6 +268,7 @@ function catalogoDeAlturas(): Elemento[] {
       nombreMostrado: `${conPunto} m`,
       alias: [conPunto, `${cifra} m`, `${conPunto} m`],
       vecinos: vecinosPorIndice[indice],
+      clase: 'pico' as const,
       cordillera,
       pregunta: `Altura del ${nombre}`,
     }
@@ -263,16 +277,14 @@ function catalogoDeAlturas(): Elemento[] {
 
 function catalogoDeRelieve(tipo: TipoDeRelieve): Elemento[] {
   if (tipo === 'jerarquia') return catalogoDeJerarquia()
-  if (tipo === 'cordillera-pico') return catalogoDeCordilleraAPico()
   if (tipo === 'alturas') return catalogoDeAlturas()
-  return catalogoConGeometria(tipo)
+  return conEnunciadoDeClase(elementosDe(contornosDeCapas(CAPAS_DEL_MAPA[tipo])))
 }
 
-// Elementos cuyo id coincide con lo que se toca en el mapa: en Jerarquía se tocan cordilleras y en
-// Cordillera → pico, picos.
+// Elementos cuyo id coincide con lo que se toca en el mapa: en Jerarquía, cordilleras y picos, cada
+// capa con sus propios vecinos.
 export function catalogoDelMapa(tipo: Tipo): Elemento[] {
-  if (tipo === 'jerarquia') return catalogo('cordilleras')
-  if (tipo === 'cordillera-pico') return catalogo('picos')
+  if (tipo === 'jerarquia') return CAPAS_DEL_MAPA.jerarquia.flatMap((capa) => elementosDe(relieve[capa].features))
   return catalogo(tipo)
 }
 
@@ -297,12 +309,10 @@ export function catalogo(tipo: Tipo): Elemento[] {
 const contornosPorTipo: Partial<Record<Tipo, Feature<Geometry>[]>> = {}
 
 function contornosDeRelieve(tipo: TipoDeRelieve): Feature<Geometry>[] {
-  if (tipo === 'jerarquia') return relieve.cordilleras.features
-  if (tipo === 'cordillera-pico') return relieve.picos.features
   if (tipo === 'alturas') {
     return (contornosPorTipo.alturas ??= relieve.picos.features.filter((pico) => ALTURAS_EXAMINADAS.includes(String(pico.id))))
   }
-  return relieve[tipo].features
+  return (contornosPorTipo[tipo] ??= contornosDeCapas(CAPAS_DEL_MAPA[tipo]))
 }
 
 export function contornos(tipo: Tipo): Feature<Geometry>[] {
@@ -313,13 +323,13 @@ export function contornos(tipo: Tipo): Feature<Geometry>[] {
 
 let contornoDeEspana: Feature<Geometry> | undefined
 
-// El relieve se juega sobre un mapa físico: contorno de España y ríos; fuera de Cordilleras y Jerarquía,
-// también las cordilleras en tenue para situarse.
+// El relieve se juega sobre un mapa físico: contorno de España y ríos; cuando las cordilleras no se
+// tocan, se ven en tenue para situarse.
 export function fondoDe(tipo: Tipo): Fondo | null {
   if (!esDeRelieve(tipo)) return null
   const { topologia, geometrias } = topologias.comunidades
   const poligonos = geometrias.geometries as MultiPolygon[]
   contornoDeEspana ??= { type: 'Feature', properties: {}, geometry: merge(topologia, poligonos) }
-  const conCordilleras = tieneGeometria(tipo) ? tipo !== 'cordilleras' : tipo !== 'jerarquia'
+  const conCordilleras = !CAPAS_DEL_MAPA[tipo].includes('cordilleras')
   return { contorno: contornoDeEspana, relieve: conCordilleras ? relieve.cordilleras.features : [], rios }
 }
