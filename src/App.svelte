@@ -66,6 +66,7 @@
   let ahora = $state(Date.now())
   let texto = $state('')
   let simulacroActivo = $state<string | null>(null)
+  let mostrarCorrecto = $state(false)
   let campoDeTexto = $state<HTMLInputElement | null>(null)
   let pistaAbierta = $state<HTMLElement | null>(null)
 
@@ -93,10 +94,28 @@
         )
       : contornosDelTipo,
   )
-  // Un pico ya acertado con su Altura aún pendiente sigue marcado: le queda una pregunta.
-  const desbloqueadosVisibles = $derived(
-    esSimulacro
-      ? (partida?.desbloqueados ?? []).map((id) => (esIdDeAltura(id) ? id.slice(idDeAltura('').length) : id))
+  // Todo lo que depende de un elemento, directa o indirectamente, siguiendo desbloqueaCon al revés.
+  function descendientesDe(id: string): Elemento[] {
+    const directos = elementosDelTipo.filter((elemento) => (elemento.desbloqueaCon ?? []).includes(id))
+    return directos.flatMap((hijo) => [hijo, ...descendientesDe(hijo.id)])
+  }
+
+  // En el Simulacro, una rama solo se pinta de verde cuando ella y todo lo que cuelga de ella están
+  // Acertados. Todo lo demás visible y sin terminar (nunca tocado o respondido a medias) se ve igual,
+  // en amarillo, para que "queda algo por hacer aquí" tenga siempre el mismo aspecto.
+  const acertadosVisibles = $derived.by(() => {
+    if (!esSimulacro || !partida) return partida?.acertados ?? []
+    const acertadosSet = new Set(partida.acertados)
+    return partida.acertados.filter((id) => descendientesDe(id).every((hijo) => acertadosSet.has(hijo.id)))
+  })
+  // Este elemento ya está Acertado, pero algo de lo que cuelga de él todavía no.
+  const parcialesVisibles = $derived(
+    esSimulacro && partida ? partida.acertados.filter((id) => !acertadosVisibles.includes(id) && !esIdDeAltura(id)) : [],
+  )
+  // Visible pero aún no Acertado: no se ha respondido nada de esto todavía.
+  const porResponderVisibles = $derived(
+    esSimulacro && partida
+      ? contornosVisibles.map((contorno) => String(contorno.id)).filter((id) => !partida!.acertados.includes(id))
       : [],
   )
   const respuesta = $derived(partida?.ultimaRespuesta)
@@ -125,6 +144,22 @@
   })
 
   const preguntaDeAltura = $derived((simulacroActivo && esIdDeAltura(simulacroActivo)) ?? false)
+  // La forma que se está respondiendo ahora mismo, para remarcarla; una Altura remarca su propio pico.
+  const activoEnSimulacro = $derived(
+    simulacroActivo ? (esIdDeAltura(simulacroActivo) ? simulacroActivo.slice(idDeAltura('').length) : simulacroActivo) : null,
+  )
+
+  const DURACION_RESPUESTA_CORRECTA = 3_000
+
+  $effect(() => {
+    if (!respuesta?.acierto) {
+      mostrarCorrecto = false
+      return
+    }
+    mostrarCorrecto = true
+    const espera = setTimeout(() => (mostrarCorrecto = false), DURACION_RESPUESTA_CORRECTA)
+    return () => clearTimeout(espera)
+  })
 
   function nombreDeLaRespuesta(elemento: Elemento): string {
     return elemento.respuesta === undefined ? '' : nombreDe(elemento.respuesta)
@@ -331,16 +366,18 @@
       {/if}
     </header>
 
-    {#if respuesta?.acierto && !partida.terminada && !pista}
+    {#if mostrarCorrecto && respuesta?.acierto && !partida.terminada && !pista}
       <p class="respuesta">Correcto: {respuesta.correcto.nombreMostrado}</p>
     {/if}
 
     <Mapa
       contornos={contornosVisibles}
       contextoDeRelieve={contextoDelTipo}
-      desbloqueados={desbloqueadosVisibles}
+      porResponder={porResponderVisibles}
+      parcial={parcialesVisibles}
+      activo={esSimulacro ? activoEnSimulacro : null}
       {contexto}
-      acertados={partida.acertados}
+      acertados={acertadosVisibles}
       tocado={correccion && !escribeNombre && correccionTrasFallo(correccion) ? correccion.elegido.id : null}
       correcto={correccion ? respuestaDe(correccion.correcto) : null}
       preguntado={correccion ? null : (partida.preguntado?.id ?? null)}
