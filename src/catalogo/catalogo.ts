@@ -36,6 +36,8 @@ export interface Elemento {
   // Texto del rótulo en el Repaso cuando el nombre mostrado no basta (Alturas).
   rotulo?: string
   destacar?: true
+  // Ids que deben estar entre los Acertados antes de poder tocar este elemento (Simulacro).
+  desbloqueaCon?: string[]
 }
 
 type Nombres = Pick<Elemento, 'nombre' | 'nombreMostrado' | 'alias'>

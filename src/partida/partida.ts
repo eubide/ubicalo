@@ -60,6 +60,7 @@ export interface Partida {
   rachaDeFallos: Elemento[]
   repaso: Repaso | null
   pistaDeArea: string[] | null
+  desbloqueados: string[]
   cola: Elemento[]
   siguienteVuelta: Elemento[]
   acertados: string[]
@@ -71,7 +72,7 @@ export interface Partida {
   ultimaRespuesta?: Respuesta
 }
 
-type CamposDerivados = 'fin' | 'mostradoEn' | 'preguntado' | 'pendientes' | 'terminada'
+type CamposDerivados = 'fin' | 'mostradoEn' | 'preguntado' | 'pendientes' | 'terminada' | 'desbloqueados'
 
 function barajar<T>(lista: T[], azar: Azar): T[] {
   const copia = [...lista]
@@ -80,6 +81,16 @@ function barajar<T>(lista: T[], azar: Azar): T[] {
     ;[copia[i], copia[j]] = [copia[j], copia[i]]
   }
   return copia
+}
+
+// Un elemento sin desbloqueaCon (el resto de Tipos) no depende de nada: está desbloqueado desde el principio.
+function desbloqueadosDe(elementos: Elemento[], cola: Elemento[], siguienteVuelta: Elemento[], acertados: string[]): string[] {
+  const acertadosSet = new Set(acertados)
+  const pendientesIds = new Set([...cola, ...siguienteVuelta].map((elemento) => elemento.id))
+  return elementos
+    .filter((elemento) => pendientesIds.has(elemento.id))
+    .filter((elemento) => (elemento.desbloqueaCon ?? []).every((id) => acertadosSet.has(id)))
+    .map((elemento) => elemento.id)
 }
 
 function construir(partida: Omit<Partida, CamposDerivados>, ahora: number): Partida {
@@ -95,8 +106,32 @@ function construir(partida: Omit<Partida, CamposDerivados>, ahora: number): Part
     mostradoEn: ahora,
     preguntado: cola[0] ?? null,
     pendientes,
+    desbloqueados: desbloqueadosDe(partida.elementos, cola, siguienteVuelta, partida.acertados),
     terminada: fin !== null,
   }
+}
+
+// Trae un elemento desbloqueado al frente de la cola, para que sea el siguiente Preguntado (Simulacro:
+// el alumno elige qué responder tocando el mapa, en vez de seguir el orden que impone el motor).
+export function elegirPregunta(partida: Partida, id: string): Partida {
+  if (!esperandoRespuesta(partida) || !partida.desbloqueados.includes(id)) return partida
+  const enCola = partida.cola.find((elemento) => elemento.id === id)
+  if (enCola) {
+    return construir(
+      { ...partida, cola: [enCola, ...partida.cola.filter((elemento) => elemento.id !== id)] },
+      partida.reloj(),
+    )
+  }
+  const enSiguienteVuelta = partida.siguienteVuelta.find((elemento) => elemento.id === id)
+  if (!enSiguienteVuelta) return partida
+  return construir(
+    {
+      ...partida,
+      cola: [enSiguienteVuelta, ...partida.cola],
+      siguienteVuelta: partida.siguienteVuelta.filter((elemento) => elemento.id !== id),
+    },
+    partida.reloj(),
+  )
 }
 
 // Elemento del mapa que hay que tocar para acertar: el propio, salvo que responda por otro (Jerarquía).

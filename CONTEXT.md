@@ -11,7 +11,7 @@ Lugar concreto del mapa que se pregunta: una provincia, una comunidad autónoma,
 _Evitar_: accidente, lugar, zona, área
 
 **Tipo**:
-Categoría de elementos que se juega por separado: comunidades autónomas, provincias, cordilleras y sierras, picos, jerarquía, alturas y, más adelante, ríos, cabos y golfos.
+Categoría de elementos que se juega por separado: comunidades autónomas, provincias, cordilleras y sierras, picos, jerarquía, alturas, simulacro y, más adelante, ríos, cabos y golfos.
 _Evitar_: tipo de prueba, categoría, capa
 
 **Cordillera**:
@@ -37,6 +37,14 @@ _Evitar_: árbol, clasificación, pertenencia
 **Altura**:
 Tipo de apoyo en el que se muestra un Pico y el alumno escribe sus metros; solo se preguntan Moncayo, Aneto, Teide y Mulhacén. Se juega siempre en Ubicación → nombre.
 _Evitar_: altitud, cota
+
+**Simulacro**:
+Tipo que recorre de una vez la jerarquía completa del relieve, Cordillera → Sierra → Pico → Altura, sobre un único mapa mudo. Empieza con las Cordilleras visibles sin nombre; acertar una Desbloquea el siguiente nivel de esa rama. El alumno elige el orden y puede tener varias ramas abiertas a la vez.
+_Evitar_: examen, prueba final, test
+
+**Desbloqueado**:
+Estado de un Elemento del Simulacro que ya se puede tocar y responder, porque los Elementos de los que depende están entre los Acertados. Antes de eso, ni se ve ni se pregunta.
+_Evitar_: revelado, visible, disponible
 
 **Nombre oficial**:
 Nombre canónico de un elemento: en provincias y comunidades el que usa el mapa (Girona, Bizkaia); en cordilleras y picos el que usan los libros de texto (Cordillera Cantábrica, Torre Cerredo).
@@ -154,5 +162,6 @@ _Evitar_: desafío, challenge
 
 - "Regiones" en la idea original significa comunidades autónomas, no regiones naturales.
 - "Montañas" en la idea original son los tipos de relieve: **Cordilleras**, **Sierras** y **Picos** sobre el mapa, más **Jerarquía** y **Altura** como apoyo. La Meseta y las depresiones no son montañas y quedan para otro tipo.
-- El listado de relieve son los apuntes del alumno desde "Macizo / sierra", con un pico por cordillera para darle simetría; el examen es rellenar un mapa mudo físico con ríos.
+- El listado de relieve son los apuntes del alumno desde "Macizo / sierra", con un pico por cordillera para darle simetría; el examen real es rellenar un mapa mudo físico con ríos.
+- El Tipo que simula ese examen se llama **Simulacro**, no "Examen": ese nombre ya estaba reservado como sinónimo a evitar de **Prueba**, para no llamar "examen" a un repaso suelto de comunidades o de picos.
 - "Tipo de prueba" mezclaba dos conceptos: el **Tipo** (qué se pregunta) y la **Prueba** (tipo más modo).

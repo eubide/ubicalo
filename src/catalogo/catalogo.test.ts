@@ -407,3 +407,63 @@ describe('Contexto geográfico del relieve', () => {
     expect(contornos('alturas').map((contorno) => contorno.id)).toEqual(['moncayo', 'aneto', 'teide', 'mulhacen'])
   })
 })
+
+describe('Catálogo de simulacro', () => {
+  it('entrega las 44 piezas del relieve: cordilleras, sierras, picos y las cuatro alturas', () => {
+    const elementos = catalogo('simulacro')
+
+    expect(elementos).toHaveLength(44)
+    expect(elementos.filter((elemento) => elemento.clase === 'cordillera')).toHaveLength(11)
+    expect(elementos.filter((elemento) => elemento.clase === 'sierra')).toHaveLength(18)
+    expect(elementos.filter((elemento) => elemento.clase === 'pico')).toHaveLength(15)
+  })
+
+  it('las 11 cordilleras están desbloqueadas desde el principio', () => {
+    const cordilleras = catalogo('simulacro').filter((elemento) => elemento.clase === 'cordillera')
+
+    expect(cordilleras).toHaveLength(11)
+    expect(cordilleras.every((elemento) => elemento.desbloqueaCon?.length === 0)).toBe(true)
+  })
+
+  it('una sierra se desbloquea al acertar su cordillera', () => {
+    const elementos = catalogo('simulacro')
+    const gredos = elementos.find((elemento) => elemento.id === 'sierra-de-gredos')!
+
+    expect(gredos.desbloqueaCon).toEqual(['sistema-central'])
+  })
+
+  it('un pico se desbloquea al acertar su cordillera y todas sus sierras', () => {
+    const elementos = catalogo('simulacro')
+    const almanzor = elementos.find((elemento) => elemento.id === 'almanzor')!
+
+    expect(almanzor.desbloqueaCon).toHaveLength(5)
+    expect(almanzor.desbloqueaCon).toContain('sistema-central')
+    expect(almanzor.desbloqueaCon).toEqual(
+      expect.arrayContaining(['sierra-de-gata', 'sierra-de-gredos', 'sierra-de-guadarrama', 'sierra-de-bejar']),
+    )
+  })
+
+  it('el pico de una cordillera sin sierras se desbloquea solo con la cordillera', () => {
+    const aizkorri = catalogo('simulacro').find((elemento) => elemento.id === 'aizkorri')!
+
+    expect(aizkorri.desbloqueaCon).toEqual(['montes-vascos'])
+  })
+
+  it('las cuatro alturas se desbloquean con su pico, y su id no coincide con el del pico', () => {
+    const alturas = catalogo('simulacro').filter((elemento) => elemento.id.startsWith('altura-'))
+
+    expect(alturas).toHaveLength(4)
+    const anetoAltura = alturas.find((elemento) => elemento.id === 'altura-aneto')!
+    expect(anetoAltura.desbloqueaCon).toEqual(['aneto'])
+    expect(anetoAltura.id).not.toBe('aneto')
+    expect(anetoAltura.nombreMostrado).toBe('3.404 m')
+  })
+
+  it('el mapa del simulacro son las 40 piezas con geometría propia, sin las alturas', () => {
+    const mapa = catalogoDelMapa('simulacro')
+
+    expect(mapa).toHaveLength(40)
+    expect(mapa.every((elemento) => elemento.id.startsWith('altura-') === false)).toBe(true)
+    expect(contornos('simulacro')).toHaveLength(40)
+  })
+})

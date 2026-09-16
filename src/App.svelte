@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Feature, FeatureCollection, Geometry } from 'geojson'
   import { catalogo, catalogoDelMapa, contextoDe, contornos, type Elemento } from './catalogo/catalogo'
-  import { etiquetaDeClase, textoDeAltura, type ContextoDeRelieve } from './catalogo/relieve'
+  import { esIdDeAltura, etiquetaDeClase, idDeAltura, textoDeAltura, type ContextoDeRelieve } from './catalogo/relieve'
   import contextoGeografico from './datos/contexto-geografico.json'
   import Mapa from './mapa/Mapa.svelte'
   import FinDePartida from './pantallas/FinDePartida.svelte'
@@ -24,6 +24,7 @@
     correccionTrasFallo,
     DURACION_REPASO_UBICACION_NOMBRE,
     elegirOpcion,
+    elegirPregunta,
     iniciarPartida,
     marcarEnRepaso,
     responder,
@@ -64,6 +65,8 @@
   let contextoDelTipo = $state.raw<ContextoDeRelieve | null>(null)
   let ahora = $state(Date.now())
   let texto = $state('')
+  let simulacroActivo = $state<string | null>(null)
+  let mostrarCorrecto = $state(false)
   let campoDeTexto = $state<HTMLInputElement | null>(null)
   let pistaAbierta = $state<HTMLElement | null>(null)
 
@@ -82,6 +85,39 @@
   })
 
   const escribeNombre = $derived(prueba?.modo === 'ubicacion-nombre')
+  const esSimulacro = $derived(prueba?.tipo === 'simulacro')
+  // Solo lo ya visible (Acertado o Desbloqueado); el resto del mapa mudo sigue sin dibujarse.
+  const contornosVisibles = $derived(
+    esSimulacro && partida
+      ? contornosDelTipo.filter(
+          (contorno) => partida!.acertados.includes(String(contorno.id)) || partida!.desbloqueados.includes(String(contorno.id)),
+        )
+      : contornosDelTipo,
+  )
+  // Todo lo que depende de un elemento, directa o indirectamente, siguiendo desbloqueaCon al revés.
+  function descendientesDe(id: string): Elemento[] {
+    const directos = elementosDelTipo.filter((elemento) => (elemento.desbloqueaCon ?? []).includes(id))
+    return directos.flatMap((hijo) => [hijo, ...descendientesDe(hijo.id)])
+  }
+
+  // En el Simulacro, una rama solo se pinta de verde cuando ella y todo lo que cuelga de ella están
+  // Acertados. Todo lo demás visible y sin terminar (nunca tocado o respondido a medias) se ve igual,
+  // en amarillo, para que "queda algo por hacer aquí" tenga siempre el mismo aspecto.
+  const acertadosVisibles = $derived.by(() => {
+    if (!esSimulacro || !partida) return partida?.acertados ?? []
+    const acertadosSet = new Set(partida.acertados)
+    return partida.acertados.filter((id) => descendientesDe(id).every((hijo) => acertadosSet.has(hijo.id)))
+  })
+  // Este elemento ya está Acertado, pero algo de lo que cuelga de él todavía no.
+  const parcialesVisibles = $derived(
+    esSimulacro && partida ? partida.acertados.filter((id) => !acertadosVisibles.includes(id) && !esIdDeAltura(id)) : [],
+  )
+  // Visible pero aún no Acertado: no se ha respondido nada de esto todavía.
+  const porResponderVisibles = $derived(
+    esSimulacro && partida
+      ? contornosVisibles.map((contorno) => String(contorno.id)).filter((id) => !partida!.acertados.includes(id))
+      : [],
+  )
   const respuesta = $derived(partida?.ultimaRespuesta)
   const pista = $derived(partida?.pista ?? null)
   const correccion = $derived(partida?.correccion ?? null)
@@ -92,16 +128,41 @@
       .map((elemento) => ({ id: respuestaDe(elemento), texto: elemento.rotulo ?? elemento.nombreMostrado })) ?? [],
   )
 
+  // En el Simulacro la cifra no se muestra hasta acertarla; antes, si el pico ya está nombrado,
+  // se avisa de que le falta la altura, para que "por qué sigue en naranja" tenga respuesta a la vista.
   const alturas = $derived(
-    elementosDelMapa.flatMap((elemento) =>
-      elemento.altura === undefined ? [] : [{ id: elemento.id, texto: textoDeAltura(elemento.altura) }],
-    ),
+    elementosDelMapa.flatMap((elemento) => {
+      if (elemento.altura === undefined) return []
+      if (esSimulacro && !(partida?.acertados.includes(idDeAltura(elemento.id)) ?? false)) {
+        const picoAcertado = partida?.acertados.includes(elemento.id) ?? false
+        return picoAcertado ? [{ id: elemento.id, texto: 'Falta la altura' }] : []
+      }
+      return [{ id: elemento.id, texto: textoDeAltura(elemento.altura) }]
+    }),
   )
 
   const enunciado = $derived.by(() => {
     const preguntado = partida?.preguntado
     if (!preguntado || correccion) return null
     return preguntado.pregunta ?? (preguntado.clase && etiquetaDeClase[preguntado.clase]) ?? null
+  })
+
+  const preguntaDeAltura = $derived((simulacroActivo && esIdDeAltura(simulacroActivo)) ?? false)
+  // La forma que se está respondiendo ahora mismo, para remarcarla; una Altura remarca su propio pico.
+  const activoEnSimulacro = $derived(
+    simulacroActivo ? (esIdDeAltura(simulacroActivo) ? simulacroActivo.slice(idDeAltura('').length) : simulacroActivo) : null,
+  )
+
+  const DURACION_RESPUESTA_CORRECTA = 3_000
+
+  $effect(() => {
+    if (!respuesta?.acierto) {
+      mostrarCorrecto = false
+      return
+    }
+    mostrarCorrecto = true
+    const espera = setTimeout(() => (mostrarCorrecto = false), DURACION_RESPUESTA_CORRECTA)
+    return () => clearTimeout(espera)
   })
 
   function nombreDeLaRespuesta(elemento: Elemento): string {
@@ -111,6 +172,8 @@
   const iluminados = $derived.by(() => {
     if (!escribeNombre) return []
     if (repaso) return rotulos.map((rotulo) => rotulo.id)
+    // El alumno elige qué tocar; solo se ilumina la respuesta correcta mientras se ve la Corrección.
+    if (esSimulacro) return correccion ? [correccion.correcto.id] : []
     const id = (correccion?.correcto ?? partida?.preguntado)?.id
     return id === undefined ? [] : [id]
   })
@@ -125,7 +188,10 @@
   $effect(() => {
     if (!correccion) return
     confirmandoAbandono = false
-    return cerrarAlCabo(correccion.duracion, cerrarCorreccion)
+    return cerrarAlCabo(correccion.duracion, (partidaEnCorreccion) => {
+      simulacroActivo = null
+      return cerrarCorreccion(partidaEnCorreccion)
+    })
   })
 
   $effect(() => {
@@ -149,6 +215,7 @@
     contextoDelTipo = contextoDe(elegida.tipo)
     ahora = Date.now()
     texto = ''
+    simulacroActivo = null
     partida = iniciarPartida(elegida, elementos, Math.random, Date.now, elementosDelMapa)
   }
 
@@ -164,6 +231,18 @@
     }
     partida = responder(partida, id)
     if (partida.terminada) registrar(partida)
+  }
+
+  // Tocar un elemento en el Simulacro lo elige como pregunta; responderlo es cosa del formulario de texto.
+  // Un pico ya acertado con su Altura pendiente redirige al toque hacia esa pregunta.
+  function elegirEnSimulacro(id: string) {
+    if (!partida) return
+    const objetivoAltura = idDeAltura(id)
+    const objetivo = partida.desbloqueados.includes(objetivoAltura) ? objetivoAltura : id
+    const elegida = elegirPregunta(partida, objetivo)
+    if (elegida === partida) return
+    partida = elegida
+    simulacroActivo = objetivo
   }
 
   $effect(() => {
@@ -208,6 +287,7 @@
     if (!partida || partida.terminada) return
     partida = responderConTexto(partida, texto)
     if (partida.terminada) registrar(partida)
+    if (!partida.pista && !partida.correccion) simulacroActivo = null
     texto = ''
     campoDeTexto?.focus()
   }
@@ -256,7 +336,7 @@
           </div>
         {:else if repaso}
           <p class="pregunta">{escribeNombre ? 'Repaso: fíjate en dónde están' : 'Repaso: toca cada nombre'}</p>
-        {:else if escribeNombre && !correccion}
+        {:else if escribeNombre && !correccion && (!esSimulacro || simulacroActivo)}
           <form class="pregunta" onsubmit={enviarTexto}>
             {#if enunciado}
               <span class="enunciado">{enunciado}</span>
@@ -265,13 +345,15 @@
               bind:this={campoDeTexto}
               bind:value={texto}
               aria-label={enunciado ?? 'Nombre del elemento iluminado'}
-              placeholder={(prueba && indicacionDeRespuesta[prueba.tipo]) ?? '¿Cómo se llama?'}
+              placeholder={preguntaDeAltura ? 'Metros' : ((prueba && indicacionDeRespuesta[prueba.tipo]) ?? '¿Cómo se llama?')}
               autocomplete="off"
               autocapitalize="off"
               spellcheck="false"
             />
             <button type="submit">Responder</button>
           </form>
+        {:else if esSimulacro && !correccion}
+          <p class="pregunta">Toca una forma para responderla</p>
         {:else}
           <p class="pregunta">
             {#if !correccion}
@@ -288,15 +370,20 @@
       {/if}
     </header>
 
-    {#if respuesta?.acierto && !partida.terminada && !pista}
-      <p class="respuesta">Correcto: {respuesta.correcto.nombreMostrado}</p>
-    {/if}
+    <p class="respuesta">
+      {#if mostrarCorrecto && respuesta?.acierto && !partida.terminada && !pista}
+        Correcto: {respuesta.correcto.nombreMostrado}
+      {/if}
+    </p>
 
     <Mapa
-      contornos={contornosDelTipo}
+      contornos={contornosVisibles}
       contextoDeRelieve={contextoDelTipo}
+      porResponder={porResponderVisibles}
+      parcial={parcialesVisibles}
+      activo={esSimulacro ? activoEnSimulacro : null}
       {contexto}
-      acertados={partida.acertados}
+      acertados={acertadosVisibles}
       tocado={correccion && !escribeNombre && correccionTrasFallo(correccion) ? correccion.elegido.id : null}
       correcto={correccion ? respuestaDe(correccion.correcto) : null}
       preguntado={correccion ? null : (partida.preguntado?.id ?? null)}
@@ -306,7 +393,7 @@
       {rotulos}
       {alturas}
       fallados={partida.terminada ? partida.fallados.map((elemento) => elemento.id) : []}
-      alElegir={elegir}
+      alElegir={esSimulacro ? elegirEnSimulacro : elegir}
       {nombreDe}
     />
 

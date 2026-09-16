@@ -20,6 +20,9 @@
     preguntado: string | null
     iluminados?: string[]
     destacados?: string[]
+    porResponder?: string[]
+    parcial?: string[]
+    activo?: string | null
     pistaDeArea?: string[]
     rotulos?: Rotulo[]
     alturas?: Rotulo[]
@@ -38,6 +41,9 @@
     preguntado,
     iluminados = [],
     destacados = [],
+    porResponder = [],
+    parcial = [],
+    activo = null,
     pistaDeArea = [],
     rotulos = [],
     alturas = [],
@@ -290,6 +296,9 @@
             class:seleccionado={seleccionado === id}
             class:iluminado={iluminados.includes(id)}
             class:destacado={destacados.includes(id)}
+            class:porResponder={porResponder.includes(id)}
+            class:parcial={parcial.includes(id)}
+            class:activo={activo === id}
             class:tocado={tocado === id}
             onclick={() => pulsarElemento(id)}
           />
@@ -453,6 +462,21 @@
   .elementos path.destacado {
     fill: #f6d365;
     stroke: #8a6d1f;
+  }
+
+  .elementos path.porResponder {
+    fill: #fde68a;
+    stroke: #a16207;
+  }
+
+  .elementos path.parcial {
+    fill: #fdba74;
+    stroke: #9a3412;
+  }
+
+  .elementos path.activo {
+    stroke: #1d4ed8;
+    stroke-width: 2.4;
   }
 
   .elementos .diana {

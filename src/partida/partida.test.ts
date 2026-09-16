@@ -6,6 +6,7 @@ import {
   cerrarRepaso,
   correccionTrasFallo,
   elegirOpcion,
+  elegirPregunta,
   iniciarPartida,
   marcarEnRepaso,
   pedirPista,
@@ -1062,5 +1063,51 @@ describe('Jerarquía: elementos que se responden tocando otro elemento del mapa'
     partida = marcarEnRepaso(partida, 'iberico')
     expect(partida.repaso).toBeNull()
     expect(partida.pistaDeArea).toEqual(['central'])
+  })
+})
+
+describe('Simulacro: desbloqueados y elegir pregunta', () => {
+  const sinDependencias: Elemento = { id: 'a', nombre: 'A', nombreMostrado: 'A', alias: [], vecinos: [], desbloqueaCon: [] }
+  const tambienSinDependencias: Elemento = {
+    id: 'b',
+    nombre: 'B',
+    nombreMostrado: 'B',
+    alias: [],
+    vecinos: [],
+    desbloqueaCon: [],
+  }
+  const dependeDeA: Elemento = { id: 'c', nombre: 'C', nombreMostrado: 'C', alias: [], vecinos: [], desbloqueaCon: ['a'] }
+  const simulacro: Elemento[] = [sinDependencias, tambienSinDependencias, dependeDeA]
+  const simulacroNombreUbicar: Prueba = { tipo: 'simulacro', modo: 'nombre-ubicar' }
+  const azarSinBarajar = () => 0.99
+
+  it('al principio, desbloqueados son solo los elementos sin dependencias pendientes', () => {
+    const partida = iniciarPartida(simulacroNombreUbicar, simulacro, azarSinBarajar, reloj)
+
+    expect([...partida.desbloqueados].sort()).toEqual(['a', 'b'])
+  })
+
+  it('elegir pregunta con un id bloqueado no cambia la partida', () => {
+    const partida = iniciarPartida(simulacroNombreUbicar, simulacro, azarSinBarajar, reloj)
+
+    expect(elegirPregunta(partida, 'c')).toBe(partida)
+  })
+
+  it('elegir pregunta con un id desbloqueado, aunque no sea el primero de la cola, lo convierte en Preguntado', () => {
+    const partida = iniciarPartida(simulacroNombreUbicar, simulacro, azarSinBarajar, reloj)
+    expect(partida.preguntado?.id).toBe('a')
+
+    const elegida = elegirPregunta(partida, 'b')
+
+    expect(elegida.preguntado?.id).toBe('b')
+  })
+
+  it('tras acertar el elemento del que depende, pasa a desbloqueados', () => {
+    let partida = iniciarPartida(simulacroNombreUbicar, simulacro, azarSinBarajar, reloj)
+    expect(partida.desbloqueados).not.toContain('c')
+
+    partida = responder(partida, 'a')
+
+    expect(partida.desbloqueados).toContain('c')
   })
 })
