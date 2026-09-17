@@ -117,11 +117,11 @@ Nunca compactes a mitad de una fase.
 - [x] Resolver los cuatro puntos "Sin decidir" de #1
 - [x] `/mattpocock-skills:to-tickets #1` → #2–#10
 - [x] `/mattpocock-skills:implement` de #2 a #10 → PRs #11–#18 y #21
-- [x] Prueba con usuario → `grill-with-docs` → `to-tickets` #25–#29 → `implement` → PRs #30–#34
+- [x] Prueba con usuario → `grill-with-docs` → `to-tickets` #25–#29 → `implement` → PRs #30–#34, spec #1 cerrada
 - [ ] Probar en un móvil real: gestos táctiles, recuadro de Ceuta y Melilla, y compartir un reto (requiere HTTPS)
-- [ ] Decidir si se cierra #1: es la spec padre y ningún skill la cierra
 - [x] Siguiente bloque: relieve (cordilleras, sierras, picos) con `grill-with-docs` → spec #36 → tickets #37–#45 → `implement` → `code-review` (dos ejes, hallazgos corregidos) → PR #46, spec cerrada
 - [x] Bloque Simulacro: spec #47 → tickets #48–#52 → PR #53, spec cerrada
 - [x] Bloque Grandes unidades: la Meseta y las depresiones, spec #63 → PR #64. Sin tickets: cupo en una sesión desde la conversación, como los cambios tras probar con usuarios
 - [ ] Probar el relieve en un móvil real: dianas de sierras y picos, rótulos apilados en el Repaso de Jerarquía, y las manchas de Montes Vascos y Montes de Toledo, que a ancho de móvil quedan por debajo de los 44 px de diana
+- [ ] Bloque Ríos: spec #54 → tickets #55–#61 → PR #62, en curso en su propio worktree
 - [ ] Siguiente bloque: despliegue (dominio y Terraform), o cabos y golfos con `/mattpocock-skills:grill-with-docs`

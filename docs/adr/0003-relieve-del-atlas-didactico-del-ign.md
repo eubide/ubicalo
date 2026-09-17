@@ -18,7 +18,7 @@ La capa del IGN clasifica el relieve en seis clases (Meseta, cordilleras interio
 - Los cortes editoriales (rectas fijadas en el script) son la parte más discutible del dato; a escala de mapa mudo no cambian la respuesta correcta.
 - Cordilleras, sierras y picos no comparten arcos ni frontera, así que sus Vecinos son los tres elementos más cercanos por centroide, no los limítrofes.
 - Cada sierra y cada pico lleva su cordillera y su clase en el dato; Jerarquía y Alturas se derivan de ahí sin geometría propia, y el icono del mapa sale de la clase.
-- La capa trae seis registros, uno por clase, y el papel que cada uno declara respecto a la Meseta viaja hasta el dato: es lo que ordena el Tipo Grandes unidades (ADR-0005). Las dos depresiones salen separadas con el mismo punto interior que ya reconoce las demás partes, sin corte nuevo.
+- La capa trae seis registros, uno por clase, y el papel que cada uno declara respecto a la Meseta viaja hasta el dato: es lo que ordena el Tipo Grandes unidades (ADR-0006). Las dos depresiones salen separadas con el mismo punto interior que ya reconoce las demás partes, sin corte nuevo.
 - La Meseta llega como un único polígono: la división en Submeseta Norte y Sur que anuncia su descripción no está en la geometría y exigiría un corte propio por el Sistema Central, que no se hace.
 
 ## Fuentes
