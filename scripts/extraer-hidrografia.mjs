@@ -1,5 +1,6 @@
-import { readFileSync, mkdirSync, writeFileSync } from 'node:fs'
-import { geoArea, geoContains } from 'd3-geo'
+import { readFileSync, mkdirSync } from 'node:fs'
+import { geoContains } from 'd3-geo'
+import { descargar, douglasPeucker, elemento, escribir, simplificar } from './geometria.mjs'
 
 // Hidrografía del IGN por el WFS INSPIRE de IDEE, CC BY 4.0 (ADR-0004).
 const WFS = 'https://servicios.idee.es/wfs-inspire/hidrografia'
@@ -261,51 +262,6 @@ function comprobarContinuidad(id, linea) {
   }
 }
 
-function distanciaARecta(punto, a, b) {
-  const dx = b[0] - a[0]
-  const dy = b[1] - a[1]
-  const longitud = Math.hypot(dx, dy)
-  if (longitud === 0) return distancia(punto, a)
-  return Math.abs(dy * punto[0] - dx * punto[1] + b[0] * a[1] - b[1] * a[0]) / longitud
-}
-
-function douglasPeucker(puntos, tolerancia) {
-  if (puntos.length < 3) return puntos
-  const [primero, ultimo] = [puntos[0], puntos.at(-1)]
-  let indice = 0
-  let maxima = 0
-  for (let i = 1; i < puntos.length - 1; i++) {
-    const separacion = distanciaARecta(puntos[i], primero, ultimo)
-    if (separacion > maxima) [maxima, indice] = [separacion, i]
-  }
-  if (maxima <= tolerancia) return [primero, ultimo]
-  return [
-    ...douglasPeucker(puntos.slice(0, indice + 1), tolerancia).slice(0, -1),
-    ...douglasPeucker(puntos.slice(indice), tolerancia),
-  ]
-}
-
-function orientado(anillo) {
-  return geoArea({ type: 'Polygon', coordinates: [anillo] }) > 2 * Math.PI ? [...anillo].reverse() : anillo
-}
-
-function simplificarAnillo(anillo, tolerancia) {
-  const abierto = anillo.slice(0, -1)
-  const mitad = Math.floor(abierto.length / 2)
-  const simplificado = [
-    ...douglasPeucker(abierto.slice(0, mitad + 1), tolerancia).slice(0, -1),
-    ...douglasPeucker([...abierto.slice(mitad), abierto[0]], tolerancia).slice(0, -1),
-  ]
-  return [...simplificado, simplificado[0]]
-}
-
-function simplificarPoligono(geometria, tolerancia) {
-  const anillos = (anillosDe) => anillosDe.map((anillo) => simplificarAnillo(orientado(anillo), tolerancia))
-  return geometria.type === 'Polygon'
-    ? { type: 'Polygon', coordinates: anillos(geometria.coordinates) }
-    : { type: 'MultiPolygon', coordinates: geometria.coordinates.map(anillos) }
-}
-
 const RADIO_DE_SONDEO = 0.05
 const RUMBOS = 12
 
@@ -326,36 +282,20 @@ function haciaLaDesembocadura(linea, esDesembocadura) {
   throw new Error('Ningún extremo del cauce parece la desembocadura')
 }
 
-async function descargar(url) {
-  const respuesta = await fetch(url)
-  if (!respuesta.ok) throw new Error(`${url} respondió ${respuesta.status}`)
-  return respuesta.json()
-}
-
-function elemento(id, properties, geometry) {
-  return { type: 'Feature', id, properties, geometry }
-}
-
-async function vertientesDe(capa) {
+function vertientesDe(capa) {
   return VERTIENTES.map(({ id, nombre, enLaCapa }) => {
     const rasgo = capa.features.find(({ properties }) => properties.Vertiente === enLaCapa)
     if (!rasgo) throw new Error(`La capa del IGN ya no trae «${enLaCapa}»`)
     return elemento(
       id,
       { nombre, clase: 'vertiente' },
-      simplificarPoligono(rasgo.geometry, TOLERANCIA_DE_VERTIENTES),
+      simplificar(rasgo.geometry, TOLERANCIA_DE_VERTIENTES, true),
     )
   })
 }
 
-function escribir(nombre, features) {
-  writeFileSync(`src/datos/${nombre}.json`, JSON.stringify({ type: 'FeatureCollection', features }))
-  const puntos = features.reduce((total, { geometry }) => total + JSON.stringify(geometry).split('],[').length, 0)
-  console.log(`${features.length} elementos y ~${puntos} puntos escritos en src/datos/${nombre}.json`)
-}
-
 const capaDeVertientes = await descargar(CAPA_VERTIENTES)
-const vertientes = await vertientesDe(capaDeVertientes)
+const vertientes = vertientesDe(capaDeVertientes)
 
 const paisesVecinos = JSON.parse(readFileSync('src/datos/contexto-geografico.json', 'utf8')).features
 const tierras = [...vertientes, ...paisesVecinos]

@@ -505,6 +505,26 @@
     cursor: pointer;
   }
 
+  .elementos.relieve path,
+  .leyenda .mancha {
+    fill: #d8d2c2;
+    stroke: #8b8578;
+  }
+
+  .elementos path.sierra,
+  .leyenda .sierra {
+    fill: #fbf9f3;
+    stroke: #6f6552;
+    stroke-width: 1.2;
+  }
+
+  .elementos path.pico,
+  .leyenda .pico {
+    fill: #6f6552;
+    stroke: #3f3a30;
+    stroke-width: 0.8;
+  }
+
   .elementos path.vertiente,
   .leyenda .vertiente {
     fill: #dbe7f0;
@@ -553,26 +573,6 @@
   .elementos path.cauce.tocado {
     stroke: #dc2626;
     stroke-width: 3.2;
-  }
-
-  .elementos.relieve path,
-  .leyenda .mancha {
-    fill: #d8d2c2;
-    stroke: #8b8578;
-  }
-
-  .elementos path.sierra,
-  .leyenda .sierra {
-    fill: #fbf9f3;
-    stroke: #6f6552;
-    stroke-width: 1.2;
-  }
-
-  .elementos path.pico,
-  .leyenda .pico {
-    fill: #6f6552;
-    stroke: #3f3a30;
-    stroke-width: 0.8;
   }
 
   .elementos path.destacado {

@@ -1,5 +1,6 @@
-import { mkdirSync, writeFileSync } from 'node:fs'
-import { geoArea, geoCentroid, geoContains } from 'd3-geo'
+import { mkdirSync } from 'node:fs'
+import { geoCentroid, geoContains } from 'd3-geo'
+import { descargar, douglasPeucker, elemento, escribir, orientado, simplificar } from './geometria.mjs'
 
 // Capa «Unidades del relieve» del Atlas Didáctico del IGN, CC BY 4.0 (ADR-0003).
 const CAPA_IGN =
@@ -119,12 +120,6 @@ const PICOS = [
   { id: 'teide', nombre: 'Teide', ngbe: 2638544, altura: 3715, cordillera: 'montanas-de-canarias', coordenadas: [-16.6423, 28.2728] },
 ]
 
-// d3-geo exige anillos exteriores en sentido horario; la capa los trae al revés.
-function orientado(anillo) {
-  const poligono = { type: 'Polygon', coordinates: [anillo] }
-  return geoArea(poligono) > 2 * Math.PI ? [...anillo].reverse() : anillo
-}
-
 function partesDe(capa) {
   return capa.features.flatMap((clase) => {
     const { Nombre } = clase.properties
@@ -165,47 +160,6 @@ function recortarAnillo(anillo, recta, signo) {
 function recortarPoligono(poligono, recta, signo) {
   const anillos = poligono.coordinates.map((anillo) => recortarAnillo(anillo, recta, signo)).filter(Boolean)
   return anillos.length > 0 ? { type: 'Polygon', coordinates: anillos } : null
-}
-
-function distanciaARecta(punto, a, b) {
-  const dx = b[0] - a[0]
-  const dy = b[1] - a[1]
-  const longitud = Math.hypot(dx, dy)
-  if (longitud === 0) return Math.hypot(punto[0] - a[0], punto[1] - a[1])
-  return Math.abs(dy * punto[0] - dx * punto[1] + b[0] * a[1] - b[1] * a[0]) / longitud
-}
-
-function douglasPeucker(puntos, tolerancia) {
-  if (puntos.length < 3) return puntos
-  const [primero, ultimo] = [puntos[0], puntos.at(-1)]
-  let indice = 0
-  let maxima = 0
-  for (let i = 1; i < puntos.length - 1; i++) {
-    const distancia = distanciaARecta(puntos[i], primero, ultimo)
-    if (distancia > maxima) [maxima, indice] = [distancia, i]
-  }
-  if (maxima <= tolerancia) return [primero, ultimo]
-  return [
-    ...douglasPeucker(puntos.slice(0, indice + 1), tolerancia).slice(0, -1),
-    ...douglasPeucker(puntos.slice(indice), tolerancia),
-  ]
-}
-
-function simplificarAnillo(anillo, tolerancia) {
-  const abierto = anillo.slice(0, -1)
-  const mitad = Math.floor(abierto.length / 2)
-  const simplificado = [
-    ...douglasPeucker(abierto.slice(0, mitad + 1), tolerancia).slice(0, -1),
-    ...douglasPeucker([...abierto.slice(mitad), abierto[0]], tolerancia).slice(0, -1),
-  ]
-  return [...simplificado, simplificado[0]]
-}
-
-function simplificar(geometria, tolerancia) {
-  const simplificarPoligono = (anillos) => anillos.map((anillo) => simplificarAnillo(anillo, tolerancia))
-  return geometria.type === 'Polygon'
-    ? { type: 'Polygon', coordinates: simplificarPoligono(geometria.coordinates) }
-    : { type: 'MultiPolygon', coordinates: geometria.coordinates.map(simplificarPoligono) }
 }
 
 function unir(geometrias) {
@@ -261,15 +215,11 @@ function unidadesDe(capa) {
   return unidades
 }
 
-function elemento(id, properties, geometry) {
-  return { type: 'Feature', id, properties, geometry }
-}
-
 function cordillerasDe(unidades) {
   return ORDEN.map((id) => {
     const unidad = unidades.get(id)
     if (!unidad?.nombre) throw new Error(`Unidad sin resolver: ${id}`)
-    return elemento(id, { nombre: unidad.nombre, clase: 'cordillera' }, simplificar(unidad.geometria, TOLERANCIA_EN_GRADOS))
+    return elemento(id, { nombre: unidad.nombre, clase: 'cordillera' }, simplificar(unidad.geometria, TOLERANCIA_EN_GRADOS, true))
   })
 }
 
@@ -304,17 +254,6 @@ function picos() {
       { type: 'Point', coordinates: coordenadas },
     ),
   )
-}
-
-async function descargar(url) {
-  const respuesta = await fetch(url)
-  if (!respuesta.ok) throw new Error(`${url} respondió ${respuesta.status}`)
-  return respuesta.json()
-}
-
-function escribir(nombre, features) {
-  writeFileSync(`src/datos/${nombre}.json`, JSON.stringify({ type: 'FeatureCollection', features }))
-  console.log(`${features.length} elementos escritos en src/datos/${nombre}.json`)
 }
 
 const capa = await descargar(CAPA_IGN)

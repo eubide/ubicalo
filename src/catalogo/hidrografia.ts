@@ -10,7 +10,7 @@ export type ClaseDeRio = 'vertiente' | 'rio-principal' | 'rio-propio' | 'afluent
 export const etiquetaDeClaseDeRio: Record<ClaseDeRio, string> = {
   vertiente: 'Vertiente',
   'rio-principal': 'Río principal',
-  'rio-propio': 'Río',
+  'rio-propio': 'Río propio',
   afluente: 'Afluente',
 }
 
@@ -77,6 +77,11 @@ function cuencaIluminada(id: string, propiedades: PropiedadesDeRio): string[] {
   return deLaCuenca.length > 1 ? deLaCuenca : [id, ...hermanosDe(id, propiedades)]
 }
 
+// El dato solo guarda la Vertiente del nivel de arriba: un Afluente hereda la de su cuenca.
+function vertienteDe(id: string, propia: string | undefined): string | undefined {
+  return propia ?? propiedadesPorId.get(cuencaDe(id))?.vertiente
+}
+
 function elementoDeRio(contorno: Feature<Geometry>): Elemento {
   const id = String(contorno.id)
   const { nombre, clase, vertiente, desembocaEn, alias, desambiguacion, fueraDeApuntes } = propiedadesDeRio(contorno)
@@ -88,7 +93,7 @@ function elementoDeRio(contorno: Feature<Geometry>): Elemento {
     vecinos: hermanosDe(id, propiedadesPorId.get(id)!),
     pistaDeArea: cuencaIluminada(id, propiedadesPorId.get(id)!),
     clase,
-    ...(vertiente && { vertiente }),
+    ...(vertienteDe(id, vertiente) && { vertiente: vertienteDe(id, vertiente) }),
     ...(desembocaEn && { desembocaEn, cuenca: cuencaDe(id) }),
     ...(desambiguacion && { desambiguacion }),
     ...(fueraDeApuntes && { fueraDeApuntes }),
@@ -98,9 +103,9 @@ function elementoDeRio(contorno: Feature<Geometry>): Elemento {
 // Cada Afluente se responde tocando el Río principal de su cuenca, aunque desemboque en otro Afluente;
 // los Vecinos son los del río que se toca, para que la Pista de área ilumine lo tocable.
 function catalogoDeJerarquiaDeRios(): Elemento[] {
-  const rios = CONTORNOS_DEL_MAPA.rios.map(elementoDeRio)
-  const porId = new Map(rios.map((rio) => [rio.id, rio]))
-  return rios
+  const elementos = CONTORNOS_DEL_MAPA.rios.map(elementoDeRio)
+  const porId = new Map(elementos.map((rio) => [rio.id, rio]))
+  return elementos
     .filter((rio) => rio.clase === 'afluente')
     .map(({ id, nombre, nombreMostrado, alias, clase, cuenca, desembocaEn, desambiguacion }) => {
       const principal = porId.get(cuenca!)!

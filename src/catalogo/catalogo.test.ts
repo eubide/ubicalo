@@ -486,14 +486,17 @@ describe('Catálogo de ríos', () => {
     expect(deClase('afluente')).toHaveLength(24)
   })
 
-  it('cada río del nivel superior conoce su vertiente y ningún afluente la lleva', () => {
+  it('cada río conoce su vertiente, y un afluente hereda la de su cuenca', () => {
     const rios = catalogo('rios')
     const vertienteDe = (id: string) => rios.find((rio) => rio.id === id)?.vertiente
 
     expect(vertienteDe('ebro')).toBe('vertiente-mediterranea')
     expect(vertienteDe('mino')).toBe('vertiente-atlantica')
     expect(vertienteDe('nervion')).toBe('vertiente-cantabrica')
-    expect(rios.filter((rio) => rio.clase === 'afluente').every((rio) => rio.vertiente === undefined)).toBe(true)
+    expect(vertienteDe('segre')).toBe('vertiente-mediterranea')
+    expect(vertienteDe('jiloca')).toBe('vertiente-mediterranea')
+    expect(vertienteDe('sil')).toBe('vertiente-atlantica')
+    expect(rios.every((rio) => rio.vertiente !== undefined)).toBe(true)
   })
 
   it('cada afluente conoce su río principal, aunque desemboque en otro afluente', () => {

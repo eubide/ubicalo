@@ -35,7 +35,6 @@ export const etiquetaDeClase: Record<ClaseDelMapa, string> = {
   ...etiquetaDeClaseDeRio,
 }
 
-// Lo que se ve en el mapa de un Tipo y en ese Tipo nunca se pregunta; depende del Tipo.
 export interface ContextoGeografico {
   contorno: Feature<Geometry>
   tenues: Feature<Geometry>[]
@@ -53,7 +52,6 @@ export interface Elemento {
   clase?: ClaseDelMapa
   cordillera?: string
   altura?: number
-  // Vertiente de un Río principal o propio; los Afluentes la heredan de su cuenca.
   vertiente?: string
   // Río en el que desemboca de verdad un Afluente, que puede ser otro Afluente.
   desembocaEn?: string
@@ -63,7 +61,6 @@ export interface Elemento {
   desambiguacion?: string
   // Lo que ilumina la Pista de área cuando no basta con los Vecinos.
   pistaDeArea?: string[]
-  // Marca el elemento que no viene de los apuntes del alumno.
   fueraDeApuntes?: true
   // Id que hay que tocar cuando no es el propio elemento (Jerarquía).
   respuesta?: string
@@ -202,8 +199,6 @@ export function contornos(tipo: Tipo): Feature<Geometry>[] {
 
 let contornoDeEspana: Feature<Geometry> | undefined
 
-// El relieve se juega sobre un mapa físico: contorno de España, ríos y, cuando no se tocan, las
-// cordilleras en tenue. Los ríos, sobre el contorno pelado. Lo político, sin nada de esto.
 export function contextoDe(tipo: Tipo): ContextoGeografico | null {
   if (!esDeRelieve(tipo) && !esDeHidrografia(tipo)) return null
   const { topologia, geometrias } = topologias.comunidades
