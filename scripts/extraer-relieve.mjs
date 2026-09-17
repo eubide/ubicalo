@@ -8,6 +8,17 @@ const CAPA_IGN =
 
 const TOLERANCIA_EN_GRADOS = 0.015
 
+// El papel que la capa del IGN asigna a cada clase: todo el relieve peninsular se define por su
+// posición respecto a la Meseta, y de ahí sale el orden en que se desbloquea.
+const PAPEL = {
+  'La Meseta': 'meseta',
+  'Cordilleras interiores': 'interior',
+  'Rebordes montañosos periféricos': 'reborde',
+  'Depresiones exteriores': 'depresion',
+  'Cordilleras exteriores': 'exterior',
+  'Relieve volcánico': 'volcanico',
+}
+
 // Cada parte de la capa se reconoce por un punto que cae dentro de ella; `todas` toma la clase entera.
 const PARTES = [
   { clase: 'Rebordes montañosos periféricos', punto: [-4.5, 38.2], id: 'sierra-morena', nombre: 'Sierra Morena' },
@@ -19,6 +30,14 @@ const PARTES = [
   { clase: 'Cordilleras exteriores', punto: [0.2, 40.7], id: 'costero-catalana-sur' },
   { clase: 'Cordilleras exteriores', punto: [0.5, 42.6], id: 'pirineos-vascos-catalana' },
   { clase: 'Relieve volcánico', todas: true, id: 'montanas-de-canarias', nombre: 'Montañas de Canarias' },
+  { clase: 'La Meseta', todas: true, id: 'meseta', nombre: 'La Meseta' },
+  { clase: 'Depresiones exteriores', punto: [-0.9, 41.7], id: 'depresion-del-ebro', nombre: 'Depresión del Ebro' },
+  {
+    clase: 'Depresiones exteriores',
+    punto: [-5.5, 37.6],
+    id: 'depresion-del-guadalquivir',
+    nombre: 'Depresión del Guadalquivir',
+  },
 ]
 
 // Cortes editoriales: la capa funde unidades que los libros separan. Cada corte es una
@@ -175,19 +194,19 @@ function reconocerPartes(capa) {
   for (const { clase, punto, todas, id, nombre } of PARTES) {
     if (todas) {
       const poligonosDeLaClase = partes.filter((parte) => parte.clase === clase).map((parte) => parte.poligono)
-      unidades.set(id, { nombre, geometria: unir(poligonosDeLaClase) })
+      unidades.set(id, { nombre, papel: PAPEL[clase], geometria: unir(poligonosDeLaClase) })
       continue
     }
     const parte = partes.find((candidata) => candidata.clase === clase && geoContains(candidata.poligono, punto))
     if (!parte) throw new Error(`No hay parte de «${clase}» que contenga ${punto}`)
-    unidades.set(id, { nombre, geometria: parte.poligono })
+    unidades.set(id, { nombre, papel: PAPEL[clase], geometria: parte.poligono })
   }
   return unidades
 }
 
 function aplicarCortes(unidades) {
   for (const { de, recta, izquierda, derecha } of CORTES) {
-    const { geometria } = unidades.get(de)
+    const { geometria, papel } = unidades.get(de)
     unidades.delete(de)
     for (const [lado, signo] of [
       [izquierda, 1],
@@ -195,7 +214,7 @@ function aplicarCortes(unidades) {
     ]) {
       const recortada = recortarPoligono(geometria, recta, signo)
       if (!recortada) throw new Error(`El corte de ${de} deja vacío ${lado.id}`)
-      unidades.set(lado.id, { nombre: lado.nombre, geometria: recortada })
+      unidades.set(lado.id, { nombre: lado.nombre, papel, geometria: recortada })
     }
   }
 }
@@ -203,8 +222,9 @@ function aplicarCortes(unidades) {
 function aplicarUniones(unidades) {
   for (const { de, id, nombre } of UNIONES) {
     const geometria = unir(de.map((parte) => unidades.get(parte).geometria))
+    const { papel } = unidades.get(de[0])
     de.forEach((parte) => unidades.delete(parte))
-    unidades.set(id, { nombre, geometria })
+    unidades.set(id, { nombre, papel, geometria })
   }
 }
 
@@ -219,7 +239,24 @@ function cordillerasDe(unidades) {
   return ORDEN.map((id) => {
     const unidad = unidades.get(id)
     if (!unidad?.nombre) throw new Error(`Unidad sin resolver: ${id}`)
-    return elemento(id, { nombre: unidad.nombre, clase: 'cordillera' }, simplificar(unidad.geometria, TOLERANCIA_EN_GRADOS, true))
+    return elemento(
+      id,
+      { nombre: unidad.nombre, clase: 'cordillera', papel: unidad.papel },
+      simplificar(unidad.geometria, TOLERANCIA_EN_GRADOS, true),
+    )
+  })
+}
+
+const UNIDADES_MAYORES = [
+  { id: 'meseta', clase: 'meseta' },
+  { id: 'depresion-del-ebro', clase: 'depresion' },
+  { id: 'depresion-del-guadalquivir', clase: 'depresion' },
+]
+
+function unidadesMayoresDe(unidades) {
+  return UNIDADES_MAYORES.map(({ id, clase }) => {
+    const { nombre, papel, geometria } = unidades.get(id)
+    return elemento(id, { nombre, clase, papel }, simplificar(geometria, TOLERANCIA_EN_GRADOS))
   })
 }
 
@@ -261,5 +298,6 @@ const unidades = unidadesDe(capa)
 
 mkdirSync('src/datos', { recursive: true })
 escribir('cordilleras', cordillerasDe(unidades))
+escribir('unidades', unidadesMayoresDe(unidades))
 escribir('sierras', sierrasDe(unidades))
 escribir('picos', picos())

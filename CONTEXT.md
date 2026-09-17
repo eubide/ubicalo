@@ -11,12 +11,32 @@ Lugar concreto del mapa que se pregunta: una provincia, una comunidad autónoma,
 _Evitar_: accidente, lugar, zona, área
 
 **Tipo**:
-Categoría de elementos que se juega por separado, agrupada en familias: político (comunidades autónomas, provincias), relieve (cordilleras y sierras, picos, jerarquía, alturas, simulacro de relieve), hidrografía (ríos, jerarquía de ríos, simulacro de ríos) y, más adelante, cabos y golfos.
+Categoría de elementos que se juega por separado, agrupada en familias: político (comunidades autónomas, provincias), relieve (grandes unidades, cordilleras y sierras, picos, jerarquía, alturas, simulacro de relieve), hidrografía (ríos, jerarquía de ríos, simulacro de ríos) y, más adelante, cabos y golfos.
 _Evitar_: tipo de prueba, categoría, capa
 
 **Cordillera**:
 Unidad montañosa de primer nivel de los apuntes (Pirineos, Sistema Ibérico, Montes de Toledo, Montañas de Canarias); se pulsa como una mancha de área.
-_Evitar_: sistema montañoso, montaña, unidad de relieve
+_Evitar_: sistema montañoso, montaña
+
+**Meseta**:
+Núcleo central de la Península, la mancha mayor del mapa; no es una Cordillera y solo se juega en Grandes unidades.
+_Evitar_: submeseta, altiplano, llanura central
+
+**Depresión**:
+Tierra baja encajada entre un Reborde de la Meseta y una Cordillera exterior: la del Ebro y la del Guadalquivir.
+_Evitar_: valle, cuenca, llanura
+
+**Papel**:
+El lugar que ocupa una mancha respecto a la Meseta, tal como lo clasifica la capa del IGN: meseta, interior, reborde, depresión, exterior o volcánico. Decide su color en la rampa de altitud y el orden en que se Desbloquea.
+_Evitar_: clase, categoría, unidad de relieve
+
+**Grandes unidades**:
+Tipo que construye el mapa físico desde la Meseta: se toca la Meseta, y acertarla abre sus cordilleras interiores y sus rebordes; cada reborde abre su Depresión, cada Depresión su Cordillera exterior, y Canarias cierra la partida. Se juega siempre en Nombre → ubicar.
+_Evitar_: unidades del relieve, capas, clasificación
+
+**Rampa de altitud**:
+Los seis colores de los Papeles, del verde de las Depresiones al marrón de las Cordilleras exteriores. Una mancha solo toma su color al acertarla: hasta entonces se ve en gris, para que el mapa no dé la respuesta.
+_Evitar_: paleta, leyenda, hipsometría
 
 **Sierra**:
 Unidad montañosa que pertenece a una Cordillera (Gredos, Picos de Europa, Montseny, las tres partes del Pirineo); en el mapa es un círculo y se juega junto a las cordilleras.
@@ -27,7 +47,7 @@ Cumbre concreta que pertenece a una Cordillera; en el mapa es un triángulo (Ane
 _Evitar_: cima, cumbre, montaña
 
 **Clase**:
-Lo que es un elemento dentro de su familia: cordillera o macizo, sierra o pico en el relieve; vertiente, río principal, río propio o afluente en la hidrografía. Se ve en el icono, en la leyenda y en el enunciado de la pregunta.
+Lo que es un elemento dentro de su familia: cordillera o macizo, sierra, pico, Meseta o Depresión en el relieve; vertiente, río principal, río propio o afluente en la hidrografía. Se ve en el icono, en la leyenda y en el enunciado de la pregunta.
 _Evitar_: tipo, categoría, nivel
 
 **Jerarquía**:
@@ -43,7 +63,7 @@ Tipo que recorre de una vez la jerarquía completa de una familia sobre un únic
 _Evitar_: examen, prueba final, test
 
 **Desbloqueado**:
-Estado de un Elemento del Simulacro que ya se puede tocar y responder, porque los Elementos de los que depende están entre los Acertados. Antes de eso, ni se ve ni se pregunta.
+Estado de un Elemento del Simulacro o de Grandes unidades que ya se puede tocar y responder, porque los Elementos de los que depende están entre los Acertados. Antes de eso, ni se ve ni se pregunta. En el Simulacro el alumno elige cuál responder; en Grandes unidades lo elige el motor.
 _Evitar_: revelado, visible, disponible
 
 **Vertiente**:
@@ -170,6 +190,7 @@ _Evitar_: desafío, challenge
 
 - Un **Tipo** agrupa muchos **Elementos**; cada **Elemento** tiene un **Nombre oficial** y cero o más **Alias**
 - Una **Prueba** es un **Tipo** jugado en un **Modo**; cada **Prueba** tiene como mucho una **Marca**
+- Cada mancha de **Grandes unidades** tiene un **Papel**, y ese **Papel** le da su color en la **Rampa de altitud**
 - Una **Partida** juega una **Prueba** en una o más **Vueltas**, y termina cuando no quedan **Pendientes** o por **Abandono**
 - Una **Partida** terminada por **Abandono** nunca fija **Marca** ni genera **Reto**
 - Una **Pista** contiene el **Elemento** correcto y tres **Distractores**, preferentemente **Vecinos**
@@ -179,7 +200,7 @@ _Evitar_: desafío, challenge
 ## Ambigüedades resueltas
 
 - "Regiones" en la idea original significa comunidades autónomas, no regiones naturales.
-- "Montañas" en la idea original son los tipos de relieve: **Cordilleras**, **Sierras** y **Picos** sobre el mapa, más **Jerarquía** y **Altura** como apoyo. La Meseta y las depresiones no son montañas y quedan para otro tipo.
+- "Montañas" en la idea original son los tipos de relieve: **Cordilleras**, **Sierras** y **Picos** sobre el mapa, más **Jerarquía** y **Altura** como apoyo. La **Meseta** y las **Depresiones** no son montañas: se juegan aparte, en **Grandes unidades**.
 - El listado de relieve son los apuntes del alumno desde "Macizo / sierra", con un pico por cordillera para darle simetría; el examen real es rellenar un mapa mudo físico con ríos.
 - El Tipo que simula ese examen se llama **Simulacro**, no "Examen": ese nombre ya estaba reservado como sinónimo a evitar de **Prueba**, para no llamar "examen" a un repaso suelto de comunidades o de picos.
 - "Tipo de prueba" mezclaba dos conceptos: el **Tipo** (qué se pregunta) y la **Prueba** (tipo más modo).

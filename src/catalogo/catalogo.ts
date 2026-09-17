@@ -12,6 +12,7 @@ import {
   etiquetaDeClaseDeRelieve,
   tocablesDeRelieve,
   type Clase,
+  type Papel,
   type TipoDeRelieve,
 } from './relieve'
 import {
@@ -50,6 +51,7 @@ export interface Elemento {
   comunidad?: string
   ciudadAutonoma?: true
   clase?: ClaseDelMapa
+  papel?: Papel
   cordillera?: string
   altura?: number
   vertiente?: string

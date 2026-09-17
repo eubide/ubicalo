@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Feature, FeatureCollection, Geometry } from 'geojson'
   import { catalogo, catalogoDelMapa, contextoDe, contornos, etiquetaDeClase, type ContextoGeografico, type Elemento } from './catalogo/catalogo'
-  import { esIdDeAltura, idDeAltura, textoDeAltura } from './catalogo/relieve'
+  import { esIdDeAltura, idDeAltura, nombreDePapel, PAPELES, textoDeAltura } from './catalogo/relieve'
   import contextoGeografico from './datos/contexto-geografico.json'
   import Mapa from './mapa/Mapa.svelte'
   import FinDePartida from './pantallas/FinDePartida.svelte'
@@ -86,9 +86,12 @@
 
   const escribeNombre = $derived(prueba?.modo === 'ubicacion-nombre')
   const esSimulacro = $derived(prueba !== null && tipoDeSimulacro(prueba.tipo))
+  const esUnidades = $derived(prueba?.tipo === 'unidades')
+  // Tipos en los que el mapa arranca mudo y solo se dibuja lo ya Acertado o Desbloqueado.
+  const conCascada = $derived(esSimulacro || esUnidades)
   // Solo lo ya visible (Acertado o Desbloqueado); el resto del mapa mudo sigue sin dibujarse.
   const contornosVisibles = $derived(
-    esSimulacro && partida
+    conCascada && partida
       ? contornosDelTipo.filter(
           (contorno) => partida!.acertados.includes(String(contorno.id)) || partida!.desbloqueados.includes(String(contorno.id)),
         )
@@ -145,6 +148,23 @@
     const preguntado = partida?.preguntado
     if (!preguntado || correccion) return null
     return preguntado.pregunta ?? (preguntado.clase && etiquetaDeClase[preguntado.clase]) ?? null
+  })
+
+  // Qué se está preguntando ahora y cuánto queda de cada papel: el alumno nunca tiene que recordar en
+  // qué punto de la cascada está.
+  const avanceDePapeles = $derived.by(() => {
+    if (!esUnidades || !partida) return []
+    const acertados = new Set(partida.acertados)
+    return PAPELES.map((papel) => {
+      const delPapel = elementosDelTipo.filter((elemento) => elemento.papel === papel)
+      return {
+        papel,
+        nombre: nombreDePapel[papel],
+        hechos: delPapel.filter((elemento) => acertados.has(elemento.id)).length,
+        total: delPapel.length,
+        activo: papel === partida!.preguntado?.papel,
+      }
+    }).filter(({ total }) => total > 0)
   })
 
   const preguntaDeAltura = $derived((simulacroActivo && esIdDeAltura(simulacroActivo)) ?? false)
@@ -319,6 +339,17 @@
           alElegirOtraPrueba={elegirOtraPrueba}
         />
       {:else}
+        {#if avanceDePapeles.length > 0}
+          <ul class="papeles" aria-label="Avance por papel respecto a la Meseta">
+            {#each avanceDePapeles as { papel, nombre, hechos, total, activo } (papel)}
+              <li class:activo class:completo={hechos === total} aria-current={activo ? 'true' : undefined}>
+                <span class="muestra" style="background: var(--{papel})" aria-hidden="true"></span>
+                {nombre}
+                <span class="cuenta">{hechos}/{total}</span>
+              </li>
+            {/each}
+          </ul>
+        {/if}
         {#if pista}
           <div
             class="pista"
@@ -382,6 +413,7 @@
     <Mapa
       contornos={contornosVisibles}
       contextoDeRelieve={contextoDelTipo}
+      rampa={esUnidades}
       porResponder={porResponderVisibles}
       parcial={parcialesVisibles}
       activo={esSimulacro ? activoEnSimulacro : null}
@@ -439,6 +471,48 @@
     align-items: baseline;
     justify-content: space-between;
     gap: 1rem;
+  }
+
+  .papeles {
+    flex-basis: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    font-size: 0.85rem;
+    color: #6b7280;
+  }
+
+  .papeles li {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.2rem 0.6rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 999px;
+  }
+
+  .papeles li.activo {
+    border-color: #1d4ed8;
+    color: #1f2933;
+    font-weight: 600;
+  }
+
+  .papeles li.completo {
+    opacity: 0.5;
+  }
+
+  .papeles .muestra {
+    width: 1rem;
+    height: 0.7rem;
+    border: 1px solid #8b8578;
+    border-radius: 0.15rem;
+  }
+
+  .papeles .cuenta {
+    font-variant-numeric: tabular-nums;
   }
 
   .pregunta {

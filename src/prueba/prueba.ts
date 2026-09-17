@@ -15,6 +15,7 @@ export const etiquetaDeTipo: Record<Tipo, string> = {
   jerarquia: 'Jerarquía',
   alturas: 'Alturas',
   'simulacro-relieve': 'Simulacro de relieve',
+  unidades: 'Grandes unidades',
   rios: 'Ríos',
   'jerarquia-rios': 'Jerarquía de ríos',
   'simulacro-rios': 'Simulacro de ríos',
@@ -22,7 +23,7 @@ export const etiquetaDeTipo: Record<Tipo, string> = {
 
 export const gruposDeTipos: { grupo: string; tipos: Tipo[] }[] = [
   { grupo: 'Político', tipos: ['comunidades', 'provincias'] },
-  { grupo: 'Relieve', tipos: ['cordilleras-y-sierras', 'picos', 'jerarquia', 'alturas', 'simulacro-relieve'] },
+  { grupo: 'Relieve', tipos: ['unidades', 'cordilleras-y-sierras', 'picos', 'jerarquia', 'alturas', 'simulacro-relieve'] },
   { grupo: 'Hidrografía', tipos: ['rios', 'jerarquia-rios', 'simulacro-rios'] },
 ]
 
@@ -33,6 +34,7 @@ export const modoFijoDeTipo: Partial<Record<Tipo, Modo>> = {
   alturas: 'ubicacion-nombre',
   'simulacro-relieve': 'ubicacion-nombre',
   'simulacro-rios': 'ubicacion-nombre',
+  unidades: 'nombre-ubicar',
 }
 
 // En Alturas se escribe una cifra, no un nombre.

@@ -84,16 +84,43 @@ function barajar<T>(lista: T[], azar: Azar): T[] {
 }
 
 // Un elemento sin desbloqueaCon (el resto de Tipos) no depende de nada: está desbloqueado desde el principio.
+function estaDesbloqueado(elemento: Elemento, acertados: Set<string>): boolean {
+  return (elemento.desbloqueaCon ?? []).every((id) => acertados.has(id))
+}
+
 function desbloqueadosDe(elementos: Elemento[], cola: Elemento[], siguienteVuelta: Elemento[], acertados: string[]): string[] {
   const acertadosSet = new Set(acertados)
   const pendientesIds = new Set([...cola, ...siguienteVuelta].map((elemento) => elemento.id))
   return elementos
     .filter((elemento) => pendientesIds.has(elemento.id))
-    .filter((elemento) => (elemento.desbloqueaCon ?? []).every((id) => acertadosSet.has(id)))
+    .filter((elemento) => estaDesbloqueado(elemento, acertadosSet))
     .map((elemento) => elemento.id)
 }
 
-function construir(partida: Omit<Partida, CamposDerivados>, ahora: number): Partida {
+type ConCola = Omit<Partida, CamposDerivados>
+
+// El Preguntado sale siempre del frente de la cola, así que en los Tipos con cascada que no deja elegir
+// hay que adelantar el primero que ya se puede responder, y traerlo de la siguiente Vuelta si en esta
+// no queda ninguno.
+function adelantarDesbloqueado(partida: ConCola): ConCola {
+  const acertados = new Set(partida.acertados)
+  if (partida.cola.length === 0 || estaDesbloqueado(partida.cola[0], acertados)) return partida
+  const enCola = partida.cola.findIndex((elemento) => estaDesbloqueado(elemento, acertados))
+  if (enCola > 0) {
+    const adelantado = partida.cola[enCola]
+    return { ...partida, cola: [adelantado, ...partida.cola.filter((_, i) => i !== enCola)] }
+  }
+  const enSiguiente = partida.siguienteVuelta.findIndex((elemento) => estaDesbloqueado(elemento, acertados))
+  if (enSiguiente === -1) return partida
+  return {
+    ...partida,
+    cola: [partida.siguienteVuelta[enSiguiente], ...partida.cola],
+    siguienteVuelta: partida.siguienteVuelta.filter((_, i) => i !== enSiguiente),
+  }
+}
+
+function construir(sinAdelantar: ConCola, ahora: number): Partida {
+  const partida = adelantarDesbloqueado(sinAdelantar)
   const { cola, siguienteVuelta, vuelta } = partida
   if (cola.length === 0 && siguienteVuelta.length > 0) {
     return construir({ ...partida, cola: siguienteVuelta, siguienteVuelta: [], vuelta: vuelta + 1 }, ahora)
@@ -230,15 +257,26 @@ export function cerrarRepaso(partida: Partida): Partida {
   return { ...reanudada, pistaDeArea: pistaDeAreaDe(partida) }
 }
 
-function pistaDeAreaDe({ prueba, elementos, cola: [preguntado] }: Partida): string[] | null {
-  const ids = preguntado.pistaDeArea
-    ? preguntado.pistaDeArea
-    : preguntado.ciudadAutonoma
-      ? elementos.filter((elemento) => elemento.ciudadAutonoma).map((elemento) => elemento.id)
-      : prueba.tipo === 'provincias'
-        ? pistaDeAreaDeProvincia(preguntado, elementos)
-        : pistaDeAreaDeVecinos(preguntado)
+function pistaDeAreaDe(partida: Partida): string[] | null {
+  const ids = idsDePistaDeArea(partida)
   return ids.length > 0 ? ids : null
+}
+
+function idsDePistaDeArea({ prueba, elementos, desbloqueados, cola: [preguntado] }: Partida): string[] {
+  if (preguntado.pistaDeArea) return preguntado.pistaDeArea
+  if (preguntado.ciudadAutonoma) return elementos.filter((elemento) => elemento.ciudadAutonoma).map((elemento) => elemento.id)
+  if (prueba.tipo === 'provincias') return pistaDeAreaDeProvincia(preguntado, elementos)
+  if (prueba.tipo === 'unidades') return pistaDeAreaDelPapel(preguntado, elementos, desbloqueados)
+  return pistaDeAreaDeVecinos(preguntado)
+}
+
+// Los Vecinos por cercanía pueden seguir bloqueados y sin dibujar, así que la pista ilumina lo que
+// comparte papel con la pregunta y ya se ve: «es una de estas».
+function pistaDeAreaDelPapel(preguntado: Elemento, elementos: Elemento[], desbloqueados: string[]): string[] {
+  const delPapel = elementos
+    .filter((elemento) => elemento.papel === preguntado.papel && desbloqueados.includes(elemento.id))
+    .map((elemento) => elemento.id)
+  return delPapel.length > 1 ? delPapel : [preguntado.id]
 }
 
 function pistaDeAreaDeProvincia(provincia: Elemento, elementos: Elemento[]): string[] {
