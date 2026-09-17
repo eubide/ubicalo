@@ -24,3 +24,7 @@ El azul es el color de lo que está en juego porque el rojo ya significa error, 
 - La Diana no siempre se toca. En Ubicación → nombre el mapa no acepta respuesta y en Jerarquía sí, así que el gesto viaja como dato aparte de la Señal.
 - Este ADR modifica la última consecuencia del 0006: en Grandes unidades la leyenda sigue siendo la rampa, y la de Señales se añade debajo con los estados presentes en pantalla.
 - Las variables `--senal-*` viven en `src/app.css`, al lado de la rampa, y las consumen el mapa y el recuadro.
+- Sobre una línea, la Señal necesita grosor además de color: a ancho de móvil un trazo de 1,6 es medio píxel y el color no llega. Lo que está en la Frontera se pinta más gordo, que es señal de estado y no de clase, así que no delata nada en Jerarquía.
+- La Tentativa pasa a dar puntería. Con el dedo ya existía como paso previo a confirmar; con ratón no había ninguno, y en una confluencia el clic se lleva el cauce más cercano sin avisar de cuál. Ahora el ratón resalta el que se llevaría antes de pulsar.
+- La barra de confirmación dice el nombre de la Tentativa en Nombre → ubicar y su Clase en Ubicación → nombre. Decía siempre el nombre, que ahí es la respuesta: en el Simulacro bastaba con tocar una línea para leer cómo se llama antes de escribirlo.
+- En los Tipos de hidrografía cada Acierto deja su Rótulo sobre el mapa. Con cuarenta y una líneas iguales, ver lo que ya está resuelto es la mitad de saber qué queda; y el mapa terminado es el producto del examen real.

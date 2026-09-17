@@ -129,7 +129,7 @@ Los Elementos Desbloqueados que el alumno todavía no ha acertado: lo que puede 
 _Evitar_: candidatos, disponibles, siguiente nivel, por responder
 
 **Tentativa**:
-El Elemento que el alumno ha marcado y que todavía no se ha juzgado: el toque pendiente de confirmar con el dedo, o la forma que se está respondiendo en el Simulacro.
+El Elemento que el alumno tiene apuntado y todavía sin juzgar: el toque pendiente de confirmar con el dedo, la forma que se está respondiendo en el Simulacro, o el cauce que se llevaría el clic del ratón. Sobre una línea es lo único que da puntería, porque el toque se resuelve por cercanía y en una confluencia hay varias bajo el dedo.
 _Evitar_: selección, elegido, activo
 
 **Prueba**:
@@ -159,6 +159,10 @@ _Evitar_: acierto tardío, recuperación
 **Fallo**:
 Respuesta incorrecta; el elemento sigue pendiente y se ve en rojo sobre el mapa mientras lo siga.
 _Evitar_: error
+
+**Rótulo**:
+El nombre de un Elemento escrito sobre el mapa. En los Tipos de hidrografía lo deja puesto cada Acierto, porque el examen de ríos se entrega como un mapa rotulado y lo que no tiene Rótulo es lo que falta. En el Repaso aparecen sobre lo fallado y se tocan para descartarlos.
+_Evitar_: etiqueta, label, leyenda
 
 **Pista**:
 Las cuatro opciones que se ofrecen en Ubicación → nombre, a petición del alumno o tras un fallo. Resolver con pista no cuenta como acierto.

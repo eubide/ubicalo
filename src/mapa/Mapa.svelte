@@ -31,10 +31,14 @@
     destello?: string | null
     pistaDeArea?: string[]
     rotulos?: Rotulo[]
+    // Los Elementos ya acertados que se quedan escritos sobre el mapa, como en el examen de papel.
+    nombres?: Rotulo[]
     alturas?: Rotulo[]
     fallados?: string[]
     alElegir: (id: string) => void
     nombreDe: (id: string) => string
+    // Lo que la barra de confirmación puede decir de una Tentativa sin resolver la pregunta.
+    textoDeTentativa?: (id: string) => string
   }
 
   let {
@@ -54,10 +58,12 @@
     destello = null,
     pistaDeArea = [],
     rotulos = [],
+    nombres = [],
     alturas = [],
     fallados = [],
     alElegir,
     nombreDe,
+    textoDeTentativa = nombreDe,
   }: Props = $props()
 
   const ancho = 960
@@ -164,6 +170,7 @@
   let lienzo = $state<SVGSVGElement | null>(null)
   let vista = $state<Vista>({ escala: 1, x: 0, y: 0 })
   let seleccionado = $state<string | null>(null)
+  let bajoElPuntero = $state<string | null>(null)
 
   const dedos = new Map<number, Punto>()
   let gesto: { distancia: number; centro: Punto; vista: Vista } | null = null
@@ -177,10 +184,11 @@
     seleccionado = null
   })
 
-  // El toque con el dedo, pendiente de confirmar, es una Tentativa como la del Simulacro.
+  // Tentativa es todo lo que el alumno tiene apuntado y sin juzgar: el toque pendiente de confirmar, la
+  // forma que responde en el Simulacro y el cauce que se llevaría el clic del ratón.
   const estado = $derived<EstadoDelMapa>({
     tocado,
-    tentativa: seleccionado ?? tentativa,
+    tentativa: seleccionado ?? tentativa ?? bajoElPuntero,
     diana,
     pistaDeArea,
     fallados,
@@ -284,6 +292,13 @@
     return trazoMasCercano(punto, trazos, radioDelDedo / vista.escala)
   }
 
+  // Con ratón no hay paso de confirmación, así que la puntería tiene que verse antes de pulsar.
+  function apuntar(evento: MouseEvent) {
+    if (tipoDePuntero === 'touch' || preguntado === null) return
+    if (diana.length > 0 && !dianaSeToca) return
+    bajoElPuntero = cauceBajoElPuntero(evento)
+  }
+
   function tocarCauce(evento: MouseEvent) {
     const id = cauceBajoElPuntero(evento)
     if (id !== null) pulsarElemento(id)
@@ -351,6 +366,8 @@
     onpointermove={alMover}
     onpointerup={alSoltar}
     onpointercancel={alSoltar}
+    onmousemove={apuntar}
+    onmouseleave={() => (bajoElPuntero = null)}
     onclick={tocarCauce}
   >
     <g transform="translate({vista.x} {vista.y}) scale({vista.escala})">
@@ -416,6 +433,15 @@
         {@const [x, y] = centroDelRotulo(contorno)}
         {@const brazo = radioAspa / vista.escala}
         <path class="aspa" d="M{x - brazo},{y - brazo}L{x + brazo},{y + brazo}M{x + brazo},{y - brazo}L{x - brazo},{y + brazo}" />
+      {/each}
+      {#each nombres as nombre (nombre.id)}
+        {@const contorno = contornos.find((candidato) => String(candidato.id) === nombre.id)}
+        {#if contorno}
+          {@const [x, y] = centroDelRotulo(contorno)}
+          <text class="rotulo" {x} {y} text-anchor="middle" font-size={(tamañoRotulo * 0.85) / vista.escala}>
+            {nombre.texto}
+          </text>
+        {/if}
       {/each}
       {#each alturas as altura (altura.id)}
         {@const contorno = contornos.find((candidato) => String(candidato.id) === altura.id)}
@@ -490,7 +516,7 @@
   {/if}
   {#if seleccionado !== null}
     <div class="seleccion">
-      <span>{nombreDe(seleccionado)}</span>
+      <span>{textoDeTentativa(seleccionado)}</span>
       <button type="button" onclick={confirmar}>Confirmar</button>
     </div>
   {/if}
@@ -665,6 +691,7 @@
 
   .elementos path.funda.frontera {
     stroke: var(--senal-frontera-borde);
+    stroke-width: 6;
   }
 
   .elementos path.funda.diana,
@@ -695,6 +722,7 @@
 
   .elementos path.cauce.frontera {
     stroke: var(--senal-frontera-borde);
+    stroke-width: 2.4;
   }
 
   .elementos path.cauce.diana,

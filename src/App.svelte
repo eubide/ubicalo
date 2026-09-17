@@ -2,6 +2,7 @@
   import type { Feature, FeatureCollection, Geometry } from 'geojson'
   import { catalogo, catalogoDelMapa, contextoDe, contornos, etiquetaDeClase, type ContextoGeografico, type Elemento } from './catalogo/catalogo'
   import { esIdDeAltura, idDeAltura, nombreDePapel, PAPELES, textoDeAltura } from './catalogo/relieve'
+  import { esDeHidrografia } from './catalogo/hidrografia'
   import contextoGeografico from './datos/contexto-geografico.json'
   import Mapa from './mapa/Mapa.svelte'
   import FinDePartida from './pantallas/FinDePartida.svelte'
@@ -119,6 +120,14 @@
   const fronteraVisible = $derived(
     esSimulacro && partida
       ? contornosVisibles.map((contorno) => String(contorno.id)).filter((id) => !partida!.acertados.includes(id))
+      : [],
+  )
+  // El examen de ríos se entrega como un mapa rotulado, así que la partida lo va escribiendo: lo que ya
+  // tiene nombre encima es lo que no hay que volver a tocar.
+  const esHidrografia = $derived(prueba !== null && esDeHidrografia(prueba.tipo))
+  const nombres = $derived(
+    esHidrografia && partida
+      ? partida.acertados.map((id) => ({ id, texto: nombreDe(id) })).filter(({ texto }) => texto !== '')
       : [],
   )
   const respuesta = $derived(partida?.ultimaRespuesta)
@@ -263,6 +272,12 @@
     return elementosDelMapa.find((elemento) => elemento.id === id)?.nombreMostrado ?? ''
   }
 
+  // Cuando el nombre es la respuesta, la barra de confirmación dice la Clase: informa sin resolver.
+  function textoDeTentativa(id: string): string {
+    if (!escribeNombre) return nombreDe(id)
+    const clase = elementosDelMapa.find((elemento) => elemento.id === id)?.clase
+    return (clase && etiquetaDeClase[clase]) ?? 'Responder esto'
+  }
 
   function elegir(id: string) {
     if (!partida || partida.terminada) return
@@ -448,10 +463,12 @@
       dianaSeToca={!escribeNombre}
       pistaDeArea={partida.pistaDeArea ?? []}
       {rotulos}
+      {nombres}
       {alturas}
       fallados={falladosVisibles}
       alElegir={esSimulacro ? elegirEnSimulacro : elegir}
       {nombreDe}
+      {textoDeTentativa}
     />
 
     {#if correccion}
