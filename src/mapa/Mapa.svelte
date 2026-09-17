@@ -345,23 +345,6 @@
       <!-- El MVP se juega con ratón o dedo; jugar con teclado no está en la spec. -->
       <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
       <g class="elementos" class:relieve={contextoDeRelieve !== null}>
-        {#each cauces as cauce (cauce.id)}
-          {@const id = String(cauce.id)}
-          <path
-            class="cauce"
-            d={trazado(cauce)}
-            class:acertado={acertados.includes(id)}
-            class:fallado={fallados.includes(id)}
-            class:pistaDeArea={pistaDeArea.includes(id)}
-            class:seleccionado={seleccionado === id}
-            class:iluminado={iluminados.includes(id)}
-            class:destacado={destacados.includes(id)}
-            class:porResponder={porResponder.includes(id)}
-            class:parcial={parcial.includes(id)}
-            class:activo={activo === id}
-            class:tocado={tocado === id}
-          />
-        {/each}
         {#each [...manchas, ...puntos.map(({ contorno }) => contorno)] as contorno (contorno.id)}
           {@const id = String(contorno.id)}
           <path
@@ -379,6 +362,24 @@
             class:activo={activo === id}
             class:tocado={tocado === id}
             onclick={(evento) => pulsarMancha(evento, id)}
+          />
+        {/each}
+        <!-- Un cauce se dibuja sobre las manchas: es el blanco fino y una vertiente lo taparía entero. -->
+        {#each cauces as cauce (cauce.id)}
+          {@const id = String(cauce.id)}
+          <path
+            class="cauce"
+            d={trazado(cauce)}
+            class:acertado={acertados.includes(id)}
+            class:fallado={fallados.includes(id)}
+            class:pistaDeArea={pistaDeArea.includes(id)}
+            class:seleccionado={seleccionado === id}
+            class:iluminado={iluminados.includes(id)}
+            class:destacado={destacados.includes(id)}
+            class:porResponder={porResponder.includes(id)}
+            class:parcial={parcial.includes(id)}
+            class:activo={activo === id}
+            class:tocado={tocado === id}
           />
         {/each}
         <!-- Las dianas van encima de todo para que una mancha no robe el toque a un punto. -->
