@@ -12,6 +12,7 @@ import {
   tocablesDeRelieve,
   type Clase,
   type ContextoDeRelieve,
+  type Papel,
   type TipoDeRelieve,
 } from './relieve'
 
@@ -27,6 +28,7 @@ export interface Elemento {
   comunidad?: string
   ciudadAutonoma?: true
   clase?: Clase
+  papel?: Papel
   cordillera?: string
   altura?: number
   // Id que hay que tocar cuando no es el propio elemento (Jerarquía).

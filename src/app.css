@@ -2,6 +2,15 @@
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   color: #1f2933;
   background: #f7f7f5;
+
+  /* Rampa de altitud de los mapas físicos, del verde de las depresiones al marrón de las cordilleras
+     exteriores. La comparten el mapa y la barra de contexto. */
+  --depresion: #a9c97f;
+  --meseta: #f1e3b2;
+  --interior: #dcbd78;
+  --reborde: #c2934f;
+  --exterior: #94663c;
+  --volcanico: #a95440;
 }
 
 body {

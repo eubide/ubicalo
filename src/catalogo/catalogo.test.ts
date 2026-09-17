@@ -467,3 +467,40 @@ describe('Catálogo de simulacro', () => {
     expect(contornos('simulacro')).toHaveLength(40)
   })
 })
+
+describe('Catálogo de grandes unidades', () => {
+  const porId = new Map(catalogo('unidades').map((elemento) => [elemento.id, elemento]))
+
+  it('suma a las once cordilleras la Meseta y las dos depresiones', () => {
+    expect(porId.size).toBe(14)
+    expect([...porId.keys()]).toEqual(
+      expect.arrayContaining(['meseta', 'depresion-del-ebro', 'depresion-del-guadalquivir']),
+    )
+  })
+
+  it('da a cada unidad el papel que la capa del IGN le asigna respecto a la Meseta', () => {
+    expect(porId.get('meseta')?.papel).toBe('meseta')
+    expect(porId.get('sistema-central')?.papel).toBe('interior')
+    expect(porId.get('sierra-morena')?.papel).toBe('reborde')
+    expect(porId.get('depresion-del-ebro')?.papel).toBe('depresion')
+    expect(porId.get('pirineos')?.papel).toBe('exterior')
+    expect(porId.get('montanas-de-canarias')?.papel).toBe('volcanico')
+  })
+
+  it('abre la partida con la Meseta y cierra cada rama por la cordillera exterior', () => {
+    expect(porId.get('meseta')?.desbloqueaCon).toEqual([])
+    expect(porId.get('sistema-central')?.desbloqueaCon).toEqual(['meseta'])
+    expect(porId.get('sistema-iberico')?.desbloqueaCon).toEqual(['meseta'])
+    expect(porId.get('depresion-del-ebro')?.desbloqueaCon).toEqual(['sistema-iberico'])
+    expect(porId.get('pirineos')?.desbloqueaCon).toEqual(['depresion-del-ebro'])
+  })
+
+  it('deja Canarias para el final, porque no se define respecto a la Meseta', () => {
+    expect(porId.get('montanas-de-canarias')?.desbloqueaCon).toEqual([
+      'pirineos',
+      'montes-vascos',
+      'cordillera-costero-catalana',
+      'cordilleras-beticas',
+    ])
+  })
+})

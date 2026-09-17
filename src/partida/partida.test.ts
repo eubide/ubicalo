@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import type { Elemento } from '../catalogo/catalogo'
+import { catalogo, type Elemento } from '../catalogo/catalogo'
+import type { Papel } from '../catalogo/relieve'
 import {
   abandonar,
   cerrarCorreccion,
@@ -1109,5 +1110,92 @@ describe('Simulacro: desbloqueados y elegir pregunta', () => {
     partida = responder(partida, 'a')
 
     expect(partida.desbloqueados).toContain('c')
+  })
+})
+
+describe('Grandes unidades: la cascada decide el Preguntado sin que el alumno elija', () => {
+  const unidad = (id: string, desbloqueaCon: string[]): Elemento => ({
+    id,
+    nombre: id,
+    nombreMostrado: id,
+    alias: [],
+    vecinos: [],
+    desbloqueaCon,
+  })
+  // La cola sin barajar deja delante lo que todavía no se puede responder.
+  const unidades = [unidad('ebro', ['iberico']), unidad('iberico', ['meseta']), unidad('meseta', [])]
+  const grandesUnidades: Prueba = { tipo: 'unidades', modo: 'nombre-ubicar' }
+  const azarSinBarajar = () => 0.99
+
+  it('pregunta lo único desbloqueado aunque no sea lo primero de la cola', () => {
+    const partida = iniciarPartida(grandesUnidades, unidades, azarSinBarajar, reloj)
+
+    expect(partida.preguntado?.id).toBe('meseta')
+  })
+
+  it('cada acierto abre el siguiente eslabón de la rama', () => {
+    let partida = iniciarPartida(grandesUnidades, unidades, azarSinBarajar, reloj)
+
+    partida = responder(partida, 'meseta')
+    expect(partida.preguntado?.id).toBe('iberico')
+
+    partida = responder(partida, 'iberico')
+    expect(partida.preguntado?.id).toBe('ebro')
+  })
+
+  it('la Pista de área ilumina las unidades del mismo papel que ya se ven, no los vecinos bloqueados', () => {
+    const conPapel = (id: string, papel: Papel, desbloqueaCon: string[]): Elemento => ({
+      ...unidad(id, desbloqueaCon),
+      papel,
+    })
+    const elementos = [
+      conPapel('meseta', 'meseta', []),
+      conPapel('iberico', 'reborde', ['meseta']),
+      conPapel('morena', 'reborde', ['meseta']),
+      conPapel('ebro', 'depresion', ['iberico']),
+    ]
+    let partida = iniciarPartida(grandesUnidades, elementos, azarSinBarajar, reloj)
+    partida = responder(partida, 'meseta')
+
+    // Tres fallos seguidos abren el Repaso, y cerrarlo deja puesta la Pista de área.
+    for (const fallo of ['ebro', 'ebro', 'ebro']) {
+      partida = responder(partida, fallo)
+      partida = cerrarCorreccion(partida)
+    }
+    partida = cerrarRepaso(partida)
+
+    expect(partida.preguntado?.papel).toBe('reborde')
+    expect([...(partida.pistaDeArea ?? [])].sort()).toEqual(['iberico', 'morena'])
+  })
+
+  it('fallar la raíz la vuelve a preguntar en la misma Vuelta en vez de bloquear la partida', () => {
+    let partida = iniciarPartida(grandesUnidades, unidades, azarSinBarajar, reloj)
+
+    partida = responder(partida, 'ebro')
+
+    expect(partida.preguntado?.id).toBe('meseta')
+    expect(partida.vuelta).toBe(1)
+  })
+})
+
+describe('Grandes unidades: partida completa sobre el catálogo real', () => {
+  it('recorre las catorce unidades sin quedarse nunca sin nada que preguntar', () => {
+    const unidades = catalogo('unidades')
+    let partida = iniciarPartida({ tipo: 'unidades', modo: 'nombre-ubicar' }, unidades, Math.random, reloj)
+    const orden: string[] = []
+
+    while (!partida.terminada) {
+      const preguntado = partida.preguntado!
+      expect(partida.desbloqueados).toContain(preguntado.id)
+      orden.push(preguntado.id)
+      partida = responder(partida, preguntado.id)
+    }
+
+    expect(orden).toHaveLength(unidades.length)
+    expect(orden[0]).toBe('meseta')
+    expect(orden.indexOf('sistema-iberico')).toBeLessThan(orden.indexOf('depresion-del-ebro'))
+    expect(orden.indexOf('depresion-del-ebro')).toBeLessThan(orden.indexOf('pirineos'))
+    expect(orden.at(-1)).toBe('montanas-de-canarias')
+    expect(partida.aciertosALaPrimera).toBe(unidades.length)
   })
 })

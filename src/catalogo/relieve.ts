@@ -3,22 +3,49 @@ import type { Feature, FeatureCollection, Geometry } from 'geojson'
 import cordillerasGeo from '../datos/cordilleras.json'
 import sierrasGeo from '../datos/sierras.json'
 import picosGeo from '../datos/picos.json'
+import unidadesGeo from '../datos/unidades.json'
 import riosGeo from '../datos/rios.json'
 import type { Elemento } from './catalogo'
 
-export type TipoDeRelieve = 'cordilleras-y-sierras' | 'picos' | 'jerarquia' | 'alturas' | 'simulacro'
+export type TipoDeRelieve = 'cordilleras-y-sierras' | 'picos' | 'jerarquia' | 'alturas' | 'simulacro' | 'unidades'
 
-export type Clase = 'cordillera' | 'sierra' | 'pico'
+export type Clase = 'cordillera' | 'sierra' | 'pico' | 'meseta' | 'depresion'
+
+// El lugar que ocupa cada unidad respecto a la Meseta, tal como lo clasifica la capa del IGN.
+export type Papel = 'meseta' | 'interior' | 'reborde' | 'depresion' | 'exterior' | 'volcanico'
 
 export const etiquetaDeClase: Record<Clase, string> = {
   cordillera: 'Cordillera o macizo',
   sierra: 'Sierra',
   pico: 'Pico',
+  meseta: 'Meseta',
+  depresion: 'Depresión',
+}
+
+export const PAPELES: Papel[] = ['meseta', 'interior', 'reborde', 'depresion', 'exterior', 'volcanico']
+
+export const etiquetaDePapel: Record<Papel, string> = {
+  meseta: 'El núcleo de la Península',
+  interior: 'Cordillera interior de la Meseta',
+  reborde: 'Reborde que envuelve la Meseta',
+  depresion: 'Depresión entre el reborde y la cordillera exterior',
+  exterior: 'Cordillera exterior, lejos de la Meseta',
+  volcanico: 'Relieve volcánico',
+}
+
+export const nombreDePapel: Record<Papel, string> = {
+  meseta: 'Meseta',
+  interior: 'Interiores',
+  reborde: 'Rebordes',
+  depresion: 'Depresiones',
+  exterior: 'Exteriores',
+  volcanico: 'Volcánico',
 }
 
 export interface PropiedadesDeRelieve {
   nombre: string
   clase: Clase
+  papel?: Papel
   cordillera?: string
   altura?: number
 }
@@ -73,10 +100,14 @@ const VECINOS_POR_CERCANIA = 3
 // Los apuntes solo examinan estas cuatro alturas, en este orden.
 const ALTURAS_EXAMINADAS = ['moncayo', 'aneto', 'teide', 'mulhacen']
 
+const unidadesMayores = (unidadesGeo as FeatureCollection).features
+
 const contornosPorClase: Record<Clase, Feature<Geometry>[]> = {
   cordillera: (cordillerasGeo as FeatureCollection).features,
   sierra: (sierrasGeo as FeatureCollection).features,
   pico: (picosGeo as FeatureCollection).features,
+  meseta: unidadesMayores.filter((contorno) => propiedadesDe(contorno).clase === 'meseta'),
+  depresion: unidadesMayores.filter((contorno) => propiedadesDe(contorno).clase === 'depresion'),
 }
 
 const rios = (riosGeo as FeatureCollection).features
@@ -88,6 +119,8 @@ const CLASES_DEL_MAPA: Record<TipoDeRelieve, Clase[]> = {
   jerarquia: ['cordillera', 'pico'],
   alturas: ['pico'],
   simulacro: ['cordillera', 'sierra', 'pico'],
+  // La Meseta primero: es la mancha mayor y las demás se dibujan encima.
+  unidades: ['meseta', 'depresion', 'cordillera'],
 }
 
 export function esDeRelieve(tipo: string): tipo is TipoDeRelieve {
@@ -119,7 +152,7 @@ function elementosDe(contornos: Feature<Geometry>[]): Elemento[] {
   const vecinosPorIndice = vecinosPorCercania(contornos)
   return contornos.map((contorno, indice) => {
     const id = String(contorno.id)
-    const { nombre, clase, cordillera, altura } = propiedadesDe(contorno)
+    const { nombre, clase, papel, cordillera, altura } = propiedadesDe(contorno)
     const examinada = altura !== undefined && ALTURAS_EXAMINADAS.includes(id)
     return {
       id,
@@ -128,6 +161,7 @@ function elementosDe(contornos: Feature<Geometry>[]): Elemento[] {
       alias: ALIAS[id] ?? [],
       vecinos: vecinosPorIndice[indice],
       clase,
+      ...(papel && { papel }),
       ...(cordillera && { cordillera }),
       ...(examinada && { altura }),
     }
@@ -202,7 +236,35 @@ function catalogoDeSimulacro(): Elemento[] {
   return [...cordilleras, ...sierras, ...picos, ...alturas]
 }
 
+const EXTERIORES = ['pirineos', 'montes-vascos', 'cordillera-costero-catalana', 'cordilleras-beticas']
+
+// Cada depresión queda encajada entre un reborde de la Meseta y una cordillera exterior, así que la rama
+// se pregunta en ese orden; lo que no está aquí cuelga directamente de la Meseta.
+const DESBLOQUEA_CON: Record<string, string[]> = {
+  'depresion-del-ebro': ['sistema-iberico'],
+  'depresion-del-guadalquivir': ['sierra-morena'],
+  pirineos: ['depresion-del-ebro'],
+  'montes-vascos': ['depresion-del-ebro'],
+  'cordillera-costero-catalana': ['depresion-del-ebro'],
+  'cordilleras-beticas': ['depresion-del-guadalquivir'],
+  // Canarias no se define respecto a la Meseta, así que cierra la partida con la Península ya entera.
+  'montanas-de-canarias': EXTERIORES,
+}
+
+function catalogoDeUnidades(): Elemento[] {
+  return elementosDeClases(CLASES_DEL_MAPA.unidades).map((elemento) => {
+    const { papel } = elemento
+    if (!papel) throw new Error(`${elemento.id} sin papel`)
+    return {
+      ...elemento,
+      pregunta: etiquetaDePapel[papel],
+      desbloqueaCon: DESBLOQUEA_CON[elemento.id] ?? (papel === 'meseta' ? [] : ['meseta']),
+    }
+  })
+}
+
 export function catalogoDeRelieve(tipo: TipoDeRelieve): Elemento[] {
+  if (tipo === 'unidades') return catalogoDeUnidades()
   if (tipo === 'jerarquia') return catalogoDeJerarquia()
   if (tipo === 'alturas') return catalogoDeAlturas()
   if (tipo === 'simulacro') return catalogoDeSimulacro()
