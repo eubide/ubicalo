@@ -9,14 +9,38 @@ import {
   contextoDeRelieve,
   contornosDeRelieve,
   esDeRelieve,
+  etiquetaDeClaseDeRelieve,
   tocablesDeRelieve,
   type Clase,
-  type ContextoDeRelieve,
   type TipoDeRelieve,
 } from './relieve'
+import {
+  catalogoDeHidrografia,
+  contextoDeHidrografia,
+  contornosDeHidrografia,
+  esDeHidrografia,
+  etiquetaDeClaseDeRio,
+  tocablesDeHidrografia,
+  type ClaseDeRio,
+  type TipoDeHidrografia,
+} from './hidrografia'
 
 type TipoPolitico = 'comunidades' | 'provincias'
-export type Tipo = TipoPolitico | TipoDeRelieve
+export type Tipo = TipoPolitico | TipoDeRelieve | TipoDeHidrografia
+
+export type ClaseDelMapa = Clase | ClaseDeRio
+
+export const etiquetaDeClase: Record<ClaseDelMapa, string> = {
+  ...etiquetaDeClaseDeRelieve,
+  ...etiquetaDeClaseDeRio,
+}
+
+// Lo que se ve en el mapa de un Tipo y en ese Tipo nunca se pregunta; depende del Tipo.
+export interface ContextoGeografico {
+  contorno: Feature<Geometry>
+  tenues: Feature<Geometry>[]
+  rios: Feature<Geometry>[]
+}
 
 export interface Elemento {
   id: string
@@ -26,9 +50,19 @@ export interface Elemento {
   vecinos: string[]
   comunidad?: string
   ciudadAutonoma?: true
-  clase?: Clase
+  clase?: ClaseDelMapa
   cordillera?: string
   altura?: number
+  // Vertiente de un Río principal o propio; los Afluentes la heredan de su cuenca.
+  vertiente?: string
+  // Río en el que desemboca de verdad un Afluente, que puede ser otro Afluente.
+  desembocaEn?: string
+  // Río principal del final de esa cadena: lo que se pregunta en Jerarquía de ríos.
+  cuenca?: string
+  // Frase que distingue este elemento del que se le parece, para la Corrección.
+  desambiguacion?: string
+  // Marca el elemento que no viene de los apuntes del alumno.
+  fueraDeApuntes?: true
   // Id que hay que tocar cuando no es el propio elemento (Jerarquía).
   respuesta?: string
   // Enunciado que acompaña al nombre; sin él, se muestra la clase.
@@ -131,11 +165,14 @@ function comunidadQueContiene(provincia: Feature<Geometry>, comunidades: Feature
 
 // Elementos que se tocan en el mapa; en Jerarquía no coinciden con los preguntados.
 export function catalogoDelMapa(tipo: Tipo): Elemento[] {
-  return esDeRelieve(tipo) ? tocablesDeRelieve(tipo) : catalogo(tipo)
+  if (esDeRelieve(tipo)) return tocablesDeRelieve(tipo)
+  if (esDeHidrografia(tipo)) return tocablesDeHidrografia(tipo)
+  return catalogo(tipo)
 }
 
 export function catalogo(tipo: Tipo): Elemento[] {
   if (esDeRelieve(tipo)) return catalogoDeRelieve(tipo)
+  if (esDeHidrografia(tipo)) return catalogoDeHidrografia(tipo)
   const { geometries } = topologias[tipo].geometrias
   const vecinosPorIndice = neighbors(geometries)
   const provincias = tipo === 'provincias' ? contornos('provincias') : []
@@ -156,6 +193,7 @@ const contornosPorTipo: Partial<Record<TipoPolitico, Feature<Geometry>[]>> = {}
 
 export function contornos(tipo: Tipo): Feature<Geometry>[] {
   if (esDeRelieve(tipo)) return contornosDeRelieve(tipo)
+  if (esDeHidrografia(tipo)) return contornosDeHidrografia(tipo)
   const { topologia, geometrias } = topologias[tipo]
   return (contornosPorTipo[tipo] ??= (feature(topologia, geometrias) as FeatureCollection).features)
 }
@@ -163,11 +201,11 @@ export function contornos(tipo: Tipo): Feature<Geometry>[] {
 let contornoDeEspana: Feature<Geometry> | undefined
 
 // El relieve se juega sobre un mapa físico: contorno de España, ríos y, cuando no se tocan, las
-// cordilleras en tenue. Nada de eso se pregunta.
-export function contextoDe(tipo: Tipo): ContextoDeRelieve | null {
-  if (!esDeRelieve(tipo)) return null
+// cordilleras en tenue. Los ríos, sobre el contorno pelado. Lo político, sin nada de esto.
+export function contextoDe(tipo: Tipo): ContextoGeografico | null {
+  if (!esDeRelieve(tipo) && !esDeHidrografia(tipo)) return null
   const { topologia, geometrias } = topologias.comunidades
   const poligonos = geometrias.geometries as MultiPolygon[]
   contornoDeEspana ??= { type: 'Feature', properties: {}, geometry: merge(topologia, poligonos) }
-  return contextoDeRelieve(tipo, contornoDeEspana)
+  return esDeRelieve(tipo) ? contextoDeRelieve(tipo, contornoDeEspana) : contextoDeHidrografia(contornoDeEspana)
 }

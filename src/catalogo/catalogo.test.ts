@@ -467,3 +467,108 @@ describe('Catálogo de simulacro', () => {
     expect(contornos('simulacro')).toHaveLength(40)
   })
 })
+
+describe('Catálogo de ríos', () => {
+  it('entrega los 41 ríos de los apuntes: 6 principales, 11 propios y 24 afluentes', () => {
+    const rios = catalogo('rios')
+    const deClase = (clase: string) => rios.filter((rio) => rio.clase === clase)
+
+    expect(rios).toHaveLength(41)
+    expect(deClase('rio-principal').map((rio) => rio.nombre)).toEqual([
+      'Ebro',
+      'Duero',
+      'Tajo',
+      'Guadiana',
+      'Guadalquivir',
+      'Miño',
+    ])
+    expect(deClase('rio-propio')).toHaveLength(11)
+    expect(deClase('afluente')).toHaveLength(24)
+  })
+
+  it('cada río del nivel superior conoce su vertiente y ningún afluente la lleva', () => {
+    const rios = catalogo('rios')
+    const vertienteDe = (id: string) => rios.find((rio) => rio.id === id)?.vertiente
+
+    expect(vertienteDe('ebro')).toBe('vertiente-mediterranea')
+    expect(vertienteDe('mino')).toBe('vertiente-atlantica')
+    expect(vertienteDe('nervion')).toBe('vertiente-cantabrica')
+    expect(rios.filter((rio) => rio.clase === 'afluente').every((rio) => rio.vertiente === undefined)).toBe(true)
+  })
+
+  it('cada afluente conoce su río principal, aunque desemboque en otro afluente', () => {
+    const rios = catalogo('rios')
+    const rio = (id: string) => rios.find((candidato) => candidato.id === id)!
+
+    expect(rio('segre').cuenca).toBe('ebro')
+    expect(rio('cinca')).toMatchObject({ desembocaEn: 'segre', cuenca: 'ebro' })
+    expect(rio('jiloca')).toMatchObject({ desembocaEn: 'jalon', cuenca: 'ebro' })
+    expect(rio('zancara')).toMatchObject({ desembocaEn: 'ciguela', cuenca: 'guadiana' })
+    expect(rio('guadiana-menor').cuenca).toBe('guadalquivir')
+  })
+
+  it('las seis cuencas reparten los 24 afluentes', () => {
+    const afluentes = catalogo('rios').filter((rio) => rio.clase === 'afluente')
+    const porCuenca = (cuenca: string) => afluentes.filter((rio) => rio.cuenca === cuenca).length
+
+    expect([porCuenca('ebro'), porCuenca('duero'), porCuenca('tajo')]).toEqual([8, 4, 4])
+    expect([porCuenca('guadiana'), porCuenca('guadalquivir'), porCuenca('mino')]).toEqual([4, 3, 1])
+  })
+
+  it('los vecinos de un afluente son sus hermanos de cuenca', () => {
+    const rios = catalogo('rios')
+    const vecinosDe = (id: string) => rios.find((rio) => rio.id === id)!.vecinos
+
+    expect(vecinosDe('tormes').sort()).toEqual(['adaja', 'esla', 'pisuerga'])
+    expect(vecinosDe('sil')).toEqual([])
+    expect(vecinosDe('jiloca')).toContain('segre')
+    expect(vecinosDe('jiloca')).not.toContain('tormes')
+  })
+
+  it('los vecinos de un río del nivel superior son los demás de su vertiente', () => {
+    const rios = catalogo('rios')
+    const vecinosDe = (id: string) => rios.find((rio) => rio.id === id)!.vecinos
+
+    expect(vecinosDe('nalon').sort()).toEqual(['bidasoa', 'nervion'])
+    expect(vecinosDe('ebro')).toContain('jucar')
+    expect(vecinosDe('ebro')).not.toContain('segre')
+    expect(vecinosDe('ebro')).not.toContain('duero')
+  })
+
+  it('acepta como alias las otras formas del nombre', () => {
+    const rios = catalogo('rios')
+    const aliasDe = (id: string) => rios.find((rio) => rio.id === id)!.alias
+
+    expect(aliasDe('jucar')).toEqual(['Xúquer'])
+    expect(aliasDe('ciguela')).toEqual(['Gigüela'])
+    expect(aliasDe('ebro')).toEqual([])
+  })
+
+  it('solo los tres pares que se confunden llevan frase de desambiguación', () => {
+    const conDesambiguacion = catalogo('rios').filter((rio) => rio.desambiguacion !== undefined)
+
+    expect(conDesambiguacion.map((rio) => rio.id).sort()).toEqual([
+      'alagon',
+      'aragon',
+      'ciguela',
+      'guadiana',
+      'guadiana-menor',
+      'zancara',
+    ])
+    expect(conDesambiguacion.find((rio) => rio.id === 'aragon')?.desambiguacion).toContain('Alagón')
+  })
+
+  it('el Tiétar está marcado como añadido fuera de los apuntes, y es el único', () => {
+    const fuera = catalogo('rios').filter((rio) => rio.fueraDeApuntes)
+
+    expect(fuera.map((rio) => rio.id)).toEqual(['tietar'])
+  })
+
+  it('los ríos se tocan como líneas y no llevan relieve de fondo', () => {
+    expect(contornos('rios')).toHaveLength(41)
+    expect(contornos('rios').every((contorno) => contorno.geometry.type === 'LineString')).toBe(true)
+    expect(contextoDe('rios')?.tenues).toEqual([])
+    expect(contextoDe('rios')?.rios).toEqual([])
+    expect(contextoDe('rios')?.contorno.geometry.type).toBe('MultiPolygon')
+  })
+})

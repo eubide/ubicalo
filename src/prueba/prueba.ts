@@ -14,12 +14,14 @@ export const etiquetaDeTipo: Record<Tipo, string> = {
   picos: 'Picos',
   jerarquia: 'Jerarquía',
   alturas: 'Alturas',
-  simulacro: 'Simulacro',
+  simulacro: 'Simulacro de relieve',
+  rios: 'Ríos',
 }
 
 export const gruposDeTipos: { grupo: string; tipos: Tipo[] }[] = [
   { grupo: 'Político', tipos: ['comunidades', 'provincias'] },
   { grupo: 'Relieve', tipos: ['cordilleras-y-sierras', 'picos', 'jerarquia', 'alturas', 'simulacro'] },
+  { grupo: 'Hidrografía', tipos: ['rios'] },
 ]
 
 // Los Tipos de apoyo solo tienen sentido en una dirección: el Modo no se elige.

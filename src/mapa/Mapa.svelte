@@ -1,8 +1,9 @@
 <script lang="ts">
-  import type { Feature, FeatureCollection, Geometry, Polygon } from 'geojson'
+  import type { Feature, FeatureCollection, Geometry, LineString, Polygon } from 'geojson'
   import { geoCentroid, geoPath } from 'd3-geo'
   import { geoConicConformalSpain } from 'd3-composite-projections'
-  import { propiedadesDe, type Clase, type ContextoDeRelieve } from '../catalogo/relieve'
+  import type { ClaseDelMapa, ContextoGeografico } from '../catalogo/catalogo'
+  import { trazoMasCercano, type Trazo } from './toque'
   import RecuadroCeutaMelilla, { esCeutaOMelilla } from './RecuadroCeutaMelilla.svelte'
 
   export interface Rotulo {
@@ -12,7 +13,7 @@
 
   interface Props {
     contornos: Feature<Geometry>[]
-    contextoDeRelieve?: ContextoDeRelieve | null
+    contextoDeRelieve?: ContextoGeografico | null
     contexto: FeatureCollection
     acertados: string[]
     tocado?: string | null
@@ -87,19 +88,34 @@
       .map((contorno) => ({ contorno, centro: geoCentroid(contorno) })),
   )
   const conDiana = $derived([...ceutaYMelilla, ...puntos])
-  const manchas = $derived(contornos.filter((contorno) => contorno.geometry.type !== 'Point'))
+  const cauces = $derived(contornos.filter((contorno) => contorno.geometry.type === 'LineString'))
+  const manchas = $derived(
+    contornos.filter((contorno) => contorno.geometry.type !== 'Point' && contorno.geometry.type !== 'LineString'),
+  )
 
-  function claseDe(contorno: Feature<Geometry>): Clase {
-    return contorno.geometry.type === 'Point' ? propiedadesDe(contorno).clase : 'cordillera'
+  function claseDe(contorno: Feature<Geometry>): ClaseDelMapa {
+    return (contorno.properties as { clase?: ClaseDelMapa })?.clase ?? 'cordillera'
   }
 
   // Solo las clases presentes, para que la leyenda no anuncie lo que el mapa no muestra.
   const clasesEnElMapa = $derived(
-    (['cordillera', 'sierra', 'pico'] as Clase[]).filter(
+    (['cordillera', 'sierra', 'pico'] as ClaseDelMapa[]).filter(
       (clase) =>
         contornos.some((contorno) => claseDe(contorno) === clase) ||
         (clase === 'cordillera' && (contextoDeRelieve?.tenues.length ?? 0) > 0),
     ),
+  )
+
+  const radioDelDedo = 14
+
+  const trazos = $derived<Trazo[]>(
+    cauces.map((cauce) => ({
+      id: String(cauce.id),
+      puntos: (cauce.geometry as LineString).coordinates.flatMap((coordenadas) => {
+        const punto = proyeccion(coordenadas as [number, number])
+        return punto ? [{ x: punto[0], y: punto[1] }] : []
+      }),
+    })),
   )
 
   // Sierra: círculo; pico: triángulo, como en los mapas físicos. Las manchas ya se distinguen solas.
@@ -211,6 +227,20 @@
     }
   }
 
+  // Una línea de dos píxeles no se puede pulsar, y en cada confluencia hay varias bajo el dedo: el
+  // toque lo resuelve el mapa entero, quedándose con el cauce que pasa más cerca del punto exacto.
+  function tocarCauce(evento: MouseEvent) {
+    if (trazos.length === 0) return
+    const caja = (evento.currentTarget as SVGSVGElement).getBoundingClientRect()
+    const factor = ancho / caja.width
+    const punto = {
+      x: ((evento.clientX - caja.left) * factor - vista.x) / vista.escala,
+      y: ((evento.clientY - caja.top) * factor - vista.y) / vista.escala,
+    }
+    const id = trazoMasCercano(punto, trazos, radioDelDedo / vista.escala)
+    if (id !== null) pulsarElemento(id)
+  }
+
   function centroDelRotulo(contorno: Feature<Geometry>): [number, number] {
     const { geometry } = contorno
     if (geometry.type !== 'MultiPolygon') return trazado.centroid(contorno)
@@ -257,7 +287,7 @@
 </script>
 
 <figure class="mapa" bind:clientWidth={anchoEnPantalla}>
-  <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+  <!-- svelte-ignore a11y_no_noninteractive_element_interactions, a11y_click_events_have_key_events -->
   <svg
     viewBox="0 0 {ancho} {alto}"
     role="img"
@@ -266,6 +296,7 @@
     onpointermove={alMover}
     onpointerup={alSoltar}
     onpointercancel={alSoltar}
+    onclick={tocarCauce}
   >
     <g transform="translate({vista.x} {vista.y}) scale({vista.escala})">
       <g class="contexto">
@@ -285,6 +316,23 @@
       <!-- El MVP se juega con ratón o dedo; jugar con teclado no está en la spec. -->
       <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
       <g class="elementos" class:relieve={contextoDeRelieve !== null}>
+        {#each cauces as cauce (cauce.id)}
+          {@const id = String(cauce.id)}
+          <path
+            class="cauce"
+            d={trazado(cauce)}
+            class:acertado={acertados.includes(id)}
+            class:fallado={fallados.includes(id)}
+            class:pistaDeArea={pistaDeArea.includes(id)}
+            class:seleccionado={seleccionado === id}
+            class:iluminado={iluminados.includes(id)}
+            class:destacado={destacados.includes(id)}
+            class:porResponder={porResponder.includes(id)}
+            class:parcial={parcial.includes(id)}
+            class:activo={activo === id}
+            class:tocado={tocado === id}
+          />
+        {/each}
         {#each [...manchas, ...puntos.map(({ contorno }) => contorno)] as contorno (contorno.id)}
           {@const id = String(contorno.id)}
           <path
@@ -377,6 +425,9 @@
       {#if clasesEnElMapa.includes('pico')}
         <li><svg viewBox="0 0 20 14" aria-hidden="true"><path class="pico" d="M10,1L16,12H4Z" /></svg> Pico</li>
       {/if}
+      {#if cauces.length > 0}
+        <li><svg viewBox="0 0 20 14" aria-hidden="true"><path class="cauce" d="M1,11C6,11 5,4 10,4S15,10 19,3" /></svg> Río</li>
+      {/if}
     </ul>
   {/if}
   {#if seleccionado !== null}
@@ -437,6 +488,50 @@
     stroke: #9aa0a6;
     stroke-width: 0.8;
     cursor: pointer;
+  }
+
+  /* El toque lo resuelve el SVG entero, no cada trazo: aquí solo se dibuja. */
+  .elementos path.cauce,
+  .leyenda .cauce {
+    fill: none;
+    stroke: #3c7fb1;
+    stroke-width: 1.6;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+    pointer-events: none;
+  }
+
+  .elementos path.cauce.acertado {
+    stroke: #2f7d4f;
+    stroke-width: 2.4;
+  }
+
+  .elementos path.cauce.fallado {
+    stroke: #c2652a;
+    stroke-width: 2.4;
+  }
+
+  .elementos path.cauce.pistaDeArea,
+  .elementos path.cauce.destacado,
+  .elementos path.cauce.porResponder {
+    stroke: #a16207;
+    stroke-width: 2.4;
+  }
+
+  .elementos path.cauce.seleccionado,
+  .elementos path.cauce.activo {
+    stroke: #1d4ed8;
+    stroke-width: 3.2;
+  }
+
+  .elementos path.cauce.iluminado {
+    stroke: #d9a300;
+    stroke-width: 3.6;
+  }
+
+  .elementos path.cauce.tocado {
+    stroke: #dc2626;
+    stroke-width: 3.2;
   }
 
   .elementos.relieve path,

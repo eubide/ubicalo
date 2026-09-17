@@ -4,13 +4,13 @@ import cordillerasGeo from '../datos/cordilleras.json'
 import sierrasGeo from '../datos/sierras.json'
 import picosGeo from '../datos/picos.json'
 import riosGeo from '../datos/rios.json'
-import type { Elemento } from './catalogo'
+import type { ContextoGeografico, Elemento } from './catalogo'
 
 export type TipoDeRelieve = 'cordilleras-y-sierras' | 'picos' | 'jerarquia' | 'alturas' | 'simulacro'
 
 export type Clase = 'cordillera' | 'sierra' | 'pico'
 
-export const etiquetaDeClase: Record<Clase, string> = {
+export const etiquetaDeClaseDeRelieve: Record<Clase, string> = {
   cordillera: 'Cordillera o macizo',
   sierra: 'Sierra',
   pico: 'Pico',
@@ -21,12 +21,6 @@ export interface PropiedadesDeRelieve {
   clase: Clase
   cordillera?: string
   altura?: number
-}
-
-export interface ContextoDeRelieve {
-  contorno: Feature<Geometry>
-  tenues: Feature<Geometry>[]
-  rios: Feature<Geometry>[]
 }
 
 export function propiedadesDe(contorno: Feature<Geometry>): PropiedadesDeRelieve {
@@ -229,7 +223,7 @@ export function contornosDeRelieve(tipo: TipoDeRelieve): Feature<Geometry>[] {
   return (contornosPorTipo[tipo] ??= CLASES_DEL_MAPA[tipo].flatMap((clase) => contornosPorClase[clase]))
 }
 
-export function contextoDeRelieve(tipo: TipoDeRelieve, contorno: Feature<Geometry>): ContextoDeRelieve {
+export function contextoDeRelieve(tipo: TipoDeRelieve, contorno: Feature<Geometry>): ContextoGeografico {
   const tenues = CLASES_DEL_MAPA[tipo].includes('cordillera') ? [] : contornosPorClase.cordillera
   return { contorno, tenues, rios }
 }

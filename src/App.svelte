@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Feature, FeatureCollection, Geometry } from 'geojson'
-  import { catalogo, catalogoDelMapa, contextoDe, contornos, type Elemento } from './catalogo/catalogo'
-  import { esIdDeAltura, etiquetaDeClase, idDeAltura, textoDeAltura, type ContextoDeRelieve } from './catalogo/relieve'
+  import { catalogo, catalogoDelMapa, contextoDe, contornos, etiquetaDeClase, type ContextoGeografico, type Elemento } from './catalogo/catalogo'
+  import { esIdDeAltura, idDeAltura, textoDeAltura } from './catalogo/relieve'
   import contextoGeografico from './datos/contexto-geografico.json'
   import Mapa from './mapa/Mapa.svelte'
   import FinDePartida from './pantallas/FinDePartida.svelte'
@@ -62,7 +62,7 @@
   let elementosDelMapa = $state.raw<Elemento[]>([])
   let totalElementos = $state(0)
   let contornosDelTipo = $state.raw<Feature<Geometry>[]>([])
-  let contextoDelTipo = $state.raw<ContextoDeRelieve | null>(null)
+  let contextoDelTipo = $state.raw<ContextoGeografico | null>(null)
   let ahora = $state(Date.now())
   let texto = $state('')
   let simulacroActivo = $state<string | null>(null)
