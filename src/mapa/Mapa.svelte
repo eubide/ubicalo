@@ -185,7 +185,7 @@
   })
 
   // Tentativa es todo lo que el alumno tiene apuntado y sin juzgar: el toque pendiente de confirmar, la
-  // forma que responde en el Simulacro y el cauce que se llevaría el clic del ratón.
+  // forma que responde en Todo y el cauce que se llevaría el clic del ratón.
   const estado = $derived<EstadoDelMapa>({
     tocado,
     tentativa: seleccionado ?? tentativa ?? bajoElPuntero,
@@ -320,7 +320,7 @@
 
   const rotulados = $derived(rotulos.map((rotulo) => rotulo.id))
 
-  // Varios rótulos sobre el mismo elemento (Jerarquía) se apilan hacia abajo.
+  // Varios rótulos sobre el mismo elemento (Pertenencia) se apilan hacia abajo.
   const rotulosConPosicion = $derived(
     rotulos.flatMap((rotulo) => {
       const contorno = contornos.find((candidato) => String(candidato.id) === rotulo.id)

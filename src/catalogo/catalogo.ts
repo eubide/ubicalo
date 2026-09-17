@@ -13,7 +13,7 @@ import {
   tocablesDeRelieve,
   type Clase,
   type Papel,
-  type TipoDeRelieve,
+  type AlcanceDeRelieve,
 } from './relieve'
 import {
   catalogoDeHidrografia,
@@ -23,11 +23,11 @@ import {
   etiquetaDeClaseDeRio,
   tocablesDeHidrografia,
   type ClaseDeRio,
-  type TipoDeHidrografia,
+  type AlcanceDeHidrografia,
 } from './hidrografia'
 
-type TipoPolitico = 'comunidades' | 'provincias'
-export type Tipo = TipoPolitico | TipoDeRelieve | TipoDeHidrografia
+type AlcancePolitico = 'comunidades' | 'provincias'
+export type Alcance = AlcancePolitico | AlcanceDeRelieve | AlcanceDeHidrografia
 
 export type ClaseDelMapa = Clase | ClaseDeRio
 
@@ -57,21 +57,23 @@ export interface Elemento {
   vertiente?: string
   // Río en el que desemboca de verdad un Afluente, que puede ser otro Afluente.
   desembocaEn?: string
-  // Río principal del final de esa cadena: lo que se pregunta en Jerarquía de ríos.
+  // Río principal del final de esa cadena: lo que se pregunta en Pertenencia de la hidrografía.
   cuenca?: string
   // Frase que distingue este elemento del que se le parece, para la Corrección.
   desambiguacion?: string
   // Lo que ilumina la Pista de área cuando no basta con los Vecinos.
   pistaDeArea?: string[]
   fueraDeApuntes?: true
-  // Id que hay que tocar cuando no es el propio elemento (Jerarquía).
+  // Id que hay que tocar cuando no es el propio elemento (Pertenencia).
   respuesta?: string
   // Enunciado que acompaña al nombre; sin él, se muestra la clase.
   pregunta?: string
   // Texto del rótulo en el Repaso cuando el nombre mostrado no basta (Alturas).
   rotulo?: string
+  // La respuesta es una cifra, así que se escribe aunque la Prueba vaya en dirección de localizar.
+  seEscribe?: true
   destacar?: true
-  // Ids que deben estar entre los Acertados antes de poder tocar este elemento (Simulacro).
+  // Ids que deben estar entre los Acertados antes de poder tocar este elemento (Todo).
   desbloqueaCon?: string[]
 }
 
@@ -145,7 +147,7 @@ function geometriasSinGibraltar(topologia: Topology, objeto: string, gibraltar: 
   }
 }
 
-const topologias: Record<TipoPolitico, ReturnType<typeof geometriasSinGibraltar>> = {
+const topologias: Record<AlcancePolitico, ReturnType<typeof geometriasSinGibraltar>> = {
   comunidades: geometriasSinGibraltar(
     comunidadesTopo as unknown as Topology,
     'autonomous_regions',
@@ -169,51 +171,55 @@ function comunidadQueContiene(provincia: Feature<Geometry>, comunidades: Feature
   return String(comunidad.id)
 }
 
-// Elementos que se tocan en el mapa; en Jerarquía no coinciden con los preguntados.
-export function catalogoDelMapa(tipo: Tipo): Elemento[] {
-  if (esDeRelieve(tipo)) return tocablesDeRelieve(tipo).map(conFormaCorta)
-  if (esDeHidrografia(tipo)) return tocablesDeHidrografia(tipo).map(conFormaCorta)
-  return catalogo(tipo)
+// Elementos que se tocan en el mapa; en Pertenencia no coinciden con los preguntados.
+export function catalogoDelMapa(alcance: Alcance): Elemento[] {
+  if (esDeRelieve(alcance)) return tocablesDeRelieve(alcance).map(conFormaCorta)
+  if (esDeHidrografia(alcance)) return tocablesDeHidrografia(alcance).map(conFormaCorta)
+  return catalogo(alcance)
 }
 
-export function catalogo(tipo: Tipo): Elemento[] {
-  return catalogoSinFormasCortas(tipo).map(conFormaCorta)
+export function catalogo(alcance: Alcance): Elemento[] {
+  return catalogoSinFormasCortas(alcance).map(conFormaCorta)
 }
 
-function catalogoSinFormasCortas(tipo: Tipo): Elemento[] {
-  if (esDeRelieve(tipo)) return catalogoDeRelieve(tipo)
-  if (esDeHidrografia(tipo)) return catalogoDeHidrografia(tipo)
-  const { geometries } = topologias[tipo].geometrias
+function catalogoSinFormasCortas(alcance: Alcance): Elemento[] {
+  if (esDeRelieve(alcance)) return catalogoDeRelieve(alcance)
+  if (esDeHidrografia(alcance)) return catalogoDeHidrografia(alcance)
+  const { geometries } = topologias[alcance].geometrias
   const vecinosPorIndice = neighbors(geometries)
-  const provincias = tipo === 'provincias' ? contornos('provincias') : []
-  const comunidades = tipo === 'provincias' ? contornos('comunidades') : []
+  const provincias = alcance === 'provincias' ? contornos('provincias') : []
+  const comunidades = alcance === 'provincias' ? contornos('comunidades') : []
   return geometries.map((geometria, indice) => {
     const { name } = geometria.properties as { name: string }
     return {
       id: String(geometria.id),
       ...nombresOficialYCastellano(name),
       vecinos: vecinosPorIndice[indice].map((vecino) => String(geometries[vecino].id)),
-      ...(tipo === 'provincias' && { comunidad: comunidadQueContiene(provincias[indice], comunidades) }),
+      ...(alcance === 'provincias' && { comunidad: comunidadQueContiene(provincias[indice], comunidades) }),
       ...(CIUDADES_AUTONOMAS.includes(name) && { ciudadAutonoma: true as const }),
     }
   })
 }
 
-const contornosPorTipo: Partial<Record<TipoPolitico, Feature<Geometry>[]>> = {}
+const contornosPorAlcance: Partial<Record<AlcancePolitico, Feature<Geometry>[]>> = {}
 
-export function contornos(tipo: Tipo): Feature<Geometry>[] {
-  if (esDeRelieve(tipo)) return contornosDeRelieve(tipo)
-  if (esDeHidrografia(tipo)) return contornosDeHidrografia(tipo)
-  const { topologia, geometrias } = topologias[tipo]
-  return (contornosPorTipo[tipo] ??= (feature(topologia, geometrias) as FeatureCollection).features)
+export function contornos(alcance: Alcance): Feature<Geometry>[] {
+  if (esDeRelieve(alcance)) return contornosDeRelieve(alcance)
+  if (esDeHidrografia(alcance)) return contornosDeHidrografia(alcance)
+  const { topologia, geometrias } = topologias[alcance]
+  return (contornosPorAlcance[alcance] ??= (feature(topologia, geometrias) as FeatureCollection).features)
 }
 
 let contornoDeEspana: Feature<Geometry> | undefined
 
-export function contextoDe(tipo: Tipo): ContextoGeografico | null {
-  if (!esDeRelieve(tipo) && !esDeHidrografia(tipo)) return null
+export function siluetaDeEspana(): Feature<Geometry> {
   const { topologia, geometrias } = topologias.comunidades
   const poligonos = geometrias.geometries as MultiPolygon[]
-  contornoDeEspana ??= { type: 'Feature', properties: {}, geometry: merge(topologia, poligonos) }
-  return esDeRelieve(tipo) ? contextoDeRelieve(tipo, contornoDeEspana) : contextoDeHidrografia(contornoDeEspana)
+  return (contornoDeEspana ??= { type: 'Feature', properties: {}, geometry: merge(topologia, poligonos) })
+}
+
+export function contextoDe(alcance: Alcance): ContextoGeografico | null {
+  if (!esDeRelieve(alcance) && !esDeHidrografia(alcance)) return null
+  const espana = siluetaDeEspana()
+  return esDeRelieve(alcance) ? contextoDeRelieve(alcance, espana) : contextoDeHidrografia(espana)
 }

@@ -7,12 +7,11 @@ import unidadesGeo from '../datos/unidades.json'
 import riosGeo from '../datos/rios.json'
 import type { ContextoGeografico, Elemento } from './catalogo'
 
-export type TipoDeRelieve =
+export type AlcanceDeRelieve =
   | 'cordilleras-y-sierras'
   | 'picos'
-  | 'jerarquia'
-  | 'alturas'
-  | 'simulacro-relieve'
+  | 'pertenencia-relieve'
+  | 'todo-relieve'
   | 'unidades'
 
 export type Clase = 'cordillera' | 'sierra' | 'pico' | 'meseta' | 'depresion'
@@ -111,19 +110,18 @@ const contornosPorClase: Record<Clase, Feature<Geometry>[]> = {
 
 const rios = (riosGeo as FeatureCollection).features
 
-// Clases que se dibujan y se tocan en cada Tipo; lo que no se toca se ve en tenue.
-const CLASES_DEL_MAPA: Record<TipoDeRelieve, Clase[]> = {
+// Clases que se dibujan y se tocan en cada Alcance; lo que no se toca se ve en tenue.
+const CLASES_DEL_MAPA: Record<AlcanceDeRelieve, Clase[]> = {
   'cordilleras-y-sierras': ['cordillera', 'sierra'],
   picos: ['pico'],
-  jerarquia: ['cordillera', 'pico'],
-  alturas: ['pico'],
-  'simulacro-relieve': ['cordillera', 'sierra', 'pico'],
+  'pertenencia-relieve': ['cordillera', 'pico'],
+  'todo-relieve': ['cordillera', 'sierra', 'pico'],
   // La Meseta primero: es la mancha mayor y las demás se dibujan encima.
   unidades: ['meseta', 'depresion', 'cordillera'],
 }
 
-export function esDeRelieve(tipo: string): tipo is TipoDeRelieve {
-  return tipo in CLASES_DEL_MAPA
+export function esDeRelieve(alcance: string): alcance is AlcanceDeRelieve {
+  return alcance in CLASES_DEL_MAPA
 }
 
 // Nada del relieve comparte frontera: los vecinos son los más cercanos por centroide.
@@ -173,7 +171,7 @@ function elementosDeClases(clases: Clase[]): Elemento[] {
 
 // Cada sierra y cada pico se responde tocando su cordillera, y cada cordillera tocando su pico; los
 // vecinos son los del elemento que se toca, para que la Pista de área ilumine lo tocable.
-function catalogoDeJerarquia(): Elemento[] {
+function catalogoDePertenencia(): Elemento[] {
   const cordilleras = elementosDe(contornosPorClase.cordillera)
   const picos = elementosDe(contornosPorClase.pico)
   const haciaLaCordillera = [...elementosDe(contornosPorClase.sierra), ...picos].map((elemento) => {
@@ -204,15 +202,31 @@ function elementoDeAltura(pico: Elemento, id: string): Elemento {
     ...(pico.cordillera && { cordillera: pico.cordillera }),
     pregunta: `Altura del ${pico.nombre}`,
     rotulo: `${pico.nombre} · ${alturaMostrada(altura)}`,
+    seEscribe: true,
   }
 }
 
-function catalogoDeAlturas(): Elemento[] {
-  return elementosDe(contornosDeRelieve('alturas')).map((pico) => elementoDeAltura(pico, pico.id))
+function alturasDe(picos: Elemento[]): Elemento[] {
+  const alturas = ALTURAS_EXAMINADAS.map((id) => {
+    const pico = picos.find((candidato) => candidato.id === id)
+    if (!pico) throw new Error(`Altura examinada sin pico: ${id}`)
+    return elementoDeAltura(pico, idDeAltura(pico.id))
+  })
+  // Una cifra no tiene vecinos en el mapa, y sin ellos su Pista se llena de nombres de pico: lo único
+  // que se le parece son las otras tres cifras.
+  return alturas.map((altura) => ({
+    ...altura,
+    vecinos: alturas.filter((otra) => otra.id !== altura.id).map((otra) => otra.id),
+  }))
+}
+
+function catalogoDePicos(): Elemento[] {
+  const picos = elementosDe(contornosPorClase.pico)
+  return [...picos, ...alturasDe(picos)]
 }
 
 // Cada Elemento sabe qué debe estar Acertado antes de poder tocarse; las cordilleras no dependen de nada.
-function catalogoDeSimulacro(): Elemento[] {
+function catalogoDeTodo(): Elemento[] {
   const cordilleras = elementosDe(contornosPorClase.cordillera).map((elemento) => ({
     ...elemento,
     desbloqueaCon: [] as string[],
@@ -229,9 +243,7 @@ function catalogoDeSimulacro(): Elemento[] {
     ...elemento,
     desbloqueaCon: [elemento.cordillera!, ...(sierrasPorCordillera.get(elemento.cordillera!) ?? [])],
   }))
-  const alturas = picos
-    .filter((pico) => pico.altura !== undefined)
-    .map((pico) => ({ ...elementoDeAltura(pico, idDeAltura(pico.id)), desbloqueaCon: [pico.id] }))
+  const alturas = alturasDe(picos).map((altura) => ({ ...altura, desbloqueaCon: [picoDeAltura(altura.id)] }))
   return [...cordilleras, ...sierras, ...picos, ...alturas]
 }
 
@@ -262,47 +274,52 @@ function catalogoDeUnidades(): Elemento[] {
   })
 }
 
-export function catalogoDeRelieve(tipo: TipoDeRelieve): Elemento[] {
-  if (tipo === 'unidades') return catalogoDeUnidades()
-  if (tipo === 'jerarquia') return catalogoDeJerarquia()
-  if (tipo === 'alturas') return catalogoDeAlturas()
-  if (tipo === 'simulacro-relieve') return catalogoDeSimulacro()
-  return elementosDeClases(CLASES_DEL_MAPA[tipo])
+export function catalogoDeRelieve(alcance: AlcanceDeRelieve): Elemento[] {
+  if (alcance === 'unidades') return catalogoDeUnidades()
+  if (alcance === 'pertenencia-relieve') return catalogoDePertenencia()
+  if (alcance === 'picos') return catalogoDePicos()
+  if (alcance === 'todo-relieve') return catalogoDeTodo()
+  return elementosDeClases(CLASES_DEL_MAPA[alcance])
 }
 
-// Elementos que se tocan en el mapa, cada clase con sus propios vecinos; en Jerarquía y Simulacro no
-// coinciden con el catálogo de preguntas (Jerarquía pregunta sierras que no están en el mapa; Simulacro
-// pregunta también las cuatro alturas, que no tienen forma propia).
-export function tocablesDeRelieve(tipo: TipoDeRelieve): Elemento[] {
-  if (tipo === 'jerarquia') return CLASES_DEL_MAPA.jerarquia.flatMap((clase) => elementosDe(contornosPorClase[clase]))
-  if (tipo === 'simulacro-relieve') return elementosDeClases(CLASES_DEL_MAPA['simulacro-relieve'])
-  return catalogoDeRelieve(tipo)
-}
-
-const contornosPorTipo: Partial<Record<TipoDeRelieve, Feature<Geometry>[]>> = {}
-
-export function contornosDeRelieve(tipo: TipoDeRelieve): Feature<Geometry>[] {
-  if (tipo === 'alturas') {
-    return (contornosPorTipo.alturas ??= ALTURAS_EXAMINADAS.map(
-      (id) => contornosPorClase.pico.find((pico) => String(pico.id) === id)!,
-    ))
+// Elementos que se tocan en el mapa, cada clase con sus propios vecinos; en Pertenencia, Picos y Todo no
+// coinciden con el catálogo de preguntas (Pertenencia pregunta sierras que no están en el mapa; Picos y
+// Todo preguntan también las alturas, que no tienen forma propia).
+export function tocablesDeRelieve(alcance: AlcanceDeRelieve): Elemento[] {
+  if (alcance === 'pertenencia-relieve') {
+    return CLASES_DEL_MAPA['pertenencia-relieve'].flatMap((clase) => elementosDe(contornosPorClase[clase]))
   }
-  return (contornosPorTipo[tipo] ??= CLASES_DEL_MAPA[tipo].flatMap((clase) => contornosPorClase[clase]))
+  if (alcance === 'picos') return elementosDe(contornosPorClase.pico)
+  if (alcance === 'todo-relieve') return elementosDeClases(CLASES_DEL_MAPA['todo-relieve'])
+  return catalogoDeRelieve(alcance)
 }
 
-export function contextoDeRelieve(tipo: TipoDeRelieve, contorno: Feature<Geometry>): ContextoGeografico {
-  const tenues = CLASES_DEL_MAPA[tipo].includes('cordillera') ? [] : contornosPorClase.cordillera
+const contornosPorAlcance: Partial<Record<AlcanceDeRelieve, Feature<Geometry>[]>> = {}
+
+export function contornosDeRelieve(alcance: AlcanceDeRelieve): Feature<Geometry>[] {
+  return (contornosPorAlcance[alcance] ??= CLASES_DEL_MAPA[alcance].flatMap((clase) => contornosPorClase[clase]))
+}
+
+export function contextoDeRelieve(alcance: AlcanceDeRelieve, contorno: Feature<Geometry>): ContextoGeografico {
+  const tenues = CLASES_DEL_MAPA[alcance].includes('cordillera') ? [] : contornosPorClase.cordillera
   return { contorno, tenues, rios }
 }
 
-// Id de la pregunta de Altura de un pico dentro del Simulacro: distinto del id del propio pico, para
-// que acertar uno y acertar el otro queden como dos entradas independientes en Acertados.
+// Id de la pregunta de Altura de un pico: distinto del id del propio pico, para que acertar uno y
+// acertar el otro queden como dos entradas independientes en Acertados.
+const PREFIJO_DE_ALTURA = 'altura-'
+
 export function idDeAltura(idDelPico: string): string {
-  return `altura-${idDelPico}`
+  return `${PREFIJO_DE_ALTURA}${idDelPico}`
 }
 
 export function esIdDeAltura(id: string): boolean {
-  return id.startsWith('altura-')
+  return id.startsWith(PREFIJO_DE_ALTURA)
+}
+
+// El pico al que le falta la cifra: es su forma la que se remarca y la que se rotula en el Repaso.
+export function picoDeAltura(id: string): string {
+  return id.slice(PREFIJO_DE_ALTURA.length)
 }
 
 export function textoDeAltura(altura: number): string {

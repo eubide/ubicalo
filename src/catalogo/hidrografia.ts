@@ -3,7 +3,7 @@ import riosGeo from '../datos/rios.json'
 import vertientesGeo from '../datos/vertientes.json'
 import type { ContextoGeografico, Elemento } from './catalogo'
 
-export type TipoDeHidrografia = 'rios' | 'jerarquia-rios' | 'simulacro-rios'
+export type AlcanceDeHidrografia = 'rios' | 'pertenencia-rios' | 'todo-rios'
 
 export type ClaseDeRio = 'vertiente' | 'rio-principal' | 'rio-propio' | 'afluente'
 
@@ -31,14 +31,14 @@ export function propiedadesDeRio(contorno: Feature<Geometry>): PropiedadesDeRio 
   return contorno.properties as PropiedadesDeRio
 }
 
-const CONTORNOS_DEL_MAPA: Record<TipoDeHidrografia, Feature<Geometry>[]> = {
+const CONTORNOS_DEL_MAPA: Record<AlcanceDeHidrografia, Feature<Geometry>[]> = {
   rios,
-  'jerarquia-rios': rios,
-  'simulacro-rios': [...vertientes, ...rios],
+  'pertenencia-rios': rios,
+  'todo-rios': [...vertientes, ...rios],
 }
 
-export function esDeHidrografia(tipo: string): tipo is TipoDeHidrografia {
-  return tipo in CONTORNOS_DEL_MAPA
+export function esDeHidrografia(alcance: string): alcance is AlcanceDeHidrografia {
+  return alcance in CONTORNOS_DEL_MAPA
 }
 
 const propiedadesPorId = new Map(
@@ -102,7 +102,7 @@ function elementoDeRio(contorno: Feature<Geometry>): Elemento {
 
 // Cada Afluente se responde tocando el Río principal de su cuenca, aunque desemboque en otro Afluente;
 // los Vecinos son los del río que se toca, para que la Pista de área ilumine lo tocable.
-function catalogoDeJerarquiaDeRios(): Elemento[] {
+function catalogoDePertenenciaDeRios(): Elemento[] {
   const elementos = CONTORNOS_DEL_MAPA.rios.map(elementoDeRio)
   const porId = new Map(elementos.map((rio) => [rio.id, rio]))
   return elementos
@@ -127,26 +127,26 @@ function catalogoDeJerarquiaDeRios(): Elemento[] {
 
 // Cada Elemento sabe qué debe estar Acertado antes de poder tocarse: las vertientes no dependen de
 // nada, un río de su vertiente y un afluente del Río principal de su cuenca, aunque desagüe en otro.
-function catalogoDeSimulacroDeRios(): Elemento[] {
-  return CONTORNOS_DEL_MAPA['simulacro-rios'].map(elementoDeRio).map((elemento) => ({
+function catalogoDeTodoDeRios(): Elemento[] {
+  return CONTORNOS_DEL_MAPA['todo-rios'].map(elementoDeRio).map((elemento) => ({
     ...elemento,
     desbloqueaCon:
       elemento.clase === 'vertiente' ? [] : [elemento.clase === 'afluente' ? elemento.cuenca! : elemento.vertiente!],
   }))
 }
 
-export function catalogoDeHidrografia(tipo: TipoDeHidrografia): Elemento[] {
-  if (tipo === 'jerarquia-rios') return catalogoDeJerarquiaDeRios()
-  if (tipo === 'simulacro-rios') return catalogoDeSimulacroDeRios()
-  return CONTORNOS_DEL_MAPA[tipo].map(elementoDeRio)
+export function catalogoDeHidrografia(alcance: AlcanceDeHidrografia): Elemento[] {
+  if (alcance === 'pertenencia-rios') return catalogoDePertenenciaDeRios()
+  if (alcance === 'todo-rios') return catalogoDeTodoDeRios()
+  return CONTORNOS_DEL_MAPA[alcance].map(elementoDeRio)
 }
 
-export function tocablesDeHidrografia(tipo: TipoDeHidrografia): Elemento[] {
-  return CONTORNOS_DEL_MAPA[tipo].map(elementoDeRio)
+export function tocablesDeHidrografia(alcance: AlcanceDeHidrografia): Elemento[] {
+  return CONTORNOS_DEL_MAPA[alcance].map(elementoDeRio)
 }
 
-export function contornosDeHidrografia(tipo: TipoDeHidrografia): Feature<Geometry>[] {
-  return CONTORNOS_DEL_MAPA[tipo]
+export function contornosDeHidrografia(alcance: AlcanceDeHidrografia): Feature<Geometry>[] {
+  return CONTORNOS_DEL_MAPA[alcance]
 }
 
 // Los ríos se juegan sobre el mapa pelado: con 41 líneas encima, las manchas de cordillera taparían

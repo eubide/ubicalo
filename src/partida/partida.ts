@@ -83,7 +83,7 @@ function barajar<T>(lista: T[], azar: Azar): T[] {
   return copia
 }
 
-// Un elemento sin desbloqueaCon (el resto de Tipos) no depende de nada: está desbloqueado desde el principio.
+// Un elemento sin desbloqueaCon (el resto de Alcances) no depende de nada: está desbloqueado desde el principio.
 function estaDesbloqueado(elemento: Elemento, acertados: Set<string>): boolean {
   return (elemento.desbloqueaCon ?? []).every((id) => acertados.has(id))
 }
@@ -99,7 +99,7 @@ function desbloqueadosDe(elementos: Elemento[], cola: Elemento[], siguienteVuelt
 
 type ConCola = Omit<Partida, CamposDerivados>
 
-// El Preguntado sale siempre del frente de la cola, así que en los Tipos con cascada que no deja elegir
+// El Preguntado sale siempre del frente de la cola, así que en los Alcances con cascada que no deja elegir
 // hay que adelantar el primero que ya se puede responder, y traerlo de la siguiente Vuelta si en esta
 // no queda ninguno.
 function adelantarDesbloqueado(partida: ConCola): ConCola {
@@ -138,7 +138,7 @@ function construir(sinAdelantar: ConCola, ahora: number): Partida {
   }
 }
 
-// Trae un elemento desbloqueado al frente de la cola, para que sea el siguiente Preguntado (Simulacro:
+// Trae un elemento desbloqueado al frente de la cola, para que sea el siguiente Preguntado (Todo:
 // el alumno elige qué responder tocando el mapa, en vez de seguir el orden que impone el motor).
 export function elegirPregunta(partida: Partida, id: string): Partida {
   if (!esperandoRespuesta(partida) || !partida.desbloqueados.includes(id)) return partida
@@ -161,7 +161,7 @@ export function elegirPregunta(partida: Partida, id: string): Partida {
   )
 }
 
-// Elemento del mapa que hay que tocar para acertar: el propio, salvo que responda por otro (Jerarquía).
+// Elemento del mapa que hay que tocar para acertar: el propio, salvo que responda por otro (Pertenencia).
 export function respuestaDe(elemento: Elemento): string {
   return elemento.respuesta ?? elemento.id
 }
@@ -211,6 +211,7 @@ function esperandoRespuesta(partida: Partida): boolean {
 export function responder(partida: Partida, idElegido: string): Partida {
   if (!esperandoRespuesta(partida)) return partida
   const correcto = partida.cola[0]
+  if (correcto.seEscribe) return partida
   if (idElegido === respuestaDe(correcto)) return resolver(partida, true)
   const elegido = partida.tocables.find((elemento) => elemento.id === idElegido)
   if (!elegido) return partida
@@ -240,7 +241,7 @@ export function cerrarCorreccion(partida: Partida): Partida {
 
 export function marcarEnRepaso(partida: Partida, id: string): Partida {
   const { repaso } = partida
-  if (!repaso || partida.prueba.modo === 'ubicacion-nombre') return partida
+  if (!repaso || partida.prueba.direccion === 'nombrar') return partida
   const tocados = repaso.elementos
     .filter((elemento) => respuestaDe(elemento) === id && !repaso.marcados.includes(elemento.id))
     .map((elemento) => elemento.id)
@@ -253,7 +254,7 @@ export function marcarEnRepaso(partida: Partida, id: string): Partida {
 export function cerrarRepaso(partida: Partida): Partida {
   if (!partida.repaso) return partida
   const reanudada = { ...reanudar(partida, partida.reloj()), repaso: null }
-  if (partida.prueba.modo === 'ubicacion-nombre') return abrirPista(reanudada, null)
+  if (partida.prueba.direccion === 'nombrar') return abrirPista(reanudada, null)
   return { ...reanudada, pistaDeArea: pistaDeAreaDe(partida) }
 }
 
@@ -265,8 +266,8 @@ function pistaDeAreaDe(partida: Partida): string[] | null {
 function idsDePistaDeArea({ prueba, elementos, desbloqueados, cola: [preguntado] }: Partida): string[] {
   if (preguntado.pistaDeArea) return preguntado.pistaDeArea
   if (preguntado.ciudadAutonoma) return elementos.filter((elemento) => elemento.ciudadAutonoma).map((elemento) => elemento.id)
-  if (prueba.tipo === 'provincias') return pistaDeAreaDeProvincia(preguntado, elementos)
-  if (prueba.tipo === 'unidades') return pistaDeAreaDelPapel(preguntado, elementos, desbloqueados)
+  if (prueba.alcance === 'provincias') return pistaDeAreaDeProvincia(preguntado, elementos)
+  if (prueba.alcance === 'unidades') return pistaDeAreaDelPapel(preguntado, elementos, desbloqueados)
   return pistaDeAreaDeVecinos(preguntado)
 }
 

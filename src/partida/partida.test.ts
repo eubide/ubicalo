@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { catalogo, type Elemento } from '../catalogo/catalogo'
-import type { Papel } from '../catalogo/relieve'
+import { catalogo, catalogoDelMapa, type Elemento } from '../catalogo/catalogo'
+import { esIdDeAltura, type Papel } from '../catalogo/relieve'
 import {
   abandonar,
   cerrarCorreccion,
@@ -17,7 +17,7 @@ import {
   tiempoJugado,
   type Partida,
 } from './partida'
-import type { Prueba } from '../prueba/prueba'
+import { pruebaDe, type Prueba } from '../prueba/prueba'
 
 const elementos: Elemento[] = [
   { id: 'a', nombre: 'Alfa', nombreMostrado: 'Alfa', alias: [], vecinos: [] },
@@ -27,7 +27,7 @@ const elementos: Elemento[] = [
   { id: 'e', nombre: 'Épsilon', nombreMostrado: 'Épsilon', alias: [], vecinos: [] },
 ]
 
-const comunidadesNombreUbicar: Prueba = { tipo: 'comunidades', modo: 'nombre-ubicar' }
+const comunidadesLocalizar: Prueba = pruebaDe('comunidades', 'localizar')
 
 const azarFijo = () => 0.5
 
@@ -40,7 +40,7 @@ beforeEach(() => {
 
 describe('Partida en Nombre → ubicar', () => {
   it('la primera vuelta pregunta todos los elementos y la partida termina al acertarlos', () => {
-    let partida = iniciarPartida(comunidadesNombreUbicar, elementos, azarFijo, reloj)
+    let partida = iniciarPartida(comunidadesLocalizar, elementos, azarFijo, reloj)
     const preguntados: string[] = []
 
     while (!partida.terminada) {
@@ -54,7 +54,7 @@ describe('Partida en Nombre → ubicar', () => {
   })
 
   it('un fallo deja el elemento pendiente y vuelve a preguntarse en la vuelta siguiente', () => {
-    let partida = iniciarPartida(comunidadesNombreUbicar, elementos, azarFijo, reloj)
+    let partida = iniciarPartida(comunidadesLocalizar, elementos, azarFijo, reloj)
     const fallado = partida.preguntado!
     const otro = elementos.find((elemento) => elemento.id !== fallado.id)!
 
@@ -90,19 +90,19 @@ describe('Corrección en Nombre → ubicar', () => {
   }
 
   it('un fallo abre durante 3 s una Corrección con lo que tocó el alumno y el elemento correcto', () => {
-    const { partida, correcto, elegido } = fallarLaPrimera(iniciarPartida(comunidadesNombreUbicar, elementos, azarFijo, reloj))
+    const { partida, correcto, elegido } = fallarLaPrimera(iniciarPartida(comunidadesLocalizar, elementos, azarFijo, reloj))
 
     expect(partida.correccion).toMatchObject({ elegido, correcto })
   })
 
   it('responder con un id que no es de ningún elemento se ignora', () => {
-    const partida = iniciarPartida(comunidadesNombreUbicar, elementos, azarFijo, reloj)
+    const partida = iniciarPartida(comunidadesLocalizar, elementos, azarFijo, reloj)
 
     expect(responder(partida, 'desconocido')).toBe(partida)
   })
 
   it('abandonar durante la Corrección la cierra y no cuenta su tiempo', () => {
-    let partida = iniciarPartida(comunidadesNombreUbicar, elementos, azarFijo, reloj)
+    let partida = iniciarPartida(comunidadesLocalizar, elementos, azarFijo, reloj)
     ahora = 2_000
     partida = fallarLaPrimera(partida).partida
 
@@ -115,13 +115,13 @@ describe('Corrección en Nombre → ubicar', () => {
   })
 
   it('un acierto sin ayuda no abre Corrección', () => {
-    const partida = iniciarPartida(comunidadesNombreUbicar, elementos, azarFijo, reloj)
+    const partida = iniciarPartida(comunidadesLocalizar, elementos, azarFijo, reloj)
 
     expect(responder(partida, partida.preguntado!.id).correccion).toBeNull()
   })
 
   it('las respuestas durante la Corrección se ignoran hasta cerrarla', () => {
-    const { partida } = fallarLaPrimera(iniciarPartida(comunidadesNombreUbicar, elementos, azarFijo, reloj))
+    const { partida } = fallarLaPrimera(iniciarPartida(comunidadesLocalizar, elementos, azarFijo, reloj))
 
     expect(responder(partida, partida.preguntado!.id)).toBe(partida)
 
@@ -131,7 +131,7 @@ describe('Corrección en Nombre → ubicar', () => {
   })
 
   it('el tiempo de la Corrección no suma al tiempo jugado ni al bonus de la pregunta siguiente', () => {
-    let partida = iniciarPartida(comunidadesNombreUbicar, elementos, azarFijo, reloj)
+    let partida = iniciarPartida(comunidadesLocalizar, elementos, azarFijo, reloj)
     ahora = 2_000
     partida = fallarLaPrimera(partida).partida
 
@@ -153,7 +153,7 @@ describe('Partida en Ubicación → nombre', () => {
   const cadiz: Elemento = { id: 'ca', nombre: 'Cádiz', nombreMostrado: 'Cádiz', alias: [], vecinos: [] }
 
   function partidaPreguntando(elemento: Elemento) {
-    return iniciarPartida(comunidadesNombreUbicar, [elemento], azarFijo, reloj)
+    return iniciarPartida(comunidadesLocalizar, [elemento], azarFijo, reloj)
   }
 
   it('da igual mayúsculas y tildes: "cadiz" vale por "Cádiz"', () => {
@@ -191,10 +191,10 @@ describe('Partida en Ubicación → nombre', () => {
     expect(acierta(soria, 'Sori')).toBe(false)
   })
 
-  it('no admite como errata el nombre o alias de otro elemento del tipo', () => {
+  it('no admite como errata el nombre o alias de otro elemento del alcance', () => {
     const palencia: Elemento = { id: 'pa', nombre: 'Palencia', nombreMostrado: 'Palencia', alias: [], vecinos: [] }
     const valencia: Elemento = { id: 'va', nombre: 'València', nombreMostrado: 'Valencia', alias: ['Valencia'], vecinos: [] }
-    const partida = iniciarPartida(comunidadesNombreUbicar, [palencia, valencia], azarFijo, reloj)
+    const partida = iniciarPartida(comunidadesLocalizar, [palencia, valencia], azarFijo, reloj)
     expect(partida.preguntado).toEqual(palencia)
 
     expect(responderConTexto(partida, 'valencia').fallos).toBe(1)
@@ -204,7 +204,7 @@ describe('Partida en Ubicación → nombre', () => {
   })
 
   it('un texto incorrecto es un fallo: resta 25 y abre la pista sin desvelar el correcto ni pasar al siguiente', () => {
-    let partida = iniciarPartida(comunidadesNombreUbicar, elementos, azarFijo, reloj)
+    let partida = iniciarPartida(comunidadesLocalizar, elementos, azarFijo, reloj)
     partida = responderConTexto(partida, partida.preguntado!.nombre)
     expect(partida.puntuacion).toBe(150)
 
@@ -225,20 +225,20 @@ describe('Partida en Ubicación → nombre', () => {
   })
 
   it('un texto incorrecto abre la pista con lo que escribió el alumno, sin Corrección', () => {
-    const partida = responderConTexto(iniciarPartida(comunidadesNombreUbicar, elementos, azarFijo, reloj), '  Zeta ')
+    const partida = responderConTexto(iniciarPartida(comunidadesLocalizar, elementos, azarFijo, reloj), '  Zeta ')
 
     expect(partida.pista?.escrito).toBe('Zeta')
     expect(partida.correccion).toBeNull()
   })
 
   it('lo escrito se muestra sin la puntuación final: "Soria." queda "Soria"', () => {
-    const partida = responderConTexto(iniciarPartida(comunidadesNombreUbicar, elementos, azarFijo, reloj), 'Soria. ')
+    const partida = responderConTexto(iniciarPartida(comunidadesLocalizar, elementos, azarFijo, reloj), 'Soria. ')
 
     expect(partida.pista?.escrito).toBe('Soria')
   })
 
   it('un texto vacío pide pista: no cuenta como fallo ni pasa al siguiente elemento', () => {
-    const inicial = iniciarPartida(comunidadesNombreUbicar, elementos, azarFijo, reloj)
+    const inicial = iniciarPartida(comunidadesLocalizar, elementos, azarFijo, reloj)
 
     const partida = responderConTexto(inicial, '   ')
 
@@ -263,7 +263,7 @@ describe('Se responde con lo que distingue al Elemento', () => {
   }
 
   function acierta(elemento: Elemento, texto: string): boolean {
-    const partida = responderConTexto(iniciarPartida(comunidadesNombreUbicar, [elemento], azarFijo, reloj), texto)
+    const partida = responderConTexto(iniciarPartida(comunidadesLocalizar, [elemento], azarFijo, reloj), texto)
     return partida.ultimaRespuesta?.acierto === true
   }
 
@@ -302,7 +302,7 @@ describe('Se responde con lo que distingue al Elemento', () => {
   })
 
   it('un texto que se queda en nada es un fallo, no una pista gratis', () => {
-    const partida = responderConTexto(iniciarPartida(comunidadesNombreUbicar, elementos, azarFijo, reloj), 'de la')
+    const partida = responderConTexto(iniciarPartida(comunidadesLocalizar, elementos, azarFijo, reloj), 'de la')
 
     expect(partida.fallos).toBe(1)
     expect(partida.pista?.escrito).toBe('de la')
@@ -311,7 +311,7 @@ describe('Se responde con lo que distingue al Elemento', () => {
 
 describe('Corrección en Ubicación → nombre', () => {
   function pistaTrasFallo() {
-    const partida = responderConTexto(iniciarPartida(comunidadesNombreUbicar, elementos, azarFijo, reloj), 'Zeta')
+    const partida = responderConTexto(iniciarPartida(comunidadesLocalizar, elementos, azarFijo, reloj), 'Zeta')
     const correcto = partida.preguntado!
     const distractor = partida.pista!.opciones.find((opcion) => opcion.id !== correcto.id)!
     return { partida, correcto, distractor }
@@ -357,7 +357,7 @@ describe('Corrección en Ubicación → nombre', () => {
 
   it('el tiempo de la Corrección no suma al tiempo jugado ni al bonus de la pregunta siguiente', () => {
     ahora = 1_000
-    let partida = responderConTexto(iniciarPartida(comunidadesNombreUbicar, elementos, azarFijo, reloj), '')
+    let partida = responderConTexto(iniciarPartida(comunidadesLocalizar, elementos, azarFijo, reloj), '')
     ahora = 3_000
     partida = elegirOpcion(partida, partida.preguntado!.id)
     expect(tiempoJugado(partida, 4_500)).toBe(2_000)
@@ -386,7 +386,7 @@ describe('Pista', () => {
   }
 
   function pistaSobreC(vecinosDeC: string[]) {
-    let partida = iniciarPartida(comunidadesNombreUbicar, catalogoConVecinos({ c: vecinosDeC }), azarSinBarajar, reloj)
+    let partida = iniciarPartida(comunidadesLocalizar, catalogoConVecinos({ c: vecinosDeC }), azarSinBarajar, reloj)
     partida = responder(partida, 'a')
     partida = responder(partida, 'b')
     expect(partida.preguntado?.id).toBe('c')
@@ -412,7 +412,7 @@ describe('Pista', () => {
     expect(distractores(partida)).toEqual(['a', 'b', 'e'])
   })
 
-  it('a falta de vecinos, completa con cualquier otro elemento del tipo', () => {
+  it('a falta de vecinos, completa con cualquier otro elemento del alcance', () => {
     const partida = pistaSobreC(['g'])
     const elegidos = distractores(partida)
 
@@ -422,7 +422,7 @@ describe('Pista', () => {
   })
 
   it('en una vuelta posterior todos los vecinos ya se preguntaron y se eligen igualmente antes que otros elementos', () => {
-    let partida = iniciarPartida(comunidadesNombreUbicar, catalogoConVecinos({ c: ['e'], a: ['d', 'e'] }), azarSinBarajar, reloj)
+    let partida = iniciarPartida(comunidadesLocalizar, catalogoConVecinos({ c: ['e'], a: ['d', 'e'] }), azarSinBarajar, reloj)
     partida = cerrarCorreccion(responder(partida, 'b'))
     for (let i = 0; i < 6; i++) partida = responder(partida, partida.preguntado!.id)
     expect(partida.vuelta).toBe(2)
@@ -434,7 +434,7 @@ describe('Pista', () => {
   })
 
   it('elegir la opción correcta da 0 puntos, no es fallo y el elemento vuelve en la vuelta siguiente', () => {
-    let partida = iniciarPartida(comunidadesNombreUbicar, elementos, azarFijo, reloj)
+    let partida = iniciarPartida(comunidadesLocalizar, elementos, azarFijo, reloj)
     partida = responder(partida, partida.preguntado!.id)
     const resuelto = partida.preguntado!
     partida = responderConTexto(partida, '')
@@ -462,7 +462,7 @@ describe('Pista', () => {
   })
 
   it('elegir una opción incorrecta es otro fallo, desvela el correcto y el elemento sigue pendiente', () => {
-    let partida = iniciarPartida(comunidadesNombreUbicar, elementos, azarFijo, reloj)
+    let partida = iniciarPartida(comunidadesLocalizar, elementos, azarFijo, reloj)
     partida = responder(partida, partida.preguntado!.id)
     const fallado = partida.preguntado!
     partida = responderConTexto(partida, 'Zeta')
@@ -485,13 +485,13 @@ describe('Pista', () => {
   })
 
   it('elegir una opción sin pista abierta no cambia la partida', () => {
-    const partida = iniciarPartida(comunidadesNombreUbicar, elementos, azarFijo, reloj)
+    const partida = iniciarPartida(comunidadesLocalizar, elementos, azarFijo, reloj)
 
     expect(elegirOpcion(partida, partida.preguntado!.id)).toBe(partida)
   })
 
   it('con una pista abierta, responder con texto o señalando y volver a pedir pista no cambian la partida', () => {
-    const partida = pedirPista(iniciarPartida(comunidadesNombreUbicar, elementos, azarFijo, reloj))
+    const partida = pedirPista(iniciarPartida(comunidadesLocalizar, elementos, azarFijo, reloj))
     const preguntado = partida.preguntado!
 
     expect(responderConTexto(partida, preguntado.nombre)).toBe(partida)
@@ -501,7 +501,7 @@ describe('Pista', () => {
   })
 
   it('recuenta las pistas usadas en la partida', () => {
-    let partida = iniciarPartida(comunidadesNombreUbicar, elementos, azarFijo, reloj)
+    let partida = iniciarPartida(comunidadesLocalizar, elementos, azarFijo, reloj)
 
     partida = responderConTexto(partida, '')
     partida = cerrarCorreccion(elegirOpcion(partida, partida.preguntado!.id))
@@ -527,7 +527,7 @@ function fallarEscribiendo(partida: Partida): Partida {
 
 describe('Racha de fallos', () => {
   it('suma una por pregunta fallada y un acierto sin ayuda la reinicia', () => {
-    let partida = iniciarPartida(comunidadesNombreUbicar, elementos, azarFijo, reloj)
+    let partida = iniciarPartida(comunidadesLocalizar, elementos, azarFijo, reloj)
     expect(partida.rachaDeFallos).toEqual([])
 
     const primero = partida.preguntado!
@@ -541,14 +541,14 @@ describe('Racha de fallos', () => {
   })
 
   it('un texto incorrecto y una opción incorrecta en la misma pregunta suman una sola', () => {
-    const partida = fallarEscribiendo(iniciarPartida(comunidadesNombreUbicar, elementos, azarFijo, reloj))
+    const partida = fallarEscribiendo(iniciarPartida(comunidadesLocalizar, elementos, azarFijo, reloj))
 
     expect(partida.fallos).toBe(2)
     expect(partida.rachaDeFallos).toHaveLength(1)
   })
 
   it('un acierto con pista no la cambia, ni tras pedirla ni tras un texto incorrecto', () => {
-    let partida = fallarEscribiendo(iniciarPartida(comunidadesNombreUbicar, elementos, azarFijo, reloj))
+    let partida = fallarEscribiendo(iniciarPartida(comunidadesLocalizar, elementos, azarFijo, reloj))
     partida = fallarEscribiendo(partida)
 
     partida = cerrarCorreccion(elegirOpcion(pedirPista(partida), partida.preguntado!.id))
@@ -559,7 +559,7 @@ describe('Racha de fallos', () => {
   })
 
   function segundaVueltaConDosFallosSeguidos() {
-    let partida = iniciarPartida(comunidadesNombreUbicar, elementos, azarFijo, reloj)
+    let partida = iniciarPartida(comunidadesLocalizar, elementos, azarFijo, reloj)
     partida = responderConTexto(partida, partida.preguntado!.nombre)
     partida = responderConTexto(partida, partida.preguntado!.nombre)
     const conPista = partida.preguntado!
@@ -594,7 +594,7 @@ describe('Racha de fallos', () => {
 
 describe('Repaso', () => {
   function tresFallosSeñalando() {
-    let partida = iniciarPartida(comunidadesNombreUbicar, elementos, azarFijo, reloj)
+    let partida = iniciarPartida(comunidadesLocalizar, elementos, azarFijo, reloj)
     const fallados: Elemento[] = []
     for (let i = 0; i < 3; i++) {
       fallados.push(partida.preguntado!)
@@ -604,7 +604,7 @@ describe('Repaso', () => {
   }
 
   it('empieza al cerrarse la Corrección del tercer fallo seguido con esos elementos y la Racha vuelve a 0', () => {
-    let partida = iniciarPartida(comunidadesNombreUbicar, elementos, azarFijo, reloj)
+    let partida = iniciarPartida(comunidadesLocalizar, elementos, azarFijo, reloj)
     const primero = partida.preguntado!
     partida = fallarSeñalando(partida)
     const segundo = partida.preguntado!
@@ -621,7 +621,7 @@ describe('Repaso', () => {
   })
 
   it('muestra los elementos de la Racha, no todos los fallados de la partida', () => {
-    let partida = fallarSeñalando(iniciarPartida(comunidadesNombreUbicar, elementos, azarFijo, reloj))
+    let partida = fallarSeñalando(iniciarPartida(comunidadesLocalizar, elementos, azarFijo, reloj))
     partida = responder(partida, partida.preguntado!.id)
     const racha: Elemento[] = []
     for (let i = 0; i < 3; i++) {
@@ -635,7 +635,7 @@ describe('Repaso', () => {
 
   it('un elemento fallado varias veces en la Racha aparece una sola vez', () => {
     const [x, y] = elementos
-    let partida = iniciarPartida(comunidadesNombreUbicar, [x, y], azarFijo, reloj)
+    let partida = iniciarPartida(comunidadesLocalizar, [x, y], azarFijo, reloj)
     const primero = partida.preguntado!
     const otro = primero.id === x.id ? y : x
     partida = cerrarCorreccion(responder(partida, otro.id))
@@ -647,7 +647,7 @@ describe('Repaso', () => {
 
   it('el mismo elemento fallado tres veces seguidas abre un Repaso con ese único elemento', () => {
     const [x, y] = elementos
-    let partida = iniciarPartida(comunidadesNombreUbicar, [x, y], azarFijo, reloj)
+    let partida = iniciarPartida(comunidadesLocalizar, [x, y], azarFijo, reloj)
     partida = responder(partida, partida.preguntado!.id)
     const pendiente = partida.preguntado!
     const otro = pendiente.id === x.id ? y : x
@@ -688,14 +688,14 @@ describe('Repaso', () => {
   })
 
   it('marcar o cerrar sin Repaso no cambia la partida', () => {
-    const partida = iniciarPartida(comunidadesNombreUbicar, elementos, azarFijo, reloj)
+    const partida = iniciarPartida(comunidadesLocalizar, elementos, azarFijo, reloj)
 
     expect(marcarEnRepaso(partida, partida.preguntado!.id)).toBe(partida)
     expect(cerrarRepaso(partida)).toBe(partida)
   })
 
   it('en Ubicación → nombre termina al cerrarlo tras 4 s, sin contar su tiempo ni restar bonus a la pregunta puntuable siguiente', () => {
-    let partida = iniciarPartida({ tipo: 'comunidades', modo: 'ubicacion-nombre' }, elementos, azarFijo, reloj)
+    let partida = iniciarPartida(pruebaDe('comunidades', 'nombrar'), elementos, azarFijo, reloj)
     ahora = 1_000
     partida = responderConTexto(partida, 'Zeta')
     partida = elegirOpcion(partida, partida.pista!.opciones.find((opcion) => opcion.id !== partida.preguntado!.id)!.id)
@@ -743,7 +743,7 @@ describe('Repaso', () => {
 
 describe('Pista de área', () => {
   const azarSinBarajar = () => 0.99
-  const provinciasNombreUbicar: Prueba = { tipo: 'provincias', modo: 'nombre-ubicar' }
+  const provinciasLocalizar: Prueba = pruebaDe('provincias', 'localizar')
 
   function catalogoDePrueba(cambiosEnE: Partial<Elemento> = {}): Elemento[] {
     const comunidadDe: Record<string, string> = { a: 'X', b: 'X', c: 'Y', d: 'Y', e: 'Y', f: 'X' }
@@ -762,7 +762,7 @@ describe('Pista de área', () => {
     return cerrarCorreccion(responder(partida, partida.preguntado!.id === 'a' ? 'b' : 'a'))
   }
 
-  function trasElRepaso(catalogo = catalogoDePrueba(), prueba = provinciasNombreUbicar): Partida {
+  function trasElRepaso(catalogo = catalogoDePrueba(), prueba = provinciasLocalizar): Partida {
     let partida = iniciarPartida(prueba, catalogo, azarSinBarajar, reloj)
     partida = responder(partida, 'a')
     for (let i = 0; i < 3; i++) partida = fallarLaPregunta(partida)
@@ -771,7 +771,7 @@ describe('Pista de área', () => {
   }
 
   it('con provincias, solo la pregunta siguiente al Repaso ilumina las provincias de su comunidad autónoma', () => {
-    let partida = iniciarPartida(provinciasNombreUbicar, catalogoDePrueba(), azarSinBarajar, reloj)
+    let partida = iniciarPartida(provinciasLocalizar, catalogoDePrueba(), azarSinBarajar, reloj)
     expect(partida.pistaDeArea).toBeNull()
 
     partida = trasElRepaso()
@@ -789,22 +789,22 @@ describe('Pista de área', () => {
   })
 
   it('con comunidades, la pregunta siguiente al Repaso ilumina sus Vecinos', () => {
-    expect(trasElRepaso(catalogoDePrueba(), comunidadesNombreUbicar).pistaDeArea).toEqual(['d', 'f'])
+    expect(trasElRepaso(catalogoDePrueba(), comunidadesLocalizar).pistaDeArea).toEqual(['d', 'f'])
   })
 
   it('en el relieve, la pregunta siguiente al Repaso ilumina sus Vecinos', () => {
-    expect(trasElRepaso(catalogoDePrueba(), { tipo: 'cordilleras-y-sierras', modo: 'nombre-ubicar' }).pistaDeArea).toEqual(['d', 'f'])
-    expect(trasElRepaso(catalogoDePrueba(), { tipo: 'picos', modo: 'nombre-ubicar' }).pistaDeArea).toEqual(['d', 'f'])
+    expect(trasElRepaso(catalogoDePrueba(), pruebaDe('cordilleras-y-sierras', 'localizar')).pistaDeArea).toEqual(['d', 'f'])
+    expect(trasElRepaso(catalogoDePrueba(), pruebaDe('picos', 'localizar')).pistaDeArea).toEqual(['d', 'f'])
   })
 
   it('un elemento que trae su propia Pista de área la usa en lugar de sus Vecinos', () => {
     const conCuenca = catalogoDePrueba({ pistaDeArea: ['a', 'b', 'e'] })
 
-    expect(trasElRepaso(conCuenca, { tipo: 'rios', modo: 'nombre-ubicar' }).pistaDeArea).toEqual(['a', 'b', 'e'])
+    expect(trasElRepaso(conCuenca, pruebaDe('rios', 'localizar')).pistaDeArea).toEqual(['a', 'b', 'e'])
   })
 
   it('una comunidad sin Vecinos se ilumina a sí misma', () => {
-    expect(trasElRepaso(catalogoDePrueba({ vecinos: [] }), comunidadesNombreUbicar).pistaDeArea).toEqual(['e'])
+    expect(trasElRepaso(catalogoDePrueba({ vecinos: [] }), comunidadesLocalizar).pistaDeArea).toEqual(['e'])
   })
 
   it('Ceuta o Melilla iluminan las dos ciudades autónomas, en provincias y en comunidades', () => {
@@ -813,7 +813,7 @@ describe('Pista de área', () => {
     )
 
     expect(trasElRepaso(catalogo).pistaDeArea).toEqual(['b', 'e'])
-    expect(trasElRepaso(catalogo, comunidadesNombreUbicar).pistaDeArea).toEqual(['b', 'e'])
+    expect(trasElRepaso(catalogo, comunidadesLocalizar).pistaDeArea).toEqual(['b', 'e'])
   })
 
   it('sin nada que iluminar no hay Pista de área y acertar puntúa como siempre', () => {
@@ -860,7 +860,7 @@ describe('Pista de área', () => {
   })
 
   it('en Ubicación → nombre los toques del Repaso se ignoran y al cerrarlo la pregunta siguiente abre directamente la Pista, que cuenta como pista usada', () => {
-    let partida = iniciarPartida({ tipo: 'provincias', modo: 'ubicacion-nombre' }, catalogoDePrueba(), azarSinBarajar, reloj)
+    let partida = iniciarPartida(pruebaDe('provincias', 'nombrar'), catalogoDePrueba(), azarSinBarajar, reloj)
     partida = responderConTexto(partida, 'A')
     for (let i = 0; i < 3; i++) partida = fallarEscribiendo(partida)
     expect(partida.repaso?.elementos.map((elemento) => elemento.id)).toEqual(['b', 'c', 'd'])
@@ -886,7 +886,7 @@ describe('Pista de área', () => {
 
 describe('Puntuación', () => {
   it('un acierto a la primera inmediato suma 100 más 50 de bonus', () => {
-    let partida = iniciarPartida(comunidadesNombreUbicar, elementos, azarFijo, reloj)
+    let partida = iniciarPartida(comunidadesLocalizar, elementos, azarFijo, reloj)
 
     partida = responder(partida, partida.preguntado!.id)
 
@@ -894,7 +894,7 @@ describe('Puntuación', () => {
   })
 
   it('a los 5 s de mostrarse el elemento, el bonus lineal vale la mitad: 25', () => {
-    let partida = iniciarPartida(comunidadesNombreUbicar, elementos, azarFijo, reloj)
+    let partida = iniciarPartida(comunidadesLocalizar, elementos, azarFijo, reloj)
 
     ahora = 5_000
     partida = responder(partida, partida.preguntado!.id)
@@ -903,7 +903,7 @@ describe('Puntuación', () => {
   })
 
   it('el bonus se redondea a entero al sumarse: 140 a los 2 s y 138 a los 2,5 s', () => {
-    let partida = iniciarPartida(comunidadesNombreUbicar, elementos, azarFijo, reloj)
+    let partida = iniciarPartida(comunidadesLocalizar, elementos, azarFijo, reloj)
 
     ahora = 2_000
     partida = responder(partida, partida.preguntado!.id)
@@ -915,7 +915,7 @@ describe('Puntuación', () => {
   })
 
   it('sin bonus si el acierto a la primera llega a los 10 s o más', () => {
-    let partida = iniciarPartida(comunidadesNombreUbicar, elementos, azarFijo, reloj)
+    let partida = iniciarPartida(comunidadesLocalizar, elementos, azarFijo, reloj)
 
     ahora = 10_000
     partida = responder(partida, partida.preguntado!.id)
@@ -927,7 +927,7 @@ describe('Puntuación', () => {
   })
 
   it('un fallo resta 25', () => {
-    let partida = iniciarPartida(comunidadesNombreUbicar, elementos, azarFijo, reloj)
+    let partida = iniciarPartida(comunidadesLocalizar, elementos, azarFijo, reloj)
     partida = responder(partida, partida.preguntado!.id)
 
     const preguntado = partida.preguntado!
@@ -937,7 +937,7 @@ describe('Puntuación', () => {
   })
 
   it('la puntuación no baja de 0 tras varios fallos', () => {
-    let partida = iniciarPartida(comunidadesNombreUbicar, elementos, azarFijo, reloj)
+    let partida = iniciarPartida(comunidadesLocalizar, elementos, azarFijo, reloj)
 
     for (let i = 0; i < 2; i++) {
       const preguntado = partida.preguntado!
@@ -950,7 +950,7 @@ describe('Puntuación', () => {
   })
 
   it('un acierto en vuelta posterior suma 25 sin bonus', () => {
-    let partida = iniciarPartida(comunidadesNombreUbicar, elementos, azarFijo, reloj)
+    let partida = iniciarPartida(comunidadesLocalizar, elementos, azarFijo, reloj)
     const fallado = partida.preguntado!
     partida = cerrarCorreccion(responder(partida, elementos.find((elemento) => elemento.id !== fallado.id)!.id))
 
@@ -967,7 +967,7 @@ describe('Puntuación', () => {
 describe('Fin de partida', () => {
   it('recuenta los fallos, lista los elementos fallados y congela el tiempo jugado al terminar', () => {
     ahora = 1_000
-    let partida = iniciarPartida(comunidadesNombreUbicar, elementos, azarFijo, reloj)
+    let partida = iniciarPartida(comunidadesLocalizar, elementos, azarFijo, reloj)
     const fallado = partida.preguntado!
     const otro = elementos.find((elemento) => elemento.id !== fallado.id)!
 
@@ -993,7 +993,7 @@ describe('Fin de partida', () => {
   })
 
   it('recuenta 3 aciertos a la primera de 5 si uno se falla y otro se resuelve con pista', () => {
-    let partida = iniciarPartida(comunidadesNombreUbicar, elementos, azarFijo, reloj)
+    let partida = iniciarPartida(comunidadesLocalizar, elementos, azarFijo, reloj)
     const fallado = partida.preguntado!
     partida = cerrarCorreccion(responder(partida, elementos.find((elemento) => elemento.id !== fallado.id)!.id))
     partida = cerrarCorreccion(elegirOpcion(pedirPista(partida), partida.preguntado!.id))
@@ -1009,7 +1009,7 @@ describe('Fin de partida', () => {
 describe('Abandono', () => {
   it('abandonar termina la partida con pendientes, conserva la puntuación y la marca como abandonada', () => {
     ahora = 1_000
-    let partida = iniciarPartida(comunidadesNombreUbicar, elementos, azarFijo, reloj)
+    let partida = iniciarPartida(comunidadesLocalizar, elementos, azarFijo, reloj)
     partida = responder(partida, partida.preguntado!.id)
     expect(partida.abandonada).toBe(false)
 
@@ -1024,9 +1024,9 @@ describe('Abandono', () => {
   })
 
   it('resume una partida acabada con su prueba, puntuación, tiempo, fecha de fin y si fue abandonada', () => {
-    const prueba = { tipo: 'provincias', modo: 'ubicacion-nombre' } as const
+    const prueba = pruebaDe('provincias', 'nombrar')
     ahora = 1_000
-    let partida = iniciarPartida(comunidadesNombreUbicar, elementos, azarFijo, reloj)
+    let partida = iniciarPartida(comunidadesLocalizar, elementos, azarFijo, reloj)
     expect(resumirPartida(partida, prueba)).toBeNull()
 
     partida = responder(partida, partida.preguntado!.id)
@@ -1034,7 +1034,7 @@ describe('Abandono', () => {
     partida = abandonar(partida)
 
     expect(resumirPartida(partida, prueba)).toEqual({
-      prueba: { tipo: 'provincias', modo: 'ubicacion-nombre' },
+      prueba: pruebaDe('provincias', 'nombrar'),
       puntuacion: 150,
       tiempo: 6_000,
       fecha: '1970-01-01T00:00:07.000Z',
@@ -1043,7 +1043,7 @@ describe('Abandono', () => {
   })
 
   it('abandonar con una pista abierta la cierra sin contarla como pista usada ni como fallo', () => {
-    let partida = iniciarPartida(comunidadesNombreUbicar, elementos, azarFijo, reloj)
+    let partida = iniciarPartida(comunidadesLocalizar, elementos, azarFijo, reloj)
     partida = responderConTexto(partida, '')
 
     partida = abandonar(partida)
@@ -1055,7 +1055,7 @@ describe('Abandono', () => {
   })
 
   it('una partida abandonada conserva sus 2 aciertos a la primera sin contar los pendientes', () => {
-    let partida = iniciarPartida(comunidadesNombreUbicar, elementos, azarFijo, reloj)
+    let partida = iniciarPartida(comunidadesLocalizar, elementos, azarFijo, reloj)
     partida = responder(partida, partida.preguntado!.id)
     const fallado = partida.preguntado!
     partida = cerrarCorreccion(responder(partida, elementos.find((elemento) => elemento.id !== fallado.id)!.id))
@@ -1068,7 +1068,7 @@ describe('Abandono', () => {
 
   it('abandonar una partida ya terminada no la cambia', () => {
     ahora = 1_000
-    let partida = iniciarPartida(comunidadesNombreUbicar, elementos, azarFijo, reloj)
+    let partida = iniciarPartida(comunidadesLocalizar, elementos, azarFijo, reloj)
     ahora = 4_000
     while (!partida.terminada) partida = responder(partida, partida.preguntado!.id)
 
@@ -1081,8 +1081,8 @@ describe('Abandono', () => {
   })
 })
 
-describe('Jerarquía: elementos que se responden tocando otro elemento del mapa', () => {
-  const jerarquia: Prueba = { tipo: 'jerarquia', modo: 'nombre-ubicar' }
+describe('Pertenencia: elementos que se responden tocando otro elemento del mapa', () => {
+  const pertenencia: Prueba = pruebaDe('pertenencia-relieve', 'localizar')
   const cordilleras: Elemento[] = [
     { id: 'central', nombre: 'Sistema Central', nombreMostrado: 'Sistema Central', alias: [], vecinos: ['iberico'] },
     { id: 'iberico', nombre: 'Sistema Ibérico', nombreMostrado: 'Sistema Ibérico', alias: [], vecinos: ['central'] },
@@ -1096,7 +1096,7 @@ describe('Jerarquía: elementos que se responden tocando otro elemento del mapa'
   const azarSinBarajar = () => 0.99
 
   it('tocar la cordillera madre es acierto y tocar otra es fallo con Corrección sobre la cordillera tocada', () => {
-    let partida = iniciarPartida(jerarquia, sierras, azarSinBarajar, reloj, cordilleras)
+    let partida = iniciarPartida(pertenencia, sierras, azarSinBarajar, reloj, cordilleras)
     expect(partida.preguntado?.id).toBe('gredos')
 
     partida = responder(partida, 'central')
@@ -1111,12 +1111,12 @@ describe('Jerarquía: elementos que se responden tocando otro elemento del mapa'
   })
 
   it('tocar un id que no está en el mapa no cambia nada', () => {
-    const partida = iniciarPartida(jerarquia, sierras, azarSinBarajar, reloj, cordilleras)
+    const partida = iniciarPartida(pertenencia, sierras, azarSinBarajar, reloj, cordilleras)
     expect(responder(partida, 'gata')).toBe(partida)
   })
 
   it('en el Repaso, tocar una cordillera marca todos los elementos fallados que responden a ella', () => {
-    let partida = iniciarPartida(jerarquia, sierras, azarSinBarajar, reloj, cordilleras)
+    let partida = iniciarPartida(pertenencia, sierras, azarSinBarajar, reloj, cordilleras)
     for (let i = 0; i < 3; i++) partida = cerrarCorreccion(responder(partida, partida.preguntado!.respuesta === 'central' ? 'iberico' : 'central'))
     expect(partida.repaso?.elementos.map((elemento) => elemento.id)).toEqual(['gredos', 'gata', 'urbion'])
 
@@ -1129,7 +1129,7 @@ describe('Jerarquía: elementos que se responden tocando otro elemento del mapa'
   })
 })
 
-describe('Simulacro: desbloqueados y elegir pregunta', () => {
+describe('Todo: desbloqueados y elegir pregunta', () => {
   const sinDependencias: Elemento = { id: 'a', nombre: 'A', nombreMostrado: 'A', alias: [], vecinos: [], desbloqueaCon: [] }
   const tambienSinDependencias: Elemento = {
     id: 'b',
@@ -1140,24 +1140,24 @@ describe('Simulacro: desbloqueados y elegir pregunta', () => {
     desbloqueaCon: [],
   }
   const dependeDeA: Elemento = { id: 'c', nombre: 'C', nombreMostrado: 'C', alias: [], vecinos: [], desbloqueaCon: ['a'] }
-  const simulacro: Elemento[] = [sinDependencias, tambienSinDependencias, dependeDeA]
-  const simulacroNombreUbicar: Prueba = { tipo: 'simulacro-relieve', modo: 'nombre-ubicar' }
+  const todo: Elemento[] = [sinDependencias, tambienSinDependencias, dependeDeA]
+  const todoRelieve: Prueba = pruebaDe('todo-relieve', 'localizar')
   const azarSinBarajar = () => 0.99
 
   it('al principio, desbloqueados son solo los elementos sin dependencias pendientes', () => {
-    const partida = iniciarPartida(simulacroNombreUbicar, simulacro, azarSinBarajar, reloj)
+    const partida = iniciarPartida(todoRelieve, todo, azarSinBarajar, reloj)
 
     expect([...partida.desbloqueados].sort()).toEqual(['a', 'b'])
   })
 
   it('elegir pregunta con un id bloqueado no cambia la partida', () => {
-    const partida = iniciarPartida(simulacroNombreUbicar, simulacro, azarSinBarajar, reloj)
+    const partida = iniciarPartida(todoRelieve, todo, azarSinBarajar, reloj)
 
     expect(elegirPregunta(partida, 'c')).toBe(partida)
   })
 
   it('elegir pregunta con un id desbloqueado, aunque no sea el primero de la cola, lo convierte en Preguntado', () => {
-    const partida = iniciarPartida(simulacroNombreUbicar, simulacro, azarSinBarajar, reloj)
+    const partida = iniciarPartida(todoRelieve, todo, azarSinBarajar, reloj)
     expect(partida.preguntado?.id).toBe('a')
 
     const elegida = elegirPregunta(partida, 'b')
@@ -1166,7 +1166,7 @@ describe('Simulacro: desbloqueados y elegir pregunta', () => {
   })
 
   it('tras acertar el elemento del que depende, pasa a desbloqueados', () => {
-    let partida = iniciarPartida(simulacroNombreUbicar, simulacro, azarSinBarajar, reloj)
+    let partida = iniciarPartida(todoRelieve, todo, azarSinBarajar, reloj)
     expect(partida.desbloqueados).not.toContain('c')
 
     partida = responder(partida, 'a')
@@ -1177,7 +1177,7 @@ describe('Simulacro: desbloqueados y elegir pregunta', () => {
 
 describe('Ríos que se confunden entre sí', () => {
   const rios = catalogo('rios')
-  const riosNombrar: Prueba = { tipo: 'rios', modo: 'ubicacion-nombre' }
+  const riosNombrar: Prueba = pruebaDe('rios', 'nombrar')
 
   function preguntando(id: string): Partida {
     const soloEse = [rios.find((rio) => rio.id === id)!, ...rios.filter((rio) => rio.id !== id)]
@@ -1222,7 +1222,7 @@ describe('Grandes unidades: la cascada decide el Preguntado sin que el alumno el
   })
   // La cola sin barajar deja delante lo que todavía no se puede responder.
   const unidades = [unidad('ebro', ['iberico']), unidad('iberico', ['meseta']), unidad('meseta', [])]
-  const grandesUnidades: Prueba = { tipo: 'unidades', modo: 'nombre-ubicar' }
+  const grandesUnidades: Prueba = pruebaDe('unidades', 'localizar')
   const azarSinBarajar = () => 0.99
 
   it('pregunta lo único desbloqueado aunque no sea lo primero de la cola', () => {
@@ -1279,7 +1279,7 @@ describe('Grandes unidades: la cascada decide el Preguntado sin que el alumno el
 describe('Grandes unidades: partida completa sobre el catálogo real', () => {
   it('recorre las catorce unidades sin quedarse nunca sin nada que preguntar', () => {
     const unidades = catalogo('unidades')
-    let partida = iniciarPartida({ tipo: 'unidades', modo: 'nombre-ubicar' }, unidades, Math.random, reloj)
+    let partida = iniciarPartida(pruebaDe('unidades', 'localizar'), unidades, Math.random, reloj)
     const orden: string[] = []
 
     while (!partida.terminada) {
@@ -1295,5 +1295,39 @@ describe('Grandes unidades: partida completa sobre el catálogo real', () => {
     expect(orden.indexOf('depresion-del-ebro')).toBeLessThan(orden.indexOf('pirineos'))
     expect(orden.at(-1)).toBe('montanas-de-canarias')
     expect(partida.aciertosALaPrimera).toBe(unidades.length)
+  })
+})
+
+describe('Altura: la cifra se escribe, no se toca', () => {
+  const alturas = catalogo('picos').filter((elemento) => esIdDeAltura(elemento.id))
+  const tocables = catalogoDelMapa('picos')
+  const picosLocalizar: Prueba = pruebaDe('picos', 'localizar')
+  const azarSinBarajar = () => 0.99
+
+  it('tocar el pico no responde la pregunta de su altura', () => {
+    const partida = iniciarPartida(picosLocalizar, alturas, azarSinBarajar, reloj, tocables)
+    expect(partida.preguntado?.id).toBe('altura-moncayo')
+
+    expect(responder(partida, 'moncayo')).toBe(partida)
+  })
+
+  it('la cifra se acierta escribiéndola aunque la Prueba vaya en dirección de localizar', () => {
+    const partida = responderConTexto(
+      iniciarPartida(picosLocalizar, alturas, azarSinBarajar, reloj, tocables),
+      '2.314',
+    )
+
+    expect(partida.acertados).toEqual(['altura-moncayo'])
+  })
+
+  it('la Pista de una altura ofrece las otras tres cifras', () => {
+    const partida = pedirPista(iniciarPartida(picosLocalizar, alturas, azarSinBarajar, reloj, tocables))
+
+    expect(partida.pista?.opciones.map((opcion) => opcion.id).sort()).toEqual([
+      'altura-aneto',
+      'altura-moncayo',
+      'altura-mulhacen',
+      'altura-teide',
+    ])
   })
 })
