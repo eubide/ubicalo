@@ -2,7 +2,7 @@ import type { Feature, FeatureCollection, Geometry } from 'geojson'
 import riosGeo from '../datos/rios.json'
 import type { ContextoGeografico, Elemento } from './catalogo'
 
-export type TipoDeHidrografia = 'rios'
+export type TipoDeHidrografia = 'rios' | 'jerarquia-rios'
 
 export type ClaseDeRio = 'vertiente' | 'rio-principal' | 'rio-propio' | 'afluente'
 
@@ -31,6 +31,7 @@ export function propiedadesDeRio(contorno: Feature<Geometry>): PropiedadesDeRio 
 
 const CONTORNOS_DEL_MAPA: Record<TipoDeHidrografia, Feature<Geometry>[]> = {
   rios,
+  'jerarquia-rios': rios,
 }
 
 export function esDeHidrografia(tipo: string): tipo is TipoDeHidrografia {
@@ -88,12 +89,38 @@ function elementoDeRio(contorno: Feature<Geometry>): Elemento {
   }
 }
 
+// Cada Afluente se responde tocando el Río principal de su cuenca, aunque desemboque en otro Afluente;
+// los Vecinos son los del río que se toca, para que la Pista de área ilumine lo tocable.
+function catalogoDeJerarquiaDeRios(): Elemento[] {
+  const rios = CONTORNOS_DEL_MAPA.rios.map(elementoDeRio)
+  const porId = new Map(rios.map((rio) => [rio.id, rio]))
+  return rios
+    .filter((rio) => rio.clase === 'afluente')
+    .map(({ id, nombre, nombreMostrado, alias, clase, cuenca, desembocaEn, desambiguacion }) => {
+      const principal = porId.get(cuenca!)!
+      return {
+        id,
+        nombre,
+        nombreMostrado,
+        alias,
+        vecinos: principal.vecinos,
+        clase,
+        cuenca,
+        desembocaEn,
+        ...(desambiguacion && { desambiguacion }),
+        respuesta: principal.id,
+        pregunta: 'Toca su río principal',
+      }
+    })
+}
+
 export function catalogoDeHidrografia(tipo: TipoDeHidrografia): Elemento[] {
+  if (tipo === 'jerarquia-rios') return catalogoDeJerarquiaDeRios()
   return CONTORNOS_DEL_MAPA[tipo].map(elementoDeRio)
 }
 
 export function tocablesDeHidrografia(tipo: TipoDeHidrografia): Elemento[] {
-  return catalogoDeHidrografia(tipo)
+  return CONTORNOS_DEL_MAPA[tipo].map(elementoDeRio)
 }
 
 export function contornosDeHidrografia(tipo: TipoDeHidrografia): Feature<Geometry>[] {

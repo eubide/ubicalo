@@ -595,3 +595,43 @@ describe('Pista de área de los ríos', () => {
     expect(areaDe('nalon').sort()).toEqual(['bidasoa', 'nalon', 'nervion'])
   })
 })
+
+describe('Catálogo de jerarquía de ríos', () => {
+  it('pregunta los 24 afluentes hacia su río principal, y ningún río propio', () => {
+    const elementos = catalogo('jerarquia-rios')
+    const porNombre = (nombre: string) => elementos.find((elemento) => elemento.nombre === nombre)!
+
+    expect(elementos).toHaveLength(24)
+    expect(porNombre('Segre')).toMatchObject({ respuesta: 'ebro', pregunta: 'Toca su río principal' })
+    expect(porNombre('Sil').respuesta).toBe('mino')
+    expect(elementos.some((elemento) => elemento.id === 'jucar')).toBe(false)
+    expect(elementos.some((elemento) => elemento.id === 'ebro')).toBe(false)
+  })
+
+  it('el Jiloca se responde con el Ebro y el Záncara con el Guadiana, aunque desemboquen en un afluente', () => {
+    const elementos = catalogo('jerarquia-rios')
+    const respuestaDe = (id: string) => elementos.find((elemento) => elemento.id === id)!.respuesta
+
+    expect(respuestaDe('jiloca')).toBe('ebro')
+    expect(respuestaDe('zancara')).toBe('guadiana')
+    expect(respuestaDe('cinca')).toBe('ebro')
+  })
+
+  it('los vecinos son los del río que hay que tocar, para que la Pista de área ilumine lo tocable', () => {
+    const elementos = catalogo('jerarquia-rios')
+    const mapa = catalogoDelMapa('jerarquia-rios')
+    const porId = (lista: typeof elementos, id: string) => lista.find((elemento) => elemento.id === id)!
+
+    expect(porId(elementos, 'segre').vecinos).toEqual(porId(mapa, 'ebro').vecinos)
+    expect(porId(elementos, 'sil').vecinos).toEqual(porId(mapa, 'mino').vecinos)
+    expect(porId(elementos, 'segre').pistaDeArea).toBeUndefined()
+  })
+
+  it('el mapa de la jerarquía de ríos son los 41 ríos', () => {
+    const mapa = catalogoDelMapa('jerarquia-rios')
+
+    expect(mapa).toHaveLength(41)
+    expect(contornos('jerarquia-rios').map((contorno) => contorno.id)).toEqual(mapa.map((elemento) => elemento.id))
+    expect(contextoDe('jerarquia-rios')?.tenues).toEqual([])
+  })
+})
