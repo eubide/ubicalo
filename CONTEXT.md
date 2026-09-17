@@ -7,7 +7,7 @@ Web pública para que alumnos de ESO repasen la geografía de España señalando
 ### Contenido
 
 **Elemento**:
-Lugar concreto del mapa que se pregunta: una provincia, una comunidad autónoma, una cordillera, una sierra o un pico.
+Lugar concreto del mapa que se pregunta: una provincia, una comunidad autónoma, una cordillera, una sierra, un pico, una vertiente o un río.
 _Evitar_: accidente, lugar, zona, área
 
 **Tipo**:
@@ -27,7 +27,7 @@ Cumbre concreta que pertenece a una Cordillera; en el mapa es un triángulo (Ane
 _Evitar_: cima, cumbre, montaña
 
 **Clase**:
-Lo que es un elemento de relieve: cordillera o macizo, sierra o pico. Se ve en el icono, en la leyenda y en el enunciado de la pregunta.
+Lo que es un elemento dentro de su familia: cordillera o macizo, sierra o pico en el relieve; vertiente, río principal, río propio o afluente en la hidrografía. Se ve en el icono, en la leyenda y en el enunciado de la pregunta.
 _Evitar_: tipo, categoría, nivel
 
 **Jerarquía**:
@@ -183,6 +183,6 @@ _Evitar_: desafío, challenge
 - El listado de relieve son los apuntes del alumno desde "Macizo / sierra", con un pico por cordillera para darle simetría; el examen real es rellenar un mapa mudo físico con ríos.
 - El Tipo que simula ese examen se llama **Simulacro**, no "Examen": ese nombre ya estaba reservado como sinónimo a evitar de **Prueba**, para no llamar "examen" a un repaso suelto de comunidades o de picos.
 - "Tipo de prueba" mezclaba dos conceptos: el **Tipo** (qué se pregunta) y la **Prueba** (tipo más modo).
-- El listado de ríos de los apuntes está ordenado geográficamente, no por pertenencia: coloca el Huerva y el Jiloca lejos del Ebro, y el Turia, el Júcar y el Segura entre los **Afluentes** del Ebro sin serlo. La cuenca de cada río sale de la hidrografía real, no del orden de la lista.
+- El listado de ríos de los apuntes está ordenado geográficamente, no por pertenencia: coloca el Huerva y el Jiloca lejos del Ebro, y el Turia, el Júcar y el Segura entre los **Afluentes** del Ebro sin serlo. La cuenca de cada río sale de la hidrografía real, no del orden de la lista: el Cinca desemboca en el Segre, el Jiloca en el Jalón y el Záncara en el Cigüela, y los tres se preguntan por su **Río principal**.
 - El río que el alumno se saltó al copiar la lista se rellena con el Tiétar por su posición; queda marcado en el dato como añadido nuestro hasta que el profesor confirme cuál era.
 - "Vertiente" es el nivel de arriba de los ríos, no un Tipo suelto: con tres **Elementos** no da para una **Partida**, así que solo se juega dentro del **Simulacro** de ríos.

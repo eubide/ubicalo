@@ -5,14 +5,7 @@ import { geoArea, geoCentroid, geoContains } from 'd3-geo'
 const CAPA_IGN =
   'https://mapas-tematicos.ign.es/servicios/rest/services/tematicos/Medio_natural/MapServer/1114/query?where=1%3D1&outFields=*&outSR=4326&f=geojson'
 
-// Ríos de Natural Earth 10m (dominio público): el fichero general y el suplemento europeo.
-const RIOS_NATURAL_EARTH = [
-  'https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_10m_rivers_lake_centerlines.geojson',
-  'https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_10m_rivers_europe.geojson',
-]
-
 const TOLERANCIA_EN_GRADOS = 0.015
-const BBOX_PENINSULA = { oeste: -9.6, este: 3.6, sur: 35.9, norte: 43.9 }
 
 // Cada parte de la capa se reconoce por un punto que cae dentro de ella; `todas` toma la clase entera.
 const PARTES = [
@@ -124,12 +117,6 @@ const PICOS = [
   { id: 'mulhacen', nombre: 'Mulhacén', ngbe: 2408142, altura: 3479, cordillera: 'cordilleras-beticas', sierra: 'sierra-nevada', coordenadas: [-3.3115, 37.0534] },
   { id: 'turo-de-l-home', nombre: "Turó de l'Home", ngbe: 1956991, altura: 1706, cordillera: 'cordillera-costero-catalana', sierra: 'montseny', coordenadas: [2.4348, 41.7765] },
   { id: 'teide', nombre: 'Teide', ngbe: 2638544, altura: 3715, cordillera: 'montanas-de-canarias', coordenadas: [-16.6423, 28.2728] },
-]
-
-// Ríos del mapa físico de fondo, por el nombre que usa Natural Earth.
-const RIOS = [
-  'Minho', 'Mio', 'Sil', 'Duero', 'Esla', 'Pisuerga', 'Tormes', 'Tajo', 'Tejo', 'Guadiana', 'Guadalquivir', 'Genil',
-  'Ebro', 'Segre', 'Cinca', 'Jalón', 'Júcar', 'Turia', 'Segura',
 ]
 
 // d3-geo exige anillos exteriores en sentido horario; la capa los trae al revés.
@@ -319,23 +306,6 @@ function picos() {
   )
 }
 
-function enLaPeninsula([lon, lat]) {
-  return lon > BBOX_PENINSULA.oeste && lon < BBOX_PENINSULA.este && lat > BBOX_PENINSULA.sur && lat < BBOX_PENINSULA.norte
-}
-
-function riosDe(colecciones) {
-  const tramos = colecciones
-    .flatMap((coleccion) => coleccion.features)
-    .filter(({ properties }) => RIOS.includes(properties.name) && properties.featurecla === 'River')
-    .flatMap(({ properties, geometry }) => {
-      const lineas = geometry.type === 'LineString' ? [geometry.coordinates] : geometry.coordinates
-      return lineas.filter((linea) => linea.some(enLaPeninsula)).map((linea) => ({ nombre: properties.name, linea }))
-    })
-  return tramos.map(({ nombre, linea }, indice) =>
-    elemento(`rio-${indice}`, { nombre }, { type: 'LineString', coordinates: douglasPeucker(linea, TOLERANCIA_EN_GRADOS / 2) }),
-  )
-}
-
 async function descargar(url) {
   const respuesta = await fetch(url)
   if (!respuesta.ok) throw new Error(`${url} respondió ${respuesta.status}`)
@@ -348,11 +318,9 @@ function escribir(nombre, features) {
 }
 
 const capa = await descargar(CAPA_IGN)
-const coleccionesDeRios = await Promise.all(RIOS_NATURAL_EARTH.map(descargar))
 const unidades = unidadesDe(capa)
 
 mkdirSync('src/datos', { recursive: true })
 escribir('cordilleras', cordillerasDe(unidades))
 escribir('sierras', sierrasDe(unidades))
 escribir('picos', picos())
-escribir('rios', riosDe(coleccionesDeRios))
