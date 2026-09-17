@@ -1,8 +1,9 @@
 import type { Feature, FeatureCollection, Geometry } from 'geojson'
 import riosGeo from '../datos/rios.json'
+import vertientesGeo from '../datos/vertientes.json'
 import type { ContextoGeografico, Elemento } from './catalogo'
 
-export type TipoDeHidrografia = 'rios' | 'jerarquia-rios'
+export type TipoDeHidrografia = 'rios' | 'jerarquia-rios' | 'simulacro-rios'
 
 export type ClaseDeRio = 'vertiente' | 'rio-principal' | 'rio-propio' | 'afluente'
 
@@ -24,6 +25,7 @@ export interface PropiedadesDeRio {
 }
 
 const rios = (riosGeo as FeatureCollection).features
+const vertientes = (vertientesGeo as FeatureCollection).features
 
 export function propiedadesDeRio(contorno: Feature<Geometry>): PropiedadesDeRio {
   return contorno.properties as PropiedadesDeRio
@@ -32,13 +34,16 @@ export function propiedadesDeRio(contorno: Feature<Geometry>): PropiedadesDeRio 
 const CONTORNOS_DEL_MAPA: Record<TipoDeHidrografia, Feature<Geometry>[]> = {
   rios,
   'jerarquia-rios': rios,
+  'simulacro-rios': [...vertientes, ...rios],
 }
 
 export function esDeHidrografia(tipo: string): tipo is TipoDeHidrografia {
   return tipo in CONTORNOS_DEL_MAPA
 }
 
-const propiedadesPorId = new Map(rios.map((rio) => [String(rio.id), propiedadesDeRio(rio)]))
+const propiedadesPorId = new Map(
+  [...vertientes, ...rios].map((forma) => [String(forma.id), propiedadesDeRio(forma)]),
+)
 
 // Un afluente puede desembocar en otro afluente, pero su cuenca es siempre el Río principal del final
 // de la cadena: es lo que pregunta el examen.
@@ -54,6 +59,7 @@ function cuencaDe(id: string): string {
 // Los Vecinos de un río son sus hermanos de cuenca, no los más cercanos: es lo que de verdad confunde
 // el alumno, y de ahí salen los Distractores y lo que ilumina la Pista de área.
 function hermanosDe(id: string, propiedades: PropiedadesDeRio): string[] {
+  if (propiedades.clase === 'vertiente') return vertientes.map((otra) => String(otra.id)).filter((otra) => otra !== id)
   const mismaFamilia =
     propiedades.clase === 'afluente'
       ? (otras: PropiedadesDeRio, otroId: string) => otras.clase === 'afluente' && cuencaDe(otroId) === cuencaDe(id)
@@ -114,8 +120,19 @@ function catalogoDeJerarquiaDeRios(): Elemento[] {
     })
 }
 
+// Cada Elemento sabe qué debe estar Acertado antes de poder tocarse: las vertientes no dependen de
+// nada, un río de su vertiente y un afluente del Río principal de su cuenca, aunque desagüe en otro.
+function catalogoDeSimulacroDeRios(): Elemento[] {
+  return CONTORNOS_DEL_MAPA['simulacro-rios'].map(elementoDeRio).map((elemento) => ({
+    ...elemento,
+    desbloqueaCon:
+      elemento.clase === 'vertiente' ? [] : [elemento.clase === 'afluente' ? elemento.cuenca! : elemento.vertiente!],
+  }))
+}
+
 export function catalogoDeHidrografia(tipo: TipoDeHidrografia): Elemento[] {
   if (tipo === 'jerarquia-rios') return catalogoDeJerarquiaDeRios()
+  if (tipo === 'simulacro-rios') return catalogoDeSimulacroDeRios()
   return CONTORNOS_DEL_MAPA[tipo].map(elementoDeRio)
 }
 

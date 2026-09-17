@@ -1085,7 +1085,7 @@ describe('Simulacro: desbloqueados y elegir pregunta', () => {
   }
   const dependeDeA: Elemento = { id: 'c', nombre: 'C', nombreMostrado: 'C', alias: [], vecinos: [], desbloqueaCon: ['a'] }
   const simulacro: Elemento[] = [sinDependencias, tambienSinDependencias, dependeDeA]
-  const simulacroNombreUbicar: Prueba = { tipo: 'simulacro', modo: 'nombre-ubicar' }
+  const simulacroNombreUbicar: Prueba = { tipo: 'simulacro-relieve', modo: 'nombre-ubicar' }
   const azarSinBarajar = () => 0.99
 
   it('al principio, desbloqueados son solo los elementos sin dependencias pendientes', () => {

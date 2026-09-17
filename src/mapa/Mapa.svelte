@@ -141,6 +141,7 @@
   const pausaDobleToque = 300
   const holguraDobleToque = 30
 
+  let lienzo = $state<SVGSVGElement | null>(null)
   let vista = $state<Vista>({ escala: 1, x: 0, y: 0 })
   let seleccionado = $state<string | null>(null)
 
@@ -229,16 +230,26 @@
 
   // Una línea de dos píxeles no se puede pulsar, y en cada confluencia hay varias bajo el dedo: el
   // toque lo resuelve el mapa entero, quedándose con el cauce que pasa más cerca del punto exacto.
-  function tocarCauce(evento: MouseEvent) {
-    if (trazos.length === 0) return
-    const caja = (evento.currentTarget as SVGSVGElement).getBoundingClientRect()
+  function cauceBajoElPuntero(evento: MouseEvent): string | null {
+    if (trazos.length === 0 || !lienzo) return null
+    const caja = lienzo.getBoundingClientRect()
     const factor = ancho / caja.width
     const punto = {
       x: ((evento.clientX - caja.left) * factor - vista.x) / vista.escala,
       y: ((evento.clientY - caja.top) * factor - vista.y) / vista.escala,
     }
-    const id = trazoMasCercano(punto, trazos, radioDelDedo / vista.escala)
+    return trazoMasCercano(punto, trazos, radioDelDedo / vista.escala)
+  }
+
+  function tocarCauce(evento: MouseEvent) {
+    const id = cauceBajoElPuntero(evento)
     if (id !== null) pulsarElemento(id)
+  }
+
+  // Los cauces se dibujan sobre las manchas, así que un toque sobre un río que cruza una vertiente
+  // le llega a las dos. Gana el río, que es el blanco fino.
+  function pulsarMancha(evento: MouseEvent, id: string) {
+    if (cauceBajoElPuntero(evento) === null) pulsarElemento(id)
   }
 
   function centroDelRotulo(contorno: Feature<Geometry>): [number, number] {
@@ -289,6 +300,7 @@
 <figure class="mapa" bind:clientWidth={anchoEnPantalla}>
   <!-- svelte-ignore a11y_no_noninteractive_element_interactions, a11y_click_events_have_key_events -->
   <svg
+    bind:this={lienzo}
     viewBox="0 0 {ancho} {alto}"
     role="img"
     aria-label="Mapa mudo de España"
@@ -337,7 +349,7 @@
           {@const id = String(contorno.id)}
           <path
             d={marcador(contorno)}
-            class={contorno.geometry.type === 'Point' ? claseDe(contorno) : ''}
+            class={contorno.geometry.type === 'Point' || claseDe(contorno) === 'vertiente' ? claseDe(contorno) : ''}
             class:acertado={acertados.includes(id)}
             class:fallado={fallados.includes(id)}
             class:pistaDeArea={pistaDeArea.includes(id)}
@@ -348,7 +360,7 @@
             class:parcial={parcial.includes(id)}
             class:activo={activo === id}
             class:tocado={tocado === id}
-            onclick={() => pulsarElemento(id)}
+            onclick={(evento) => pulsarMancha(evento, id)}
           />
         {/each}
         <!-- Las dianas van encima de todo para que una mancha no robe el toque a un punto. -->
@@ -361,7 +373,7 @@
               cx={punto[0]}
               cy={punto[1]}
               r={radioDiana}
-              onclick={() => pulsarElemento(String(contorno.id))}
+              onclick={(evento) => pulsarMancha(evento, String(contorno.id))}
             />
           {/if}
         {/each}
@@ -424,6 +436,9 @@
       {/if}
       {#if clasesEnElMapa.includes('pico')}
         <li><svg viewBox="0 0 20 14" aria-hidden="true"><path class="pico" d="M10,1L16,12H4Z" /></svg> Pico</li>
+      {/if}
+      {#if contornos.some((contorno) => claseDe(contorno) === 'vertiente')}
+        <li><svg viewBox="0 0 20 14" aria-hidden="true"><path class="vertiente" d="M1,9C4,3 8,2 12,5S18,6 19,3V13H1Z" /></svg> Vertiente</li>
       {/if}
       {#if cauces.length > 0}
         <li><svg viewBox="0 0 20 14" aria-hidden="true"><path class="cauce" d="M1,11C6,11 5,4 10,4S15,10 19,3" /></svg> Río</li>
@@ -488,6 +503,12 @@
     stroke: #9aa0a6;
     stroke-width: 0.8;
     cursor: pointer;
+  }
+
+  .elementos path.vertiente,
+  .leyenda .vertiente {
+    fill: #dbe7f0;
+    stroke: #6b8ea6;
   }
 
   /* El toque lo resuelve el SVG entero, no cada trazo: aquí solo se dibuja. */

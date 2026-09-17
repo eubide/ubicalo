@@ -6,7 +6,7 @@ import picosGeo from '../datos/picos.json'
 import riosGeo from '../datos/rios.json'
 import type { ContextoGeografico, Elemento } from './catalogo'
 
-export type TipoDeRelieve = 'cordilleras-y-sierras' | 'picos' | 'jerarquia' | 'alturas' | 'simulacro'
+export type TipoDeRelieve = 'cordilleras-y-sierras' | 'picos' | 'jerarquia' | 'alturas' | 'simulacro-relieve'
 
 export type Clase = 'cordillera' | 'sierra' | 'pico'
 
@@ -81,7 +81,7 @@ const CLASES_DEL_MAPA: Record<TipoDeRelieve, Clase[]> = {
   picos: ['pico'],
   jerarquia: ['cordillera', 'pico'],
   alturas: ['pico'],
-  simulacro: ['cordillera', 'sierra', 'pico'],
+  'simulacro-relieve': ['cordillera', 'sierra', 'pico'],
 }
 
 export function esDeRelieve(tipo: string): tipo is TipoDeRelieve {
@@ -199,7 +199,7 @@ function catalogoDeSimulacro(): Elemento[] {
 export function catalogoDeRelieve(tipo: TipoDeRelieve): Elemento[] {
   if (tipo === 'jerarquia') return catalogoDeJerarquia()
   if (tipo === 'alturas') return catalogoDeAlturas()
-  if (tipo === 'simulacro') return catalogoDeSimulacro()
+  if (tipo === 'simulacro-relieve') return catalogoDeSimulacro()
   return elementosDeClases(CLASES_DEL_MAPA[tipo])
 }
 
@@ -208,7 +208,7 @@ export function catalogoDeRelieve(tipo: TipoDeRelieve): Elemento[] {
 // pregunta también las cuatro alturas, que no tienen forma propia).
 export function tocablesDeRelieve(tipo: TipoDeRelieve): Elemento[] {
   if (tipo === 'jerarquia') return CLASES_DEL_MAPA.jerarquia.flatMap((clase) => elementosDe(contornosPorClase[clase]))
-  if (tipo === 'simulacro') return elementosDeClases(CLASES_DEL_MAPA.simulacro)
+  if (tipo === 'simulacro-relieve') return elementosDeClases(CLASES_DEL_MAPA['simulacro-relieve'])
   return catalogoDeRelieve(tipo)
 }
 

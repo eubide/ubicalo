@@ -410,7 +410,7 @@ describe('Contexto geográfico del relieve', () => {
 
 describe('Catálogo de simulacro', () => {
   it('entrega las 44 piezas del relieve: cordilleras, sierras, picos y las cuatro alturas', () => {
-    const elementos = catalogo('simulacro')
+    const elementos = catalogo('simulacro-relieve')
 
     expect(elementos).toHaveLength(44)
     expect(elementos.filter((elemento) => elemento.clase === 'cordillera')).toHaveLength(11)
@@ -419,21 +419,21 @@ describe('Catálogo de simulacro', () => {
   })
 
   it('las 11 cordilleras están desbloqueadas desde el principio', () => {
-    const cordilleras = catalogo('simulacro').filter((elemento) => elemento.clase === 'cordillera')
+    const cordilleras = catalogo('simulacro-relieve').filter((elemento) => elemento.clase === 'cordillera')
 
     expect(cordilleras).toHaveLength(11)
     expect(cordilleras.every((elemento) => elemento.desbloqueaCon?.length === 0)).toBe(true)
   })
 
   it('una sierra se desbloquea al acertar su cordillera', () => {
-    const elementos = catalogo('simulacro')
+    const elementos = catalogo('simulacro-relieve')
     const gredos = elementos.find((elemento) => elemento.id === 'sierra-de-gredos')!
 
     expect(gredos.desbloqueaCon).toEqual(['sistema-central'])
   })
 
   it('un pico se desbloquea al acertar su cordillera y todas sus sierras', () => {
-    const elementos = catalogo('simulacro')
+    const elementos = catalogo('simulacro-relieve')
     const almanzor = elementos.find((elemento) => elemento.id === 'almanzor')!
 
     expect(almanzor.desbloqueaCon).toHaveLength(5)
@@ -444,13 +444,13 @@ describe('Catálogo de simulacro', () => {
   })
 
   it('el pico de una cordillera sin sierras se desbloquea solo con la cordillera', () => {
-    const aizkorri = catalogo('simulacro').find((elemento) => elemento.id === 'aizkorri')!
+    const aizkorri = catalogo('simulacro-relieve').find((elemento) => elemento.id === 'aizkorri')!
 
     expect(aizkorri.desbloqueaCon).toEqual(['montes-vascos'])
   })
 
   it('las cuatro alturas se desbloquean con su pico, y su id no coincide con el del pico', () => {
-    const alturas = catalogo('simulacro').filter((elemento) => elemento.id.startsWith('altura-'))
+    const alturas = catalogo('simulacro-relieve').filter((elemento) => elemento.id.startsWith('altura-'))
 
     expect(alturas).toHaveLength(4)
     const anetoAltura = alturas.find((elemento) => elemento.id === 'altura-aneto')!
@@ -460,11 +460,11 @@ describe('Catálogo de simulacro', () => {
   })
 
   it('el mapa del simulacro son las 40 piezas con geometría propia, sin las alturas', () => {
-    const mapa = catalogoDelMapa('simulacro')
+    const mapa = catalogoDelMapa('simulacro-relieve')
 
     expect(mapa).toHaveLength(40)
     expect(mapa.every((elemento) => elemento.id.startsWith('altura-') === false)).toBe(true)
-    expect(contornos('simulacro')).toHaveLength(40)
+    expect(contornos('simulacro-relieve')).toHaveLength(40)
   })
 })
 
@@ -633,5 +633,66 @@ describe('Catálogo de jerarquía de ríos', () => {
     expect(mapa).toHaveLength(41)
     expect(contornos('jerarquia-rios').map((contorno) => contorno.id)).toEqual(mapa.map((elemento) => elemento.id))
     expect(contextoDe('jerarquia-rios')?.tenues).toEqual([])
+  })
+})
+
+describe('Catálogo de simulacro de ríos', () => {
+  it('entrega las 44 piezas: 3 vertientes, 17 ríos del nivel superior y 24 afluentes', () => {
+    const elementos = catalogo('simulacro-rios')
+    const deClase = (clase: string) => elementos.filter((elemento) => elemento.clase === clase)
+
+    expect(elementos).toHaveLength(44)
+    expect(deClase('vertiente')).toHaveLength(3)
+    expect(deClase('rio-principal')).toHaveLength(6)
+    expect(deClase('rio-propio')).toHaveLength(11)
+    expect(deClase('afluente')).toHaveLength(24)
+  })
+
+  it('solo las tres vertientes están desbloqueadas desde el principio', () => {
+    const elementos = catalogo('simulacro-rios')
+    const sinDependencias = elementos.filter((elemento) => elemento.desbloqueaCon?.length === 0)
+
+    expect(sinDependencias.map((elemento) => elemento.id)).toEqual([
+      'vertiente-cantabrica',
+      'vertiente-atlantica',
+      'vertiente-mediterranea',
+    ])
+    expect(elementos.every((elemento) => elemento.desbloqueaCon !== undefined)).toBe(true)
+  })
+
+  it('un río del nivel superior se desbloquea al acertar su vertiente', () => {
+    const elementos = catalogo('simulacro-rios')
+    const porId = (id: string) => elementos.find((elemento) => elemento.id === id)!
+
+    expect(porId('ebro').desbloqueaCon).toEqual(['vertiente-mediterranea'])
+    expect(porId('nalon').desbloqueaCon).toEqual(['vertiente-cantabrica'])
+    expect(porId('mino').desbloqueaCon).toEqual(['vertiente-atlantica'])
+  })
+
+  it('un afluente se desbloquea al acertar el río principal de su cuenca, aunque desemboque en otro afluente', () => {
+    const elementos = catalogo('simulacro-rios')
+    const porId = (id: string) => elementos.find((elemento) => elemento.id === id)!
+
+    expect(porId('segre').desbloqueaCon).toEqual(['ebro'])
+    expect(porId('jiloca').desbloqueaCon).toEqual(['ebro'])
+    expect(porId('zancara').desbloqueaCon).toEqual(['guadiana'])
+    expect(porId('sil').desbloqueaCon).toEqual(['mino'])
+  })
+
+  it('las vertientes se tocan como manchas y los ríos como líneas', () => {
+    const formas = contornos('simulacro-rios')
+
+    expect(formas).toHaveLength(44)
+    expect(formas.slice(0, 3).every((forma) => forma.geometry.type !== 'LineString')).toBe(true)
+    expect(formas.slice(3).every((forma) => forma.geometry.type === 'LineString')).toBe(true)
+    expect(catalogoDelMapa('simulacro-rios').map((elemento) => elemento.id)).toEqual(
+      formas.map((forma) => String(forma.id)),
+    )
+  })
+
+  it('los vecinos de una vertiente son las otras dos', () => {
+    const cantabrica = catalogo('simulacro-rios').find((elemento) => elemento.id === 'vertiente-cantabrica')!
+
+    expect(cantabrica.vecinos.sort()).toEqual(['vertiente-atlantica', 'vertiente-mediterranea'])
   })
 })

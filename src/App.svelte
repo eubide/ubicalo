@@ -34,7 +34,7 @@
     tiempoJugado,
     type Partida,
   } from './partida/partida'
-  import { indicacionDeRespuesta, pruebaDe, type Prueba } from './prueba/prueba'
+  import { esSimulacro as esSimulacroDeAlgo, indicacionDeRespuesta, pruebaDe, type Prueba } from './prueba/prueba'
   import SeleccionPrueba from './seleccion/SeleccionPrueba.svelte'
 
   const contexto = contextoGeografico as FeatureCollection
@@ -85,7 +85,7 @@
   })
 
   const escribeNombre = $derived(prueba?.modo === 'ubicacion-nombre')
-  const esSimulacro = $derived(prueba?.tipo === 'simulacro')
+  const esSimulacro = $derived(prueba !== null && esSimulacroDeAlgo(prueba.tipo))
   // Solo lo ya visible (Acertado o Desbloqueado); el resto del mapa mudo sigue sin dibujarse.
   const contornosVisibles = $derived(
     esSimulacro && partida
