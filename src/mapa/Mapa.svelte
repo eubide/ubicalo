@@ -2,7 +2,14 @@
   import type { Feature, FeatureCollection, Geometry, Polygon } from 'geojson'
   import { geoCentroid, geoPath } from 'd3-geo'
   import { geoConicConformalSpain } from 'd3-composite-projections'
-  import { propiedadesDe, type Clase, type ContextoDeRelieve } from '../catalogo/relieve'
+  import {
+    nombreDePapel,
+    PAPELES,
+    propiedadesDe,
+    type Clase,
+    type ContextoDeRelieve,
+    type Papel,
+  } from '../catalogo/relieve'
   import RecuadroCeutaMelilla, { esCeutaOMelilla } from './RecuadroCeutaMelilla.svelte'
 
   export interface Rotulo {
@@ -13,6 +20,8 @@
   interface Props {
     contornos: Feature<Geometry>[]
     contextoDeRelieve?: ContextoDeRelieve | null
+    // La leyenda es la rampa de altitud, no los iconos de clase: solo en Grandes unidades.
+    rampa?: boolean
     contexto: FeatureCollection
     acertados: string[]
     tocado?: string | null
@@ -34,6 +43,7 @@
   let {
     contornos,
     contextoDeRelieve = null,
+    rampa = false,
     contexto,
     acertados,
     tocado = null,
@@ -90,8 +100,21 @@
   const manchas = $derived(contornos.filter((contorno) => contorno.geometry.type !== 'Point'))
 
   function claseDe(contorno: Feature<Geometry>): Clase {
-    return contorno.geometry.type === 'Point' ? propiedadesDe(contorno).clase : 'cordillera'
+    return propiedadesDe(contorno).clase
   }
+
+  // El color de cada unidad sale de su papel respecto a la Meseta, en la rampa de altitud de los mapas
+  // físicos; la leyenda pasa a ser esa rampa y no los iconos, que aquí son todos manchas.
+  // El color entra como variable y no como clase: así los estados momentáneos (un toque erróneo sobre una
+  // mancha ya pintada, la Corrección, el Repaso) siguen ganando por orden, como en el resto de los Tipos.
+  function colorDelPapel(contorno: Feature<Geometry>): string | null {
+    const { papel } = propiedadesDe(contorno)
+    return papel ? `--papel: var(--${papel})` : null
+  }
+
+  const papelesEnElMapa = $derived(
+    rampa ? PAPELES.filter((papel) => contornos.some((contorno) => propiedadesDe(contorno).papel === papel)) : [],
+  )
 
   // Solo las clases presentes, para que la leyenda no anuncie lo que el mapa no muestra.
   const clasesEnElMapa = $derived(
@@ -290,6 +313,7 @@
           <path
             d={marcador(contorno)}
             class={contorno.geometry.type === 'Point' ? claseDe(contorno) : ''}
+            style={colorDelPapel(contorno)}
             class:acertado={acertados.includes(id)}
             class:fallado={fallados.includes(id)}
             class:pistaDeArea={pistaDeArea.includes(id)}
@@ -366,7 +390,13 @@
       />
     {/if}
   </svg>
-  {#if contextoDeRelieve}
+  {#if papelesEnElMapa.length > 0}
+    <ul class="leyenda rampa">
+      {#each papelesEnElMapa as papel (papel)}
+        <li><span class="muestra" style="background: var(--{papel})" aria-hidden="true"></span> {nombreDePapel[papel]}</li>
+      {/each}
+    </ul>
+  {:else if contextoDeRelieve}
     <ul class="leyenda">
       {#if clasesEnElMapa.includes('cordillera')}
         <li><svg viewBox="0 0 20 14" aria-hidden="true"><path class="mancha" d="M1,9C4,3 8,2 12,5S18,6 19,3V13H1Z" /></svg> Cordillera o macizo</li>
@@ -490,8 +520,18 @@
     vector-effect: non-scaling-stroke;
   }
 
+  /* Rampa hipsométrica: la unidad acertada toma su altura en un mapa físico; sin papel, el verde de siempre. */
   .elementos path.acertado {
-    fill: #cfe8d6;
+    fill: var(--papel, #cfe8d6);
+  }
+
+  .muestra {
+    display: inline-block;
+    width: 1.1rem;
+    height: 0.8rem;
+    border: 1px solid #8b8578;
+    border-radius: 0.15rem;
+    vertical-align: -0.1em;
   }
 
   .elementos path.fallado {
