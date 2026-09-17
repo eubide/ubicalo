@@ -231,11 +231,13 @@ export function cerrarRepaso(partida: Partida): Partida {
 }
 
 function pistaDeAreaDe({ prueba, elementos, cola: [preguntado] }: Partida): string[] | null {
-  const ids = preguntado.ciudadAutonoma
-    ? elementos.filter((elemento) => elemento.ciudadAutonoma).map((elemento) => elemento.id)
-    : prueba.tipo === 'provincias'
-      ? pistaDeAreaDeProvincia(preguntado, elementos)
-      : pistaDeAreaDeVecinos(preguntado)
+  const ids = preguntado.pistaDeArea
+    ? preguntado.pistaDeArea
+    : preguntado.ciudadAutonoma
+      ? elementos.filter((elemento) => elemento.ciudadAutonoma).map((elemento) => elemento.id)
+      : prueba.tipo === 'provincias'
+        ? pistaDeAreaDeProvincia(preguntado, elementos)
+        : pistaDeAreaDeVecinos(preguntado)
   return ids.length > 0 ? ids : null
 }
 

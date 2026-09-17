@@ -330,6 +330,9 @@
             <p class:fallo={pista.escrito !== null}>
               {pista.escrito !== null ? `Escribiste: ${pista.escrito}. ¿Cuál es?` : '¿Cuál es?'}
             </p>
+            {#if pista.escrito !== null && partida.preguntado?.desambiguacion}
+              <p class="desambiguacion">{partida.preguntado.desambiguacion}</p>
+            {/if}
             {#each pista.opciones as opcion (opcion.id)}
               <button type="button" onclick={() => elegirOpcionDePista(opcion.id)}>{opcion.nombreMostrado}</button>
             {/each}
@@ -410,6 +413,9 @@
             Elegiste {correccion.elegido.nombreMostrado} · Era {correccion.correcto.nombreMostrado}
           {/if}
         </p>
+        {#if correccionTrasFallo(correccion) && correccion.correcto.desambiguacion}
+          <p class="desambiguacion">{correccion.correcto.desambiguacion}</p>
+        {/if}
         <div class="barra" style:animation-duration="{correccion.duracion}ms"></div>
       </div>
     {:else if repaso && escribeNombre}
@@ -497,6 +503,11 @@
     color: #b45309;
   }
 
+  .desambiguacion {
+    font-size: 0.9375rem;
+    color: #6b7280;
+  }
+
   .pendientes {
     margin: 0;
     color: #6b7280;
@@ -537,6 +548,11 @@
     margin: 0 0 0.5rem;
     font-size: 1.125rem;
     color: #b45309;
+  }
+
+  .correccion .desambiguacion {
+    font-size: 0.9375rem;
+    color: #6b7280;
   }
 
   .correccion.conPista p {

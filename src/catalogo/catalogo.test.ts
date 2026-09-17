@@ -572,3 +572,26 @@ describe('Catálogo de ríos', () => {
     expect(contextoDe('rios')?.contorno.geometry.type).toBe('MultiPolygon')
   })
 })
+
+describe('Pista de área de los ríos', () => {
+  const rios = catalogo('rios')
+  const areaDe = (id: string) => rios.find((rio) => rio.id === id)!.pistaDeArea!
+
+  it('la de un afluente ilumina su cuenca entera, con el río principal incluido', () => {
+    expect(areaDe('tormes').sort()).toEqual(['adaja', 'duero', 'esla', 'pisuerga', 'tormes'])
+  })
+
+  it('la de un río principal ilumina su cuenca, no los ríos de su vertiente', () => {
+    expect(areaDe('mino').sort()).toEqual(['mino', 'sil'])
+    expect(areaDe('ebro')).toHaveLength(9)
+    expect(areaDe('ebro')).not.toContain('jucar')
+  })
+
+  it('un afluente de afluente ilumina la cuenca de su río principal', () => {
+    expect(areaDe('zancara').sort()).toEqual(['ciguela', 'guadiana', 'jabalon', 'zancara', 'zujar'])
+  })
+
+  it('un río propio, que no recoge afluentes, ilumina los de su vertiente', () => {
+    expect(areaDe('nalon').sort()).toEqual(['bidasoa', 'nalon', 'nervion'])
+  })
+})

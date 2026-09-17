@@ -62,6 +62,14 @@ function hermanosDe(id: string, propiedades: PropiedadesDeRio): string[] {
     .map(([otroId]) => otroId)
 }
 
+// La Pista de área ilumina la cuenca: el Río principal con todos sus Afluentes. Un Río propio no
+// recoge ninguno, así que ilumina los de su Vertiente, que es lo más parecido a una cuenca que tiene.
+function cuencaIluminada(id: string, propiedades: PropiedadesDeRio): string[] {
+  const principal = cuencaDe(id)
+  const deLaCuenca = [...propiedadesPorId.keys()].filter((otroId) => cuencaDe(otroId) === principal)
+  return deLaCuenca.length > 1 ? deLaCuenca : [id, ...hermanosDe(id, propiedades)]
+}
+
 function elementoDeRio(contorno: Feature<Geometry>): Elemento {
   const id = String(contorno.id)
   const { nombre, clase, vertiente, desembocaEn, alias, desambiguacion, fueraDeApuntes } = propiedadesDeRio(contorno)
@@ -71,6 +79,7 @@ function elementoDeRio(contorno: Feature<Geometry>): Elemento {
     nombreMostrado: nombre,
     alias: alias ?? [],
     vecinos: hermanosDe(id, propiedadesPorId.get(id)!),
+    pistaDeArea: cuencaIluminada(id, propiedadesPorId.get(id)!),
     clase,
     ...(vertiente && { vertiente }),
     ...(desembocaEn && { desembocaEn, cuenca: cuencaDe(id) }),

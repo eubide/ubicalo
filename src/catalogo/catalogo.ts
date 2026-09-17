@@ -61,6 +61,8 @@ export interface Elemento {
   cuenca?: string
   // Frase que distingue este elemento del que se le parece, para la Corrección.
   desambiguacion?: string
+  // Lo que ilumina la Pista de área cuando no basta con los Vecinos.
+  pistaDeArea?: string[]
   // Marca el elemento que no viene de los apuntes del alumno.
   fueraDeApuntes?: true
   // Id que hay que tocar cuando no es el propio elemento (Jerarquía).
