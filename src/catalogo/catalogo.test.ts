@@ -48,7 +48,7 @@ describe('Catálogo de comunidades autónomas', () => {
       nombreMostrado: 'Comunitat Valenciana (Comunidad Valenciana)',
       alias: ['Comunidad Valenciana', 'Valencia'],
     })
-    expect(elementos.filter((elemento) => elemento.alias.length > 0)).toHaveLength(11)
+    expect(elementos.filter((elemento) => elemento.alias.length > 0)).toHaveLength(10)
   })
 
   it('acepta como alias las formas cortas habituales sin cambiar el nombre mostrado', () => {
@@ -64,7 +64,6 @@ describe('Catálogo de comunidades autónomas', () => {
     expect(porId('13').alias).toEqual(['Madrid'])
     expect(porId('14').alias).toEqual(['Murcia'])
     expect(porId('15').alias).toEqual(['Navarra'])
-    expect(porId('17').alias).toEqual(['Rioja'])
     expect(porId('18').alias).toEqual(['Ceuta'])
     expect(porId('19').alias).toEqual(['Melilla'])
   })
@@ -139,7 +138,7 @@ describe('Catálogo de provincias', () => {
       nombreMostrado: 'Illes Balears (Islas Baleares)',
       alias: ['Islas Baleares', 'Baleares'],
     })
-    expect(elementos.filter((elemento) => elemento.alias.length > 0)).toHaveLength(13)
+    expect(elementos.filter((elemento) => elemento.alias.length > 0)).toHaveLength(12)
   })
 
   it('la provincia de Madrid tiene como vecinos exactamente Toledo, Ávila, Segovia, Guadalajara y Cuenca', () => {
@@ -154,7 +153,7 @@ describe('Catálogo de provincias', () => {
     const elementos = nombresDelCatalogo('provincias')
     const porId = (id: string) => elementos.find((elemento) => elemento.id === id)!
 
-    expect(porId('26')).toEqual({ id: '26', nombre: 'La Rioja', nombreMostrado: 'La Rioja', alias: ['Rioja'] })
+    expect(porId('26')).toEqual({ id: '26', nombre: 'La Rioja', nombreMostrado: 'La Rioja', alias: [] })
     expect(porId('38')).toEqual({
       id: '38',
       nombre: 'Santa Cruz de Tenerife',
@@ -303,12 +302,7 @@ describe('Catálogo de picos', () => {
   it('acepta las otras formas habituales como alias', () => {
     const elementos = nombresDelCatalogo('picos')
 
-    expect(elementos).toContainEqual({
-      id: 'torre-cerredo',
-      nombre: 'Torre Cerredo',
-      nombreMostrado: 'Torre Cerredo',
-      alias: ['Torrecerredo', 'Torre de Cerredo'],
-    })
+    expect(elementos).toContainEqual({ id: 'torre-cerredo', nombre: 'Torre Cerredo', nombreMostrado: 'Torre Cerredo', alias: [] })
     expect(elementos).toContainEqual({ id: 'aizkorri', nombre: 'Aizkorri', nombreMostrado: 'Aizkorri', alias: ['Aketegi'] })
     expect(elementos).toContainEqual({ id: 'aneto', nombre: 'Aneto', nombreMostrado: 'Aneto', alias: [] })
   })

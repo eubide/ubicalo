@@ -86,7 +86,6 @@ const ALIAS: Record<string, string[]> = {
   'pirineo-navarro': ['Navarro'],
   'pirineo-aragones': ['Aragonés'],
   'pirineo-catalan': ['Catalán'],
-  'torre-cerredo': ['Torrecerredo', 'Torre de Cerredo'],
   'pena-trevinca': ['Trevinca'],
   aizkorri: ['Aketegi'],
   almanzor: ['Pico Almanzor'],

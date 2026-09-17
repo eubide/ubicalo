@@ -110,7 +110,6 @@ const BASTA_ESCRIBIR: Record<string, string> = {
   'Comunidad de Madrid': 'Madrid',
   'Región de Murcia': 'Murcia',
   'Comunidad Foral de Navarra': 'Navarra',
-  'La Rioja': 'Rioja',
   'Ciudad Autónoma de Ceuta': 'Ceuta',
   'Ciudad Autónoma de Melilla': 'Melilla',
   'A Coruña': 'Coruña',
