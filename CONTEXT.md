@@ -35,7 +35,7 @@ Tipo que construye el mapa físico desde la Meseta: se toca la Meseta, y acertar
 _Evitar_: unidades del relieve, capas, clasificación
 
 **Rampa de altitud**:
-Los seis colores de los Papeles, del verde de las Depresiones al marrón de las Cordilleras exteriores. Una mancha solo toma su color al acertarla: hasta entonces se ve en gris, para que el mapa no dé la respuesta.
+Los seis colores de los Papeles, del verde de las Depresiones al marrón de las Cordilleras exteriores. Una mancha solo toma su color al acertarla: hasta entonces se ve en gris, para que el mapa no dé la respuesta. Al acertarla destella antes en el verde del Acierto, porque pasar de gris a ocre es un cambio demasiado suave para leerse como tal.
 _Evitar_: paleta, leyenda, hipsometría
 
 **Sierra**:
@@ -116,6 +116,22 @@ _Evitar_: localizar, colocar
 Modo en el que se ilumina un elemento y el alumno escribe su nombre.
 _Evitar_: ¿qué es esto?, identificar
 
+**Señales**:
+El código con el que el mapa dice en qué estado está cada Elemento, el mismo en todos los Tipos. El color dice qué es: azul lo que está en juego, verde lo Acertado, rojo el Fallo, amarillo la ayuda. El borde dice si sigue en juego: punteado abierto, continuo cerrado. Un Elemento lleva como mucho una Señal, la de mayor prioridad, y lo que pasa ahora gana al historial. En una línea el borde es la funda que la envuelve.
+_Evitar_: leyenda, paleta, estilos, colores
+
+**Diana**:
+El Elemento que se pregunta ahora, marcado sobre el mapa. En Ubicación → nombre es el que el alumno tiene que nombrar; en Jerarquía, la Cordillera que se muestra para preguntar por su Pico. Solo se toca cuando el Modo es Nombre → ubicar.
+_Evitar_: objetivo, foco, iluminado, destacado
+
+**Frontera**:
+Los Elementos Desbloqueados que el alumno todavía no ha acertado: lo que puede tocar en este turno. Crece con cada Acierto y solo se muestra donde el alumno elige, es decir en el Simulacro.
+_Evitar_: candidatos, disponibles, siguiente nivel, por responder
+
+**Tentativa**:
+El Elemento que el alumno ha marcado y que todavía no se ha juzgado: el toque pendiente de confirmar con el dedo, o la forma que se está respondiendo en el Simulacro.
+_Evitar_: selección, elegido, activo
+
 **Prueba**:
 Combinación de un tipo y un modo, por ejemplo provincias en Nombre → ubicar.
 _Evitar_: test, examen, juego
@@ -141,7 +157,7 @@ Elemento acertado sin ayuda después de haberlo fallado o resuelto con pista.
 _Evitar_: acierto tardío, recuperación
 
 **Fallo**:
-Respuesta incorrecta; el elemento sigue pendiente.
+Respuesta incorrecta; el elemento sigue pendiente y se ve en rojo sobre el mapa mientras lo siga.
 _Evitar_: error
 
 **Pista**:
@@ -191,6 +207,7 @@ _Evitar_: desafío, challenge
 - Un **Tipo** agrupa muchos **Elementos**; cada **Elemento** tiene un **Nombre oficial** y cero o más **Alias**
 - Una **Prueba** es un **Tipo** jugado en un **Modo**; cada **Prueba** tiene como mucho una **Marca**
 - Cada mancha de **Grandes unidades** tiene un **Papel**, y ese **Papel** le da su color en la **Rampa de altitud**
+- Cada **Elemento** del mapa lleva como mucho una **Señal**; la **Diana**, la **Frontera** y la **Tentativa** son tres de ellas
 - Una **Partida** juega una **Prueba** en una o más **Vueltas**, y termina cuando no quedan **Pendientes** o por **Abandono**
 - Una **Partida** terminada por **Abandono** nunca fija **Marca** ni genera **Reto**
 - Una **Pista** contiene el **Elemento** correcto y tres **Distractores**, preferentemente **Vecinos**

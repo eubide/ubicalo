@@ -115,8 +115,8 @@
   const parcialesVisibles = $derived(
     esSimulacro && partida ? partida.acertados.filter((id) => !acertadosVisibles.includes(id) && !esIdDeAltura(id)) : [],
   )
-  // Visible pero aún no Acertado: no se ha respondido nada de esto todavía.
-  const porResponderVisibles = $derived(
+  // La Frontera: visible, Desbloqueado y todavía sin acertar. Es lo que el alumno puede tocar ahora.
+  const fronteraVisible = $derived(
     esSimulacro && partida
       ? contornosVisibles.map((contorno) => String(contorno.id)).filter((id) => !partida!.acertados.includes(id))
       : [],
@@ -174,6 +174,15 @@
   )
 
   const DURACION_RESPUESTA_CORRECTA = 3_000
+  const DURACION_DESTELLO = 600
+  let destello = $state<string | null>(null)
+
+  $effect(() => {
+    if (!respuesta?.acierto) return
+    destello = respuestaDe(respuesta.correcto)
+    const espera = setTimeout(() => (destello = null), DURACION_DESTELLO)
+    return () => clearTimeout(espera)
+  })
 
   $effect(() => {
     if (!respuesta?.acierto) {
@@ -189,13 +198,24 @@
     return elemento.respuesta === undefined ? '' : nombreDe(elemento.respuesta)
   }
 
-  const iluminados = $derived.by(() => {
+  // La Diana: el Elemento que se pregunta ahora. En Ubicación → nombre es el que se señala para que el
+  // alumno lo nombre; en Jerarquía, la Cordillera que se muestra para preguntar por su Pico.
+  const diana = $derived.by(() => {
+    if (!correccion && partida?.preguntado?.destacar) return [partida.preguntado.id]
     if (!escribeNombre) return []
     if (repaso) return rotulos.map((rotulo) => rotulo.id)
-    // El alumno elige qué tocar; solo se ilumina la respuesta correcta mientras se ve la Corrección.
+    // El alumno elige qué tocar; solo se señala la respuesta correcta mientras se ve la Corrección.
     if (esSimulacro) return correccion ? [correccion.correcto.id] : []
     const id = (correccion?.correcto ?? partida?.preguntado)?.id
     return id === undefined ? [] : [id]
+  })
+
+  // El rojo del Fallo dura mientras el Elemento siga Pendiente; al terminar se ven todos los que costaron
+  // un fallo, acertados después o no.
+  const falladosVisibles = $derived.by(() => {
+    if (!partida) return []
+    const ids = partida.fallados.map((elemento) => elemento.id)
+    return partida.terminada ? ids : ids.filter((id) => !partida!.acertados.includes(id))
   })
 
   function cerrarAlCabo(duracion: number, cerrar: (partida: Partida) => Partida) {
@@ -242,6 +262,7 @@
   function nombreDe(id: string): string {
     return elementosDelMapa.find((elemento) => elemento.id === id)?.nombreMostrado ?? ''
   }
+
 
   function elegir(id: string) {
     if (!partida || partida.terminada) return
@@ -414,20 +435,21 @@
       contornos={contornosVisibles}
       contextoDeRelieve={contextoDelTipo}
       rampa={esUnidades}
-      porResponder={porResponderVisibles}
+      frontera={fronteraVisible}
       parcial={parcialesVisibles}
-      activo={esSimulacro ? activoEnSimulacro : null}
+      tentativa={esSimulacro ? activoEnSimulacro : null}
+      {destello}
       {contexto}
       acertados={acertadosVisibles}
       tocado={correccion && !escribeNombre && correccionTrasFallo(correccion) ? correccion.elegido.id : null}
       correcto={correccion ? respuestaDe(correccion.correcto) : null}
       preguntado={correccion ? null : (partida.preguntado?.id ?? null)}
-      {iluminados}
-      destacados={!correccion && partida.preguntado?.destacar ? [partida.preguntado.id] : []}
+      {diana}
+      dianaSeToca={!escribeNombre}
       pistaDeArea={partida.pistaDeArea ?? []}
       {rotulos}
       {alturas}
-      fallados={partida.terminada ? partida.fallados.map((elemento) => elemento.id) : []}
+      fallados={falladosVisibles}
       alElegir={esSimulacro ? elegirEnSimulacro : elegir}
       {nombreDe}
     />
