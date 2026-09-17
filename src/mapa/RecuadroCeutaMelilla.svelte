@@ -18,20 +18,16 @@
 <script lang="ts">
   import type { FeatureCollection } from 'geojson'
   import { geoMercator, geoPath } from 'd3-geo'
+  import { abierta, senalDe, type EstadoDelMapa } from './senales'
 
   interface Props {
     elementos: ElementoConCentro[]
     contexto: FeatureCollection
-    acertados: string[]
-    tocado: string | null
+    estado: EstadoDelMapa
     correcto: string | null
-    iluminados: string[]
-    pistaDeArea: string[]
     rotulados: string[]
     tamañoRotulo: number
     nombreDe: (id: string) => string
-    fallados: string[]
-    seleccionado: string | null
     alElegir: (id: string) => void
     x: number
     y: number
@@ -42,16 +38,11 @@
   let {
     elementos,
     contexto,
-    acertados,
-    tocado,
+    estado,
     correcto,
-    iluminados,
-    pistaDeArea,
     rotulados,
     tamañoRotulo,
     nombreDe,
-    fallados,
-    seleccionado,
     alElegir,
     x,
     y,
@@ -114,18 +105,14 @@
         <path class="contexto" d={celda.trazado(pais)} />
       {/each}
     </g>
+    {@const senal = senalDe(celda.id, estado)}
     <g
-      class="elemento"
-      class:acertado={acertados.includes(celda.id)}
-      class:fallado={fallados.includes(celda.id)}
-      class:pistaDeArea={pistaDeArea.includes(celda.id)}
-      class:seleccionado={seleccionado === celda.id}
-      class:iluminado={iluminados.includes(celda.id)}
-      class:tocado={tocado === celda.id}
+      class="elemento {senal ?? ''}"
+      class:abierta={abierta(senal)}
       class:correcto={correcto === celda.id}
       onclick={() => alElegir(celda.id)}
     >
-      <rect class="diana" x={celda.x0} {y} width={anchoCelda} height={alto} />
+      <rect class="pulsador" x={celda.x0} {y} width={anchoCelda} height={alto} />
       <path d={celda.trazado(celda.contorno)} />
     </g>
     {#if rotulados.includes(celda.id)}
@@ -158,7 +145,7 @@
     cursor: pointer;
   }
 
-  .diana {
+  .pulsador {
     fill: transparent;
   }
 
@@ -168,35 +155,48 @@
     stroke-width: 0.8;
   }
 
-  .elemento.acertado path {
-    fill: #cfe8d6;
+  .elemento.frontera path {
+    fill: var(--senal-frontera);
+    stroke: var(--senal-frontera-borde);
+    stroke-width: 1.2;
   }
 
-  .elemento.fallado path {
-    fill: #f4c7a1;
+  .elemento.diana path,
+  .elemento.tentativa path {
+    fill: var(--senal-diana);
+    stroke: var(--senal-diana-borde);
+    stroke-width: 2.4;
   }
 
-  .elemento.pistaDeArea path {
-    fill: #fbe7a1;
-    stroke: #8a6d1f;
+  .elemento.acierto path,
+  .elemento.parcial path {
+    fill: var(--senal-acierto);
+    stroke: var(--senal-acierto-borde);
+    stroke-width: 1.2;
   }
 
-  .elemento.seleccionado path {
-    fill: #c9dcf2;
+  .elemento.fallo path {
+    fill: var(--senal-fallo);
+    stroke: var(--senal-fallo-borde);
+    stroke-width: 1.2;
   }
 
-  .elemento.iluminado path {
-    fill: #f6d365;
-    stroke: #8a6d1f;
-    stroke-width: 1.6;
+  .elemento.ayuda path {
+    fill: var(--senal-ayuda);
+    stroke: var(--senal-ayuda-borde);
   }
 
   .elemento.tocado path {
-    fill: #dc2626;
+    fill: var(--senal-tocado);
+    stroke: var(--senal-fallo-borde);
+  }
+
+  .elemento.abierta path {
+    stroke-dasharray: 4 2.5;
   }
 
   .elemento.correcto path {
-    stroke: #14532d;
+    stroke: var(--senal-correcto);
     stroke-width: 4;
     vector-effect: non-scaling-stroke;
     stroke-linejoin: round;

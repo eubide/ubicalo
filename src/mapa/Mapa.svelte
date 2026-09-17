@@ -4,6 +4,7 @@
   import { geoConicConformalSpain } from 'd3-composite-projections'
   import type { ClaseDelMapa, ContextoGeografico } from '../catalogo/catalogo'
   import { nombreDePapel, PAPELES, propiedadesDe, type Papel } from '../catalogo/relieve'
+  import { abierta, ETIQUETA_DE_SENAL, senalDe, type EstadoDelMapa, type Senal } from './senales'
   import { trazoMasCercano, type Trazo } from './toque'
   import RecuadroCeutaMelilla, { esCeutaOMelilla } from './RecuadroCeutaMelilla.svelte'
 
@@ -22,17 +23,22 @@
     tocado?: string | null
     correcto?: string | null
     preguntado: string | null
-    iluminados?: string[]
-    destacados?: string[]
-    porResponder?: string[]
+    diana?: string[]
+    dianaSeToca?: boolean
+    frontera?: string[]
     parcial?: string[]
-    activo?: string | null
+    tentativa?: string | null
+    destello?: string | null
     pistaDeArea?: string[]
     rotulos?: Rotulo[]
+    // Los Elementos ya acertados que se quedan escritos sobre el mapa, como en el examen de papel.
+    nombres?: Rotulo[]
     alturas?: Rotulo[]
     fallados?: string[]
     alElegir: (id: string) => void
     nombreDe: (id: string) => string
+    // Lo que la barra de confirmación puede decir de una Tentativa sin resolver la pregunta.
+    textoDeTentativa?: (id: string) => string
   }
 
   let {
@@ -44,17 +50,20 @@
     tocado = null,
     correcto = null,
     preguntado,
-    iluminados = [],
-    destacados = [],
-    porResponder = [],
+    diana = [],
+    dianaSeToca = false,
+    frontera = [],
     parcial = [],
-    activo = null,
+    tentativa = null,
+    destello = null,
     pistaDeArea = [],
     rotulos = [],
+    nombres = [],
     alturas = [],
     fallados = [],
     alElegir,
     nombreDe,
+    textoDeTentativa = nombreDe,
   }: Props = $props()
 
   const ancho = 960
@@ -76,7 +85,7 @@
   const contornoCorrecto = $derived(contornos.find((contorno) => String(contorno.id) === correcto))
   const anchoRecuadro = 232
   const altoRecuadro = 150
-  const radioDiana = 10
+  const radioPulsador = 10
   const tamañoRotuloEnPixeles = 13
   let anchoEnPantalla = $state(ancho)
   const tamañoRotulo = $derived((tamañoRotuloEnPixeles * ancho) / Math.max(anchoEnPantalla, 1))
@@ -91,7 +100,7 @@
       .filter((contorno) => contorno.geometry.type === 'Point')
       .map((contorno) => ({ contorno, centro: geoCentroid(contorno) })),
   )
-  const conDiana = $derived([...ceutaYMelilla, ...puntos])
+  const conPulsador = $derived([...ceutaYMelilla, ...puntos])
   const cauces = $derived(contornos.filter((contorno) => contorno.geometry.type === 'LineString'))
   const manchas = $derived(
     contornos.filter((contorno) => contorno.geometry.type !== 'Point' && contorno.geometry.type !== 'LineString'),
@@ -161,6 +170,7 @@
   let lienzo = $state<SVGSVGElement | null>(null)
   let vista = $state<Vista>({ escala: 1, x: 0, y: 0 })
   let seleccionado = $state<string | null>(null)
+  let bajoElPuntero = $state<string | null>(null)
 
   const dedos = new Map<number, Punto>()
   let gesto: { distancia: number; centro: Punto; vista: Vista } | null = null
@@ -172,6 +182,30 @@
   $effect(() => {
     void preguntado
     seleccionado = null
+  })
+
+  // Tentativa es todo lo que el alumno tiene apuntado y sin juzgar: el toque pendiente de confirmar, la
+  // forma que responde en el Simulacro y el cauce que se llevaría el clic del ratón.
+  const estado = $derived<EstadoDelMapa>({
+    tocado,
+    tentativa: seleccionado ?? tentativa ?? bajoElPuntero,
+    diana,
+    pistaDeArea,
+    fallados,
+    acertados,
+    parcial,
+    frontera,
+  })
+
+  function senal(id: string): Senal | null {
+    return senalDe(id, estado)
+  }
+
+  const radioAspa = 5
+
+  const senalesEnElMapa = $derived.by(() => {
+    const presentes = new Set(contornos.map((contorno) => senal(String(contorno.id))))
+    return (Object.keys(ETIQUETA_DE_SENAL) as Senal[]).filter((candidata) => presentes.has(candidata))
   })
 
   function enCoordenadasDelMapa(evento: PointerEvent): Punto {
@@ -258,6 +292,13 @@
     return trazoMasCercano(punto, trazos, radioDelDedo / vista.escala)
   }
 
+  // Con ratón no hay paso de confirmación, así que la puntería tiene que verse antes de pulsar.
+  function apuntar(evento: MouseEvent) {
+    if (tipoDePuntero === 'touch' || preguntado === null) return
+    if (diana.length > 0 && !dianaSeToca) return
+    bajoElPuntero = cauceBajoElPuntero(evento)
+  }
+
   function tocarCauce(evento: MouseEvent) {
     const id = cauceBajoElPuntero(evento)
     if (id !== null) pulsarElemento(id)
@@ -289,12 +330,12 @@
       const esPunto = contorno.geometry.type === 'Point'
       const apilados = rotulos.filter((otro) => otro.id === rotulo.id)
       const desplazamiento = apilados.indexOf(rotulo) - (apilados.length - 1) / 2
-      return [{ rotulo, x: enRecuadro ? x - radioDiana : x, y: (esPunto ? y - radioDiana : y) + desplazamiento * tamañoRotulo * 1.2, enRecuadro }]
+      return [{ rotulo, x: enRecuadro ? x - radioPulsador : x, y: (esPunto ? y - radioPulsador : y) + desplazamiento * tamañoRotulo * 1.2, enRecuadro }]
     }),
   )
 
   function pulsarElemento(id: string) {
-    if (iluminados.length > 0) return
+    if (diana.length > 0 && !dianaSeToca) return
     if (rotulados.length > 0) {
       if (rotulados.includes(id) && !huboGesto && !dobleToque) alElegir(id)
       return
@@ -325,6 +366,8 @@
     onpointermove={alMover}
     onpointerup={alSoltar}
     onpointercancel={alSoltar}
+    onmousemove={apuntar}
+    onmouseleave={() => (bajoElPuntero = null)}
     onclick={tocarCauce}
   >
     <g transform="translate({vista.x} {vista.y}) scale({vista.escala})">
@@ -345,52 +388,38 @@
       <!-- El MVP se juega con ratón o dedo; jugar con teclado no está en la spec. -->
       <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
       <g class="elementos" class:relieve={contextoDeRelieve !== null}>
-        {#each cauces as cauce (cauce.id)}
-          {@const id = String(cauce.id)}
-          <path
-            class="cauce"
-            d={trazado(cauce)}
-            class:acertado={acertados.includes(id)}
-            class:fallado={fallados.includes(id)}
-            class:pistaDeArea={pistaDeArea.includes(id)}
-            class:seleccionado={seleccionado === id}
-            class:iluminado={iluminados.includes(id)}
-            class:destacado={destacados.includes(id)}
-            class:porResponder={porResponder.includes(id)}
-            class:parcial={parcial.includes(id)}
-            class:activo={activo === id}
-            class:tocado={tocado === id}
-          />
-        {/each}
         {#each [...manchas, ...puntos.map(({ contorno }) => contorno)] as contorno (contorno.id)}
           {@const id = String(contorno.id)}
+          {@const senalDelElemento = senal(id)}
           <path
             d={marcador(contorno)}
-            class={contorno.geometry.type === 'Point' || claseDe(contorno) === 'vertiente' ? claseDe(contorno) : ''}
+            class="{contorno.geometry.type === 'Point' || claseDe(contorno) === 'vertiente' ? claseDe(contorno) : ''} {senalDelElemento ?? ''}"
+            class:abierta={abierta(senalDelElemento)}
+            class:destello={destello === id}
             style={colorDelPapel(contorno)}
-            class:acertado={acertados.includes(id)}
-            class:fallado={fallados.includes(id)}
-            class:pistaDeArea={pistaDeArea.includes(id)}
-            class:seleccionado={seleccionado === id}
-            class:iluminado={iluminados.includes(id)}
-            class:destacado={destacados.includes(id)}
-            class:porResponder={porResponder.includes(id)}
-            class:parcial={parcial.includes(id)}
-            class:activo={activo === id}
-            class:tocado={tocado === id}
             onclick={(evento) => pulsarMancha(evento, id)}
           />
         {/each}
+        <!-- Un cauce se dibuja sobre las manchas: es el blanco fino y una vertiente lo taparía entero. -->
+        {#each cauces as cauce (cauce.id)}
+          {@const id = String(cauce.id)}
+          {@const senalDelElemento = senal(id)}
+          {#if senalDelElemento}
+            <!-- Una línea no tiene borde: la funda hace de borde y es donde cabe decir si sigue en juego. -->
+            <path class="funda {senalDelElemento}" class:abierta={abierta(senalDelElemento)} d={trazado(cauce)} />
+          {/if}
+          <path class="cauce {senalDelElemento ?? ''}" d={trazado(cauce)} />
+        {/each}
         <!-- Las dianas van encima de todo para que una mancha no robe el toque a un punto. -->
-        {#each conDiana as { contorno, centro } (contorno.id)}
+        {#each conPulsador as { contorno, centro } (contorno.id)}
           {@const punto = proyeccion(centro)}
           {#if punto}
             <circle
-              class="diana"
+              class="pulsador"
               class:correcto={correcto === String(contorno.id)}
               cx={punto[0]}
               cy={punto[1]}
-              r={radioDiana}
+              r={radioPulsador}
               onclick={(evento) => pulsarMancha(evento, String(contorno.id))}
             />
           {/if}
@@ -400,11 +429,25 @@
         <!-- Encima de todos los elementos para que los vecinos no tapen el contorno grueso. -->
         <path class="correcto" d={trazado(contornoCorrecto)} />
       {/if}
+      {#each manchas.filter((contorno) => senal(String(contorno.id)) === 'fallo') as contorno (contorno.id)}
+        {@const [x, y] = centroDelRotulo(contorno)}
+        {@const brazo = radioAspa / vista.escala}
+        <path class="aspa" d="M{x - brazo},{y - brazo}L{x + brazo},{y + brazo}M{x + brazo},{y - brazo}L{x - brazo},{y + brazo}" />
+      {/each}
+      {#each nombres as nombre (nombre.id)}
+        {@const contorno = contornos.find((candidato) => String(candidato.id) === nombre.id)}
+        {#if contorno}
+          {@const [x, y] = centroDelRotulo(contorno)}
+          <text class="rotulo" {x} {y} text-anchor="middle" font-size={(tamañoRotulo * 0.85) / vista.escala}>
+            {nombre.texto}
+          </text>
+        {/if}
+      {/each}
       {#each alturas as altura (altura.id)}
         {@const contorno = contornos.find((candidato) => String(candidato.id) === altura.id)}
         {#if contorno}
           {@const [x, y] = centroDelRotulo(contorno)}
-          <text class="altura" {x} y={y + radioDiana + tamañoRotulo * 0.6} text-anchor="middle" font-size={(tamañoRotulo * 0.8) / vista.escala}>
+          <text class="altura" {x} y={y + radioPulsador + tamañoRotulo * 0.6} text-anchor="middle" font-size={(tamañoRotulo * 0.8) / vista.escala}>
             {altura.texto}
           </text>
         {/if}
@@ -426,16 +469,11 @@
       <RecuadroCeutaMelilla
         elementos={ceutaYMelilla}
         {contexto}
-        {acertados}
-        {tocado}
+        {estado}
         {correcto}
-        {iluminados}
-        {pistaDeArea}
         {rotulados}
         {tamañoRotulo}
         {nombreDe}
-        {fallados}
-        {seleccionado}
         alElegir={pulsarElemento}
         x={ancho - anchoRecuadro}
         y={alto - altoRecuadro}
@@ -469,9 +507,16 @@
       {/if}
     </ul>
   {/if}
+  {#if senalesEnElMapa.length > 0}
+    <ul class="leyenda senales">
+      {#each senalesEnElMapa as etiqueta (etiqueta)}
+        <li><span class="muestra {etiqueta}" aria-hidden="true"></span> {ETIQUETA_DE_SENAL[etiqueta]}</li>
+      {/each}
+    </ul>
+  {/if}
   {#if seleccionado !== null}
     <div class="seleccion">
-      <span>{nombreDe(seleccionado)}</span>
+      <span>{textoDeTentativa(seleccionado)}</span>
       <button type="button" onclick={confirmar}>Confirmar</button>
     </div>
   {/if}
@@ -566,73 +611,155 @@
     pointer-events: none;
   }
 
-  .elementos path.cauce.acertado {
-    stroke: #2f7d4f;
-    stroke-width: 2.4;
-  }
-
-  .elementos path.cauce.fallado {
-    stroke: #c2652a;
-    stroke-width: 2.4;
-  }
-
-  .elementos path.cauce.pistaDeArea,
-  .elementos path.cauce.destacado,
-  .elementos path.cauce.porResponder {
-    stroke: #a16207;
-    stroke-width: 2.4;
-  }
-
-  .elementos path.cauce.seleccionado,
-  .elementos path.cauce.activo {
-    stroke: #1d4ed8;
-    stroke-width: 3.2;
-  }
-
-  .elementos path.cauce.iluminado {
-    stroke: #d9a300;
-    stroke-width: 3.6;
-  }
-
-  .elementos path.cauce.tocado {
-    stroke: #dc2626;
-    stroke-width: 3.2;
-  }
-
-  .elementos path.destacado {
-    fill: #f6d365;
-    stroke: #8a6d1f;
-  }
-
-  .elementos path.porResponder {
-    fill: #fde68a;
-    stroke: #a16207;
-  }
-
-  .elementos path.parcial {
-    fill: #fdba74;
-    stroke: #9a3412;
-  }
-
-  .elementos path.activo {
-    stroke: #1d4ed8;
-    stroke-width: 2.4;
-  }
-
-  .elementos .diana {
+  .elementos .pulsador {
     fill: transparent;
     cursor: pointer;
   }
 
-  .elementos .diana.correcto {
-    stroke: #14532d;
+  .elementos .pulsador.correcto {
+    stroke: var(--senal-correcto);
     stroke-width: 3;
     vector-effect: non-scaling-stroke;
   }
 
+  .elementos path.frontera {
+    fill: var(--senal-frontera);
+    stroke: var(--senal-frontera-borde);
+    stroke-width: 1.2;
+  }
+
+  .elementos path.diana,
+  .elementos path.tentativa {
+    fill: var(--senal-diana);
+    stroke: var(--senal-diana-borde);
+    stroke-width: 2.4;
+  }
+
   /* Rampa hipsométrica: la unidad acertada toma su altura en un mapa físico; sin papel, el verde de siempre. */
-  .elementos path.acertado {
-    fill: var(--papel, #cfe8d6);
+  .elementos path.acierto,
+  .elementos path.parcial {
+    fill: var(--papel, var(--senal-acierto));
+    stroke: var(--senal-acierto-borde);
+    stroke-width: 1.2;
+  }
+
+  .elementos path.fallo {
+    fill: var(--senal-fallo);
+    stroke: var(--senal-fallo-borde);
+    stroke-width: 1.2;
+  }
+
+  .elementos path.ayuda {
+    fill: var(--senal-ayuda);
+    stroke: var(--senal-ayuda-borde);
+  }
+
+  .elementos path.tocado {
+    fill: var(--senal-tocado);
+    stroke: var(--senal-fallo-borde);
+  }
+
+  /* El borde dice si el Elemento sigue en juego; el color solo dice qué es. */
+  .elementos path.abierta {
+    stroke-dasharray: 4 2.5;
+  }
+
+  /* En Grandes unidades el color final es la rampa, un cambio demasiado suave para leerse como acierto. */
+  .elementos path.destello {
+    animation: destello 600ms ease-out;
+  }
+
+  @keyframes destello {
+    from {
+      fill: var(--senal-acierto-borde);
+    }
+  }
+
+  /* Una línea no tiene borde: la funda ocupa su lugar y es la que se puntea. */
+  .elementos path.funda {
+    fill: none;
+    stroke-width: 5;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  .elementos path.funda.abierta {
+    stroke-dasharray: 5 3.5;
+  }
+
+  .elementos path.funda.frontera {
+    stroke: var(--senal-frontera-borde);
+    stroke-width: 6;
+  }
+
+  .elementos path.funda.diana,
+  .elementos path.funda.tentativa {
+    stroke: var(--senal-diana-borde);
+  }
+
+  .elementos path.funda.acierto,
+  .elementos path.funda.parcial {
+    stroke: var(--senal-acierto-borde);
+  }
+
+  .elementos path.funda.fallo,
+  .elementos path.funda.tocado {
+    stroke: var(--senal-fallo-borde);
+  }
+
+  .elementos path.funda.ayuda {
+    stroke: var(--senal-ayuda-borde);
+  }
+
+  /* Una Señal le da color al trazo de un cauce y nunca relleno: la regla genérica de arriba tiene la
+     misma especificidad que la del cauce y va después, así que cerraría la línea en una cuña.
+     El color es el del borde de la Señal: los rellenos pálidos no se leen a 2,4 px de trazo. */
+  .elementos path.cauce {
+    fill: none;
+  }
+
+  .elementos path.cauce.frontera {
+    stroke: var(--senal-frontera-borde);
+    stroke-width: 2.4;
+  }
+
+  .elementos path.cauce.diana,
+  .elementos path.cauce.tentativa {
+    stroke: var(--senal-diana-borde);
+    stroke-width: 2.6;
+  }
+
+  .elementos path.cauce.acierto,
+  .elementos path.cauce.parcial {
+    stroke: var(--senal-acierto-borde);
+    stroke-width: 2.4;
+  }
+
+  .elementos path.cauce.fallo {
+    stroke: var(--senal-fallo-borde);
+    stroke-width: 2.4;
+  }
+
+  .elementos path.cauce.ayuda {
+    stroke: var(--senal-ayuda-borde);
+    stroke-width: 2.4;
+  }
+
+  .elementos path.cauce.tocado {
+    stroke: var(--senal-tocado);
+    stroke-width: 2.6;
+  }
+
+  /* La marca del Fallo que no es color: uno de cada doce alumnos no distingue el rojo del verde. */
+  .aspa {
+    fill: none;
+    stroke: var(--senal-fallo-borde);
+    stroke-width: 2;
+    stroke-linecap: round;
+    vector-effect: non-scaling-stroke;
+    pointer-events: none;
   }
 
   .muestra {
@@ -644,32 +771,41 @@
     vertical-align: -0.1em;
   }
 
-  .elementos path.fallado {
-    fill: #f4c7a1;
+  .muestra.frontera {
+    background: var(--senal-frontera);
+    border-color: var(--senal-frontera-borde);
+    border-style: dashed;
   }
 
-  .elementos path.pistaDeArea {
-    fill: #fbe7a1;
-    stroke: #8a6d1f;
+  .muestra.diana {
+    background: var(--senal-diana);
+    border-color: var(--senal-diana-borde);
   }
 
-  .elementos path.seleccionado {
-    fill: #c9dcf2;
+  .muestra.acierto {
+    background: var(--senal-acierto);
+    border-color: var(--senal-acierto-borde);
   }
 
-  .elementos path.iluminado {
-    fill: #f6d365;
-    stroke: #8a6d1f;
-    stroke-width: 1.6;
+  .muestra.parcial {
+    background: var(--senal-acierto);
+    border-color: var(--senal-acierto-borde);
+    border-style: dashed;
   }
 
-  .elementos path.tocado {
-    fill: #dc2626;
+  .muestra.fallo {
+    background: var(--senal-fallo);
+    border-color: var(--senal-fallo-borde);
+  }
+
+  .muestra.ayuda {
+    background: var(--senal-ayuda);
+    border-color: var(--senal-ayuda-borde);
   }
 
   path.correcto {
     fill: none;
-    stroke: #14532d;
+    stroke: var(--senal-correcto);
     stroke-width: 4;
     stroke-linejoin: round;
     pointer-events: none;

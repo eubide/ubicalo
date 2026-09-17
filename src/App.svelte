@@ -2,6 +2,7 @@
   import type { Feature, FeatureCollection, Geometry } from 'geojson'
   import { catalogo, catalogoDelMapa, contextoDe, contornos, etiquetaDeClase, type ContextoGeografico, type Elemento } from './catalogo/catalogo'
   import { esIdDeAltura, idDeAltura, nombreDePapel, PAPELES, textoDeAltura } from './catalogo/relieve'
+  import { esDeHidrografia } from './catalogo/hidrografia'
   import contextoGeografico from './datos/contexto-geografico.json'
   import Mapa from './mapa/Mapa.svelte'
   import FinDePartida from './pantallas/FinDePartida.svelte'
@@ -115,10 +116,18 @@
   const parcialesVisibles = $derived(
     esSimulacro && partida ? partida.acertados.filter((id) => !acertadosVisibles.includes(id) && !esIdDeAltura(id)) : [],
   )
-  // Visible pero aún no Acertado: no se ha respondido nada de esto todavía.
-  const porResponderVisibles = $derived(
+  // La Frontera: visible, Desbloqueado y todavía sin acertar. Es lo que el alumno puede tocar ahora.
+  const fronteraVisible = $derived(
     esSimulacro && partida
       ? contornosVisibles.map((contorno) => String(contorno.id)).filter((id) => !partida!.acertados.includes(id))
+      : [],
+  )
+  // El examen de ríos se entrega como un mapa rotulado, así que la partida lo va escribiendo: lo que ya
+  // tiene nombre encima es lo que no hay que volver a tocar.
+  const esHidrografia = $derived(prueba !== null && esDeHidrografia(prueba.tipo))
+  const nombres = $derived(
+    esHidrografia && partida
+      ? partida.acertados.map((id) => ({ id, texto: nombreDe(id) })).filter(({ texto }) => texto !== '')
       : [],
   )
   const respuesta = $derived(partida?.ultimaRespuesta)
@@ -174,6 +183,15 @@
   )
 
   const DURACION_RESPUESTA_CORRECTA = 3_000
+  const DURACION_DESTELLO = 600
+  let destello = $state<string | null>(null)
+
+  $effect(() => {
+    if (!respuesta?.acierto) return
+    destello = respuestaDe(respuesta.correcto)
+    const espera = setTimeout(() => (destello = null), DURACION_DESTELLO)
+    return () => clearTimeout(espera)
+  })
 
   $effect(() => {
     if (!respuesta?.acierto) {
@@ -189,13 +207,24 @@
     return elemento.respuesta === undefined ? '' : nombreDe(elemento.respuesta)
   }
 
-  const iluminados = $derived.by(() => {
+  // La Diana: el Elemento que se pregunta ahora. En Ubicación → nombre es el que se señala para que el
+  // alumno lo nombre; en Jerarquía, la Cordillera que se muestra para preguntar por su Pico.
+  const diana = $derived.by(() => {
+    if (!correccion && partida?.preguntado?.destacar) return [partida.preguntado.id]
     if (!escribeNombre) return []
     if (repaso) return rotulos.map((rotulo) => rotulo.id)
-    // El alumno elige qué tocar; solo se ilumina la respuesta correcta mientras se ve la Corrección.
+    // El alumno elige qué tocar; solo se señala la respuesta correcta mientras se ve la Corrección.
     if (esSimulacro) return correccion ? [correccion.correcto.id] : []
     const id = (correccion?.correcto ?? partida?.preguntado)?.id
     return id === undefined ? [] : [id]
+  })
+
+  // El rojo del Fallo dura mientras el Elemento siga Pendiente; al terminar se ven todos los que costaron
+  // un fallo, acertados después o no.
+  const falladosVisibles = $derived.by(() => {
+    if (!partida) return []
+    const ids = partida.fallados.map((elemento) => elemento.id)
+    return partida.terminada ? ids : ids.filter((id) => !partida!.acertados.includes(id))
   })
 
   function cerrarAlCabo(duracion: number, cerrar: (partida: Partida) => Partida) {
@@ -241,6 +270,13 @@
 
   function nombreDe(id: string): string {
     return elementosDelMapa.find((elemento) => elemento.id === id)?.nombreMostrado ?? ''
+  }
+
+  // Cuando el nombre es la respuesta, la barra de confirmación dice la Clase: informa sin resolver.
+  function textoDeTentativa(id: string): string {
+    if (!escribeNombre) return nombreDe(id)
+    const clase = elementosDelMapa.find((elemento) => elemento.id === id)?.clase
+    return (clase && etiquetaDeClase[clase]) ?? 'Responder esto'
   }
 
   function elegir(id: string) {
@@ -414,22 +450,25 @@
       contornos={contornosVisibles}
       contextoDeRelieve={contextoDelTipo}
       rampa={esUnidades}
-      porResponder={porResponderVisibles}
+      frontera={fronteraVisible}
       parcial={parcialesVisibles}
-      activo={esSimulacro ? activoEnSimulacro : null}
+      tentativa={esSimulacro ? activoEnSimulacro : null}
+      {destello}
       {contexto}
       acertados={acertadosVisibles}
       tocado={correccion && !escribeNombre && correccionTrasFallo(correccion) ? correccion.elegido.id : null}
       correcto={correccion ? respuestaDe(correccion.correcto) : null}
       preguntado={correccion ? null : (partida.preguntado?.id ?? null)}
-      {iluminados}
-      destacados={!correccion && partida.preguntado?.destacar ? [partida.preguntado.id] : []}
+      {diana}
+      dianaSeToca={!escribeNombre}
       pistaDeArea={partida.pistaDeArea ?? []}
       {rotulos}
+      {nombres}
       {alturas}
-      fallados={partida.terminada ? partida.fallados.map((elemento) => elemento.id) : []}
+      fallados={falladosVisibles}
       alElegir={esSimulacro ? elegirEnSimulacro : elegir}
       {nombreDe}
+      {textoDeTentativa}
     />
 
     {#if correccion}

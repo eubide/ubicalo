@@ -11,6 +11,21 @@
   --reborde: #c2934f;
   --exterior: #94663c;
   --volcanico: #a95440;
+
+  /* Señales: un estado, un color, el mismo en todos los Tipos. El relleno dice qué es un Elemento y el
+     borde si sigue en juego: punteado abierto, continuo cerrado. En una línea el borde es la funda. */
+  --senal-frontera: #dce9fa;
+  --senal-frontera-borde: #6b93d6;
+  --senal-diana: #a8c7f0;
+  --senal-diana-borde: #1d4ed8;
+  --senal-acierto: #cfe8d6;
+  --senal-acierto-borde: #2f7a4a;
+  --senal-fallo: #e9a6a6;
+  --senal-fallo-borde: #9b1c1c;
+  --senal-tocado: #dc2626;
+  --senal-ayuda: #fbe7a1;
+  --senal-ayuda-borde: #8a6d1f;
+  --senal-correcto: #14532d;
 }
 
 body {
