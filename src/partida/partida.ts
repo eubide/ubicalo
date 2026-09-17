@@ -301,8 +301,18 @@ function reanudar(partida: Partida, ahora: number): Partida {
   }
 }
 
+// Se caen de los dos lados de la comparación, y con ellas los espacios: «Sierra de Gata»,
+// «Sierra Gata» y «sierragata» son la misma respuesta.
+const PALABRAS_QUE_NO_DISTINGUEN = ['el', 'la', 'los', 'las', 'de', 'del', 'y', 'e', 'al', 'l']
+
 function normalizar(texto: string): string {
-  return texto.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().trim()
+  return texto
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .toLowerCase()
+    .split(/[\s'\u2019-]+/u)
+    .filter((palabra) => palabra !== '' && !PALABRAS_QUE_NO_DISTINGUEN.includes(palabra))
+    .join('')
 }
 
 const LETRAS_MINIMAS_PARA_ERRATA = 6
@@ -332,8 +342,8 @@ function admiteErrata(respuesta: string, aceptado: string): boolean {
 export function responderConTexto(partida: Partida, texto: string): Partida {
   if (!esperandoRespuesta(partida)) return partida
   const preguntado = partida.cola[0]
+  if (texto.trim() === '') return pedirPista(partida)
   const respuesta = normalizar(texto)
-  if (respuesta === '') return pedirPista(partida)
   const aceptados = nombresAceptados(preguntado)
   const esNombreDeOtro = partida.elementos
     .filter((elemento) => elemento.id !== preguntado.id)

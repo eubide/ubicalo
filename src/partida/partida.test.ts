@@ -253,6 +253,62 @@ describe('Partida en Ubicación → nombre', () => {
   })
 })
 
+describe('Se responde con lo que distingue al Elemento', () => {
+  const sierraDeGata: Elemento = {
+    id: 'sg',
+    nombre: 'Sierra de Gata',
+    nombreMostrado: 'Sierra de Gata',
+    alias: [],
+    vecinos: [],
+  }
+
+  function acierta(elemento: Elemento, texto: string): boolean {
+    const partida = responderConTexto(iniciarPartida(comunidadesNombreUbicar, [elemento], azarFijo, reloj), texto)
+    return partida.ultimaRespuesta?.acierto === true
+  }
+
+  it('los conectores no hacen falta: "Sierra Gata" y "sierragata" valen por "Sierra de Gata"', () => {
+    expect(acierta(sierraDeGata, 'Sierra de Gata')).toBe(true)
+    expect(acierta(sierraDeGata, 'Sierra Gata')).toBe(true)
+    expect(acierta(sierraDeGata, 'sierragata')).toBe(true)
+  })
+
+  it('los artículos tampoco: "Palmas" vale por "Las Palmas"', () => {
+    const lasPalmas: Elemento = { id: 'lp', nombre: 'Las Palmas', nombreMostrado: 'Las Palmas', alias: [], vecinos: [] }
+
+    expect(acierta(lasPalmas, 'Palmas')).toBe(true)
+    expect(acierta(lasPalmas, 'las palmas')).toBe(true)
+  })
+
+  it('el guion y el apóstrofo se ignoran en los dos lados', () => {
+    const mancha: Elemento = {
+      id: 'cm',
+      nombre: 'Castilla-La Mancha',
+      nombreMostrado: 'Castilla-La Mancha',
+      alias: [],
+      vecinos: [],
+    }
+    const turo: Elemento = { id: 'th', nombre: "Turó de l'Home", nombreMostrado: "Turó de l'Home", alias: [], vecinos: [] }
+
+    expect(acierta(mancha, 'Castilla La Mancha')).toBe(true)
+    expect(acierta(mancha, 'castillamancha')).toBe(true)
+    expect(acierta(turo, "Turó de l Home")).toBe(true)
+    expect(acierta(turo, 'turohome')).toBe(true)
+  })
+
+  it('el sustantivo genérico no se cae solo: quitarlo es cosa del Alias del Elemento', () => {
+    expect(acierta(sierraDeGata, 'Gata')).toBe(false)
+    expect(acierta({ ...sierraDeGata, alias: ['Gata'] }, 'Gata')).toBe(true)
+  })
+
+  it('un texto que se queda en nada es un fallo, no una pista gratis', () => {
+    const partida = responderConTexto(iniciarPartida(comunidadesNombreUbicar, elementos, azarFijo, reloj), 'de la')
+
+    expect(partida.fallos).toBe(1)
+    expect(partida.pista?.escrito).toBe('de la')
+  })
+})
+
 describe('Corrección en Ubicación → nombre', () => {
   function pistaTrasFallo() {
     const partida = responderConTexto(iniciarPartida(comunidadesNombreUbicar, elementos, azarFijo, reloj), 'Zeta')

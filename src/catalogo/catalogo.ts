@@ -102,7 +102,8 @@ const FORMAS_CASTELLANAS: Record<string, string> = {
   Ourense: 'Orense',
 }
 
-const FORMAS_CORTAS: Record<string, string> = {
+// Lo que basta escribir cuando sobra un sustantivo entero que la normalización no puede quitar.
+const BASTA_ESCRIBIR: Record<string, string> = {
   'Principado de Asturias': 'Asturias',
   'Illes Balears': 'Baleares',
   'Comunitat Valenciana': 'Valencia',
@@ -114,6 +115,12 @@ const FORMAS_CORTAS: Record<string, string> = {
   'Ciudad Autónoma de Melilla': 'Melilla',
   'A Coruña': 'Coruña',
   'Santa Cruz de Tenerife': 'Tenerife',
+  'Vertiente Cantábrica': 'Cantábrica',
+  'Vertiente Atlántica': 'Atlántica',
+  'Vertiente Mediterránea': 'Mediterránea',
+  'Depresión del Guadalquivir': 'Guadalquivir',
+  'Depresión del Ebro': 'Ebro',
+  "Turó de l'Home": 'Turó',
 }
 
 function nombresOficialYCastellano(nombreEnAtlas: string): Nombres {
@@ -124,10 +131,9 @@ function nombresOficialYCastellano(nombreEnAtlas: string): Nombres {
   return { nombre: nombreEnAtlas, nombreMostrado: nombreEnAtlas, alias: [] }
 }
 
-function nombresDelElemento(nombreEnAtlas: string): Nombres {
-  const nombres = nombresOficialYCastellano(nombreEnAtlas)
-  const formaCorta = FORMAS_CORTAS[nombreEnAtlas]
-  return formaCorta ? { ...nombres, alias: [...nombres.alias, formaCorta] } : nombres
+function conFormaCorta(elemento: Elemento): Elemento {
+  const corta = BASTA_ESCRIBIR[elemento.nombre]
+  return corta ? { ...elemento, alias: [...elemento.alias, corta] } : elemento
 }
 
 type Geometrias = GeometryCollection<{ name: string }>
@@ -166,12 +172,16 @@ function comunidadQueContiene(provincia: Feature<Geometry>, comunidades: Feature
 
 // Elementos que se tocan en el mapa; en Jerarquía no coinciden con los preguntados.
 export function catalogoDelMapa(tipo: Tipo): Elemento[] {
-  if (esDeRelieve(tipo)) return tocablesDeRelieve(tipo)
-  if (esDeHidrografia(tipo)) return tocablesDeHidrografia(tipo)
+  if (esDeRelieve(tipo)) return tocablesDeRelieve(tipo).map(conFormaCorta)
+  if (esDeHidrografia(tipo)) return tocablesDeHidrografia(tipo).map(conFormaCorta)
   return catalogo(tipo)
 }
 
 export function catalogo(tipo: Tipo): Elemento[] {
+  return catalogoSinFormasCortas(tipo).map(conFormaCorta)
+}
+
+function catalogoSinFormasCortas(tipo: Tipo): Elemento[] {
   if (esDeRelieve(tipo)) return catalogoDeRelieve(tipo)
   if (esDeHidrografia(tipo)) return catalogoDeHidrografia(tipo)
   const { geometries } = topologias[tipo].geometrias
@@ -182,7 +192,7 @@ export function catalogo(tipo: Tipo): Elemento[] {
     const { name } = geometria.properties as { name: string }
     return {
       id: String(geometria.id),
-      ...nombresDelElemento(name),
+      ...nombresOficialYCastellano(name),
       vecinos: vecinosPorIndice[indice].map((vecino) => String(geometries[vecino].id)),
       ...(tipo === 'provincias' && { comunidad: comunidadQueContiene(provincias[indice], comunidades) }),
       ...(CIUDADES_AUTONOMAS.includes(name) && { ciudadAutonoma: true as const }),

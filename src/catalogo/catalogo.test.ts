@@ -736,3 +736,33 @@ describe('Catálogo de grandes unidades', () => {
     ])
   })
 })
+
+describe('Lo que basta escribir en el relieve y la hidrografía', () => {
+  function elementoDe(tipo: Tipo, id: string) {
+    return catalogo(tipo).find((elemento) => elemento.id === id)!
+  }
+
+  it('las tres vertientes se responden sin el genérico, que sigue en el nombre mostrado', () => {
+    expect(elementoDe('simulacro-rios', 'vertiente-mediterranea')).toMatchObject({
+      nombreMostrado: 'Vertiente Mediterránea',
+      alias: ['Mediterránea'],
+    })
+    expect(elementoDe('simulacro-rios', 'vertiente-cantabrica').alias).toEqual(['Cantábrica'])
+    expect(elementoDe('simulacro-rios', 'vertiente-atlantica').alias).toEqual(['Atlántica'])
+  })
+
+  it('las dos depresiones se responden con el río que las nombra', () => {
+    expect(elementoDe('unidades', 'depresion-del-guadalquivir')).toMatchObject({
+      nombreMostrado: 'Depresión del Guadalquivir',
+      alias: ['Guadalquivir'],
+    })
+    expect(elementoDe('unidades', 'depresion-del-ebro').alias).toEqual(['Ebro'])
+  })
+
+  it('el Turó de l\'Home se responde con "Turó", donde la regla general no llega', () => {
+    expect(elementoDe('picos', 'turo-de-l-home')).toMatchObject({
+      nombreMostrado: "Turó de l'Home",
+      alias: ['Turó'],
+    })
+  })
+})
