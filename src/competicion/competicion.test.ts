@@ -168,7 +168,7 @@ describe('Almacén', () => {
   })
 
   it.each([
-    ['tipo desconocido', { tipo: 'rios', modo: 'nombre-ubicar' }],
+    ['tipo desconocido', { tipo: 'lo-que-sea', modo: 'nombre-ubicar' }],
     ['modo desconocido', { tipo: 'provincias', modo: 'pista' }],
   ])('descarta del historial una partida guardada con %s', (_caso, prueba) => {
     const guardado = JSON.stringify({ marcas: {}, historial: [{ ...partida, prueba }, partida] })
@@ -265,7 +265,7 @@ describe('Reto', () => {
   it.each([
     ['sin parámetros', 'http://localhost:5173/'],
     ['sin tiempo', 'http://localhost:5173/?tipo=provincias&modo=nombre-ubicar&puntuacion=1800'],
-    ['tipo desconocido', 'http://localhost:5173/?tipo=rios&modo=nombre-ubicar&puntuacion=1800&tiempo=95000'],
+    ['tipo desconocido', 'http://localhost:5173/?tipo=lo-que-sea&modo=nombre-ubicar&puntuacion=1800&tiempo=95000'],
     ['modo desconocido', 'http://localhost:5173/?tipo=provincias&modo=pista&puntuacion=1800&tiempo=95000'],
     ['puntuación no numérica', 'http://localhost:5173/?tipo=provincias&modo=nombre-ubicar&puntuacion=mucha&tiempo=95000'],
     ['puntuación vacía', 'http://localhost:5173/?tipo=provincias&modo=nombre-ubicar&puntuacion=&tiempo=95000'],

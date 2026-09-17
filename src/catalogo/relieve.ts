@@ -5,16 +5,22 @@ import sierrasGeo from '../datos/sierras.json'
 import picosGeo from '../datos/picos.json'
 import unidadesGeo from '../datos/unidades.json'
 import riosGeo from '../datos/rios.json'
-import type { Elemento } from './catalogo'
+import type { ContextoGeografico, Elemento } from './catalogo'
 
-export type TipoDeRelieve = 'cordilleras-y-sierras' | 'picos' | 'jerarquia' | 'alturas' | 'simulacro' | 'unidades'
+export type TipoDeRelieve =
+  | 'cordilleras-y-sierras'
+  | 'picos'
+  | 'jerarquia'
+  | 'alturas'
+  | 'simulacro-relieve'
+  | 'unidades'
 
 export type Clase = 'cordillera' | 'sierra' | 'pico' | 'meseta' | 'depresion'
 
 // El lugar que ocupa cada unidad respecto a la Meseta, tal como lo clasifica la capa del IGN.
 export type Papel = 'meseta' | 'interior' | 'reborde' | 'depresion' | 'exterior' | 'volcanico'
 
-export const etiquetaDeClase: Record<Clase, string> = {
+export const etiquetaDeClaseDeRelieve: Record<Clase, string> = {
   cordillera: 'Cordillera o macizo',
   sierra: 'Sierra',
   pico: 'Pico',
@@ -48,12 +54,6 @@ export interface PropiedadesDeRelieve {
   papel?: Papel
   cordillera?: string
   altura?: number
-}
-
-export interface ContextoDeRelieve {
-  contorno: Feature<Geometry>
-  tenues: Feature<Geometry>[]
-  rios: Feature<Geometry>[]
 }
 
 export function propiedadesDe(contorno: Feature<Geometry>): PropiedadesDeRelieve {
@@ -118,7 +118,7 @@ const CLASES_DEL_MAPA: Record<TipoDeRelieve, Clase[]> = {
   picos: ['pico'],
   jerarquia: ['cordillera', 'pico'],
   alturas: ['pico'],
-  simulacro: ['cordillera', 'sierra', 'pico'],
+  'simulacro-relieve': ['cordillera', 'sierra', 'pico'],
   // La Meseta primero: es la mancha mayor y las demás se dibujan encima.
   unidades: ['meseta', 'depresion', 'cordillera'],
 }
@@ -267,7 +267,7 @@ export function catalogoDeRelieve(tipo: TipoDeRelieve): Elemento[] {
   if (tipo === 'unidades') return catalogoDeUnidades()
   if (tipo === 'jerarquia') return catalogoDeJerarquia()
   if (tipo === 'alturas') return catalogoDeAlturas()
-  if (tipo === 'simulacro') return catalogoDeSimulacro()
+  if (tipo === 'simulacro-relieve') return catalogoDeSimulacro()
   return elementosDeClases(CLASES_DEL_MAPA[tipo])
 }
 
@@ -276,7 +276,7 @@ export function catalogoDeRelieve(tipo: TipoDeRelieve): Elemento[] {
 // pregunta también las cuatro alturas, que no tienen forma propia).
 export function tocablesDeRelieve(tipo: TipoDeRelieve): Elemento[] {
   if (tipo === 'jerarquia') return CLASES_DEL_MAPA.jerarquia.flatMap((clase) => elementosDe(contornosPorClase[clase]))
-  if (tipo === 'simulacro') return elementosDeClases(CLASES_DEL_MAPA.simulacro)
+  if (tipo === 'simulacro-relieve') return elementosDeClases(CLASES_DEL_MAPA['simulacro-relieve'])
   return catalogoDeRelieve(tipo)
 }
 
@@ -291,7 +291,7 @@ export function contornosDeRelieve(tipo: TipoDeRelieve): Feature<Geometry>[] {
   return (contornosPorTipo[tipo] ??= CLASES_DEL_MAPA[tipo].flatMap((clase) => contornosPorClase[clase]))
 }
 
-export function contextoDeRelieve(tipo: TipoDeRelieve, contorno: Feature<Geometry>): ContextoDeRelieve {
+export function contextoDeRelieve(tipo: TipoDeRelieve, contorno: Feature<Geometry>): ContextoGeografico {
   const tenues = CLASES_DEL_MAPA[tipo].includes('cordillera') ? [] : contornosPorClase.cordillera
   return { contorno, tenues, rios }
 }

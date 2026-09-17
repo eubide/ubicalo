@@ -123,5 +123,5 @@ Nunca compactes a mitad de una fase.
 - [x] Bloque Simulacro: spec #47 → tickets #48–#52 → PR #53, spec cerrada
 - [x] Bloque Grandes unidades: la Meseta y las depresiones, spec #63 → PR #64. Sin tickets: cupo en una sesión desde la conversación, como los cambios tras probar con usuarios
 - [ ] Probar el relieve en un móvil real: dianas de sierras y picos, rótulos apilados en el Repaso de Jerarquía, y las manchas de Montes Vascos y Montes de Toledo, que a ancho de móvil quedan por debajo de los 44 px de diana
-- [ ] Bloque Ríos: spec #54 → tickets #55–#61 → PR #62, en curso en su propio worktree
+- [x] Bloque Ríos: spec #54 → tickets #55–#61 → PR #62, spec cerrada. La rama salió antes que Grandes unidades, así que se integró con `git merge main` y los nueve conflictos resueltos a mano
 - [ ] Siguiente bloque: despliegue (dominio y Terraform), o cabos y golfos con `/mattpocock-skills:grill-with-docs`

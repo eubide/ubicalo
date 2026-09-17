@@ -1,18 +1,12 @@
-import { mkdirSync, writeFileSync } from 'node:fs'
-import { geoArea, geoCentroid, geoContains } from 'd3-geo'
+import { mkdirSync } from 'node:fs'
+import { geoCentroid, geoContains } from 'd3-geo'
+import { descargar, douglasPeucker, elemento, escribir, orientado, simplificar } from './geometria.mjs'
 
 // Capa «Unidades del relieve» del Atlas Didáctico del IGN, CC BY 4.0 (ADR-0003).
 const CAPA_IGN =
   'https://mapas-tematicos.ign.es/servicios/rest/services/tematicos/Medio_natural/MapServer/1114/query?where=1%3D1&outFields=*&outSR=4326&f=geojson'
 
-// Ríos de Natural Earth 10m (dominio público): el fichero general y el suplemento europeo.
-const RIOS_NATURAL_EARTH = [
-  'https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_10m_rivers_lake_centerlines.geojson',
-  'https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_10m_rivers_europe.geojson',
-]
-
 const TOLERANCIA_EN_GRADOS = 0.015
-const BBOX_PENINSULA = { oeste: -9.6, este: 3.6, sur: 35.9, norte: 43.9 }
 
 // El papel que la capa del IGN asigna a cada clase: todo el relieve peninsular se define por su
 // posición respecto a la Meseta, y de ahí sale el orden en que se desbloquea.
@@ -145,18 +139,6 @@ const PICOS = [
   { id: 'teide', nombre: 'Teide', ngbe: 2638544, altura: 3715, cordillera: 'montanas-de-canarias', coordenadas: [-16.6423, 28.2728] },
 ]
 
-// Ríos del mapa físico de fondo, por el nombre que usa Natural Earth.
-const RIOS = [
-  'Minho', 'Mio', 'Sil', 'Duero', 'Esla', 'Pisuerga', 'Tormes', 'Tajo', 'Tejo', 'Guadiana', 'Guadalquivir', 'Genil',
-  'Ebro', 'Segre', 'Cinca', 'Jalón', 'Júcar', 'Turia', 'Segura',
-]
-
-// d3-geo exige anillos exteriores en sentido horario; la capa los trae al revés.
-function orientado(anillo) {
-  const poligono = { type: 'Polygon', coordinates: [anillo] }
-  return geoArea(poligono) > 2 * Math.PI ? [...anillo].reverse() : anillo
-}
-
 function partesDe(capa) {
   return capa.features.flatMap((clase) => {
     const { Nombre } = clase.properties
@@ -197,47 +179,6 @@ function recortarAnillo(anillo, recta, signo) {
 function recortarPoligono(poligono, recta, signo) {
   const anillos = poligono.coordinates.map((anillo) => recortarAnillo(anillo, recta, signo)).filter(Boolean)
   return anillos.length > 0 ? { type: 'Polygon', coordinates: anillos } : null
-}
-
-function distanciaARecta(punto, a, b) {
-  const dx = b[0] - a[0]
-  const dy = b[1] - a[1]
-  const longitud = Math.hypot(dx, dy)
-  if (longitud === 0) return Math.hypot(punto[0] - a[0], punto[1] - a[1])
-  return Math.abs(dy * punto[0] - dx * punto[1] + b[0] * a[1] - b[1] * a[0]) / longitud
-}
-
-function douglasPeucker(puntos, tolerancia) {
-  if (puntos.length < 3) return puntos
-  const [primero, ultimo] = [puntos[0], puntos.at(-1)]
-  let indice = 0
-  let maxima = 0
-  for (let i = 1; i < puntos.length - 1; i++) {
-    const distancia = distanciaARecta(puntos[i], primero, ultimo)
-    if (distancia > maxima) [maxima, indice] = [distancia, i]
-  }
-  if (maxima <= tolerancia) return [primero, ultimo]
-  return [
-    ...douglasPeucker(puntos.slice(0, indice + 1), tolerancia).slice(0, -1),
-    ...douglasPeucker(puntos.slice(indice), tolerancia),
-  ]
-}
-
-function simplificarAnillo(anillo, tolerancia) {
-  const abierto = anillo.slice(0, -1)
-  const mitad = Math.floor(abierto.length / 2)
-  const simplificado = [
-    ...douglasPeucker(abierto.slice(0, mitad + 1), tolerancia).slice(0, -1),
-    ...douglasPeucker([...abierto.slice(mitad), abierto[0]], tolerancia).slice(0, -1),
-  ]
-  return [...simplificado, simplificado[0]]
-}
-
-function simplificar(geometria, tolerancia) {
-  const simplificarPoligono = (anillos) => anillos.map((anillo) => simplificarAnillo(anillo, tolerancia))
-  return geometria.type === 'Polygon'
-    ? { type: 'Polygon', coordinates: simplificarPoligono(geometria.coordinates) }
-    : { type: 'MultiPolygon', coordinates: geometria.coordinates.map(simplificarPoligono) }
 }
 
 function unir(geometrias) {
@@ -294,10 +235,6 @@ function unidadesDe(capa) {
   return unidades
 }
 
-function elemento(id, properties, geometry) {
-  return { type: 'Feature', id, properties, geometry }
-}
-
 function cordillerasDe(unidades) {
   return ORDEN.map((id) => {
     const unidad = unidades.get(id)
@@ -305,7 +242,7 @@ function cordillerasDe(unidades) {
     return elemento(
       id,
       { nombre: unidad.nombre, clase: 'cordillera', papel: unidad.papel },
-      simplificar(unidad.geometria, TOLERANCIA_EN_GRADOS),
+      simplificar(unidad.geometria, TOLERANCIA_EN_GRADOS, true),
     )
   })
 }
@@ -356,36 +293,7 @@ function picos() {
   )
 }
 
-function enLaPeninsula([lon, lat]) {
-  return lon > BBOX_PENINSULA.oeste && lon < BBOX_PENINSULA.este && lat > BBOX_PENINSULA.sur && lat < BBOX_PENINSULA.norte
-}
-
-function riosDe(colecciones) {
-  const tramos = colecciones
-    .flatMap((coleccion) => coleccion.features)
-    .filter(({ properties }) => RIOS.includes(properties.name) && properties.featurecla === 'River')
-    .flatMap(({ properties, geometry }) => {
-      const lineas = geometry.type === 'LineString' ? [geometry.coordinates] : geometry.coordinates
-      return lineas.filter((linea) => linea.some(enLaPeninsula)).map((linea) => ({ nombre: properties.name, linea }))
-    })
-  return tramos.map(({ nombre, linea }, indice) =>
-    elemento(`rio-${indice}`, { nombre }, { type: 'LineString', coordinates: douglasPeucker(linea, TOLERANCIA_EN_GRADOS / 2) }),
-  )
-}
-
-async function descargar(url) {
-  const respuesta = await fetch(url)
-  if (!respuesta.ok) throw new Error(`${url} respondió ${respuesta.status}`)
-  return respuesta.json()
-}
-
-function escribir(nombre, features) {
-  writeFileSync(`src/datos/${nombre}.json`, JSON.stringify({ type: 'FeatureCollection', features }))
-  console.log(`${features.length} elementos escritos en src/datos/${nombre}.json`)
-}
-
 const capa = await descargar(CAPA_IGN)
-const coleccionesDeRios = await Promise.all(RIOS_NATURAL_EARTH.map(descargar))
 const unidades = unidadesDe(capa)
 
 mkdirSync('src/datos', { recursive: true })
@@ -393,4 +301,3 @@ escribir('cordilleras', cordillerasDe(unidades))
 escribir('unidades', unidadesMayoresDe(unidades))
 escribir('sierras', sierrasDe(unidades))
 escribir('picos', picos())
-escribir('rios', riosDe(coleccionesDeRios))

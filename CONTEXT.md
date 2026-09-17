@@ -7,11 +7,11 @@ Web pública para que alumnos de ESO repasen la geografía de España señalando
 ### Contenido
 
 **Elemento**:
-Lugar concreto del mapa que se pregunta: una provincia, una comunidad autónoma, una cordillera, una sierra o un pico.
+Lugar concreto del mapa que se pregunta: una provincia, una comunidad autónoma, una cordillera, una sierra, un pico, una vertiente o un río.
 _Evitar_: accidente, lugar, zona, área
 
 **Tipo**:
-Categoría de elementos que se juega por separado: comunidades autónomas, provincias, grandes unidades, cordilleras y sierras, picos, jerarquía, alturas, simulacro y, más adelante, ríos, cabos y golfos.
+Categoría de elementos que se juega por separado, agrupada en familias: político (comunidades autónomas, provincias), relieve (grandes unidades, cordilleras y sierras, picos, jerarquía, alturas, simulacro de relieve), hidrografía (ríos, jerarquía de ríos, simulacro de ríos) y, más adelante, cabos y golfos.
 _Evitar_: tipo de prueba, categoría, capa
 
 **Cordillera**:
@@ -47,7 +47,7 @@ Cumbre concreta que pertenece a una Cordillera; en el mapa es un triángulo (Ane
 _Evitar_: cima, cumbre, montaña
 
 **Clase**:
-Lo que es un elemento de relieve: cordillera o macizo, sierra, pico, Meseta o Depresión. Se ve en el icono, en la leyenda y en el enunciado de la pregunta.
+Lo que es un elemento dentro de su familia: cordillera o macizo, sierra, pico, Meseta o Depresión en el relieve; vertiente, río principal, río propio o afluente en la hidrografía. Se ve en el icono, en la leyenda y en el enunciado de la pregunta.
 _Evitar_: tipo, categoría, nivel
 
 **Jerarquía**:
@@ -59,12 +59,28 @@ Tipo de apoyo en el que se muestra un Pico y el alumno escribe sus metros; solo 
 _Evitar_: altitud, cota
 
 **Simulacro**:
-Tipo que recorre de una vez la jerarquía completa del relieve, Cordillera → Sierra → Pico → Altura, sobre un único mapa mudo. Empieza con las Cordilleras visibles sin nombre; acertar una Desbloquea el siguiente nivel de esa rama. El alumno elige el orden y puede tener varias ramas abiertas a la vez.
+Tipo que recorre de una vez la jerarquía completa de una familia sobre un único mapa mudo: Cordillera → Sierra → Pico → Altura en el Simulacro de relieve, Vertiente → Río → Afluente en el de ríos. Empieza con el nivel de arriba visible sin nombre; acertar un Elemento Desbloquea el siguiente nivel de esa rama. El alumno elige el orden y puede tener varias ramas abiertas a la vez.
 _Evitar_: examen, prueba final, test
 
 **Desbloqueado**:
 Estado de un Elemento del Simulacro o de Grandes unidades que ya se puede tocar y responder, porque los Elementos de los que depende están entre los Acertados. Antes de eso, ni se ve ni se pregunta. En el Simulacro el alumno elige cuál responder; en Grandes unidades lo elige el motor.
 _Evitar_: revelado, visible, disponible
+
+**Vertiente**:
+Mar al que van a parar los ríos de una zona: Cantábrica, Atlántica y Mediterránea; en el mapa se pulsa como una mancha de área.
+_Evitar_: cuenca, demarcación, ladera
+
+**Río principal**:
+Río que recoge Afluentes y desemboca en el mar: Ebro, Duero, Tajo, Guadiana, Guadalquivir y Miño; en el mapa es una línea.
+_Evitar_: río grande, colector, río madre
+
+**Afluente**:
+Río que desemboca en otro río en vez de en el mar; se pregunta siempre por el Río principal de su cuenca, aunque desagüe en otro Afluente.
+_Evitar_: tributario, subafluente, brazo
+
+**Río propio**:
+Río que llega al mar por sí solo sin ser Río principal, porque no se le pregunta ningún Afluente: Ter, Llobregat, Turia, Júcar, Segura, Nalón, Nervión, Bidasoa, Tambre, Odiel y Tinto.
+_Evitar_: río menor, río costero, río suelto
 
 **Nombre oficial**:
 Nombre canónico de un elemento: en provincias y comunidades el que usa el mapa (Girona, Bizkaia); en cordilleras y picos el que usan los libros de texto (Cordillera Cantábrica, Torre Cerredo).
@@ -75,11 +91,11 @@ Otra forma aceptada del nombre de un elemento, normalmente la castellana (Gerona
 _Evitar_: sinónimo, traducción
 
 **Vecino**:
-Elemento del mismo tipo que comparte frontera con otro; en el relieve, uno de los tres más cercanos, y en Jerarquía, un vecino de la Cordillera a la que pertenece.
+Elemento del mismo tipo con el que otro se confunde, y de donde salen los Distractores: en lo político, el que comparte frontera; en el relieve, uno de los tres más cercanos; en los ríos, un hermano de cuenca, es decir, otro Afluente del mismo Río principal o, para el nivel de arriba, otro río de la misma Vertiente. En las Jerarquías, los Vecinos son los del Elemento que hay que tocar.
 _Evitar_: limítrofe, colindante, cercano
 
 **Contexto geográfico**:
-Lo que se ve en el mapa y nunca se pregunta: los países que rodean España y, en el relieve, los ríos principales y las cordilleras en tono tenue.
+Lo que se ve en el mapa de un Tipo y en ese Tipo nunca se pregunta; depende del Tipo, no es una lista fija. Los países que rodean España son contexto siempre. En el relieve lo son los ríos y, cuando no se tocan, las cordilleras en tono tenue. En los ríos no hay relieve de fondo: con 41 líneas sobre el mapa, las manchas de cordillera taparían lo que hay que tocar.
 _Evitar_: fondo, países vecinos
 
 ### Juego
@@ -178,6 +194,8 @@ _Evitar_: desafío, challenge
 - Una **Partida** juega una **Prueba** en una o más **Vueltas**, y termina cuando no quedan **Pendientes** o por **Abandono**
 - Una **Partida** terminada por **Abandono** nunca fija **Marca** ni genera **Reto**
 - Una **Pista** contiene el **Elemento** correcto y tres **Distractores**, preferentemente **Vecinos**
+- Cada **Vertiente** recoge varios **Ríos principales** y **Ríos propios**; cada **Río principal** recoge varios **Afluentes**
+- Un **Afluente** desemboca en un **Río principal** o en otro **Afluente**, pero siempre se pregunta por el **Río principal** de su cuenca
 
 ## Ambigüedades resueltas
 
@@ -186,3 +204,6 @@ _Evitar_: desafío, challenge
 - El listado de relieve son los apuntes del alumno desde "Macizo / sierra", con un pico por cordillera para darle simetría; el examen real es rellenar un mapa mudo físico con ríos.
 - El Tipo que simula ese examen se llama **Simulacro**, no "Examen": ese nombre ya estaba reservado como sinónimo a evitar de **Prueba**, para no llamar "examen" a un repaso suelto de comunidades o de picos.
 - "Tipo de prueba" mezclaba dos conceptos: el **Tipo** (qué se pregunta) y la **Prueba** (tipo más modo).
+- El listado de ríos de los apuntes está ordenado geográficamente, no por pertenencia: coloca el Huerva y el Jiloca lejos del Ebro, y el Turia, el Júcar y el Segura entre los **Afluentes** del Ebro sin serlo. La cuenca de cada río sale de la hidrografía real, no del orden de la lista: el Cinca desemboca en el Segre, el Jiloca en el Jalón y el Záncara en el Cigüela, y los tres se preguntan por su **Río principal**.
+- El río que el alumno se saltó al copiar la lista se rellena con el Tiétar por su posición; queda marcado en el dato como añadido nuestro hasta que el profesor confirme cuál era.
+- "Vertiente" es el nivel de arriba de los ríos, no un Tipo suelto: con tres **Elementos** no da para una **Partida**, así que solo se juega dentro del **Simulacro** de ríos.

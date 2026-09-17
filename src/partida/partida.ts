@@ -263,6 +263,7 @@ function pistaDeAreaDe(partida: Partida): string[] | null {
 }
 
 function idsDePistaDeArea({ prueba, elementos, desbloqueados, cola: [preguntado] }: Partida): string[] {
+  if (preguntado.pistaDeArea) return preguntado.pistaDeArea
   if (preguntado.ciudadAutonoma) return elementos.filter((elemento) => elemento.ciudadAutonoma).map((elemento) => elemento.id)
   if (prueba.tipo === 'provincias') return pistaDeAreaDeProvincia(preguntado, elementos)
   if (prueba.tipo === 'unidades') return pistaDeAreaDelPapel(preguntado, elementos, desbloqueados)

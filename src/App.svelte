@@ -1,15 +1,7 @@
 <script lang="ts">
   import type { Feature, FeatureCollection, Geometry } from 'geojson'
-  import { catalogo, catalogoDelMapa, contextoDe, contornos, type Elemento } from './catalogo/catalogo'
-  import {
-    esIdDeAltura,
-    etiquetaDeClase,
-    idDeAltura,
-    nombreDePapel,
-    PAPELES,
-    textoDeAltura,
-    type ContextoDeRelieve,
-  } from './catalogo/relieve'
+  import { catalogo, catalogoDelMapa, contextoDe, contornos, etiquetaDeClase, type ContextoGeografico, type Elemento } from './catalogo/catalogo'
+  import { esIdDeAltura, idDeAltura, nombreDePapel, PAPELES, textoDeAltura } from './catalogo/relieve'
   import contextoGeografico from './datos/contexto-geografico.json'
   import Mapa from './mapa/Mapa.svelte'
   import FinDePartida from './pantallas/FinDePartida.svelte'
@@ -42,7 +34,7 @@
     tiempoJugado,
     type Partida,
   } from './partida/partida'
-  import { indicacionDeRespuesta, pruebaDe, type Prueba } from './prueba/prueba'
+  import { esSimulacro as tipoDeSimulacro, indicacionDeRespuesta, pruebaDe, type Prueba } from './prueba/prueba'
   import SeleccionPrueba from './seleccion/SeleccionPrueba.svelte'
 
   const contexto = contextoGeografico as FeatureCollection
@@ -70,7 +62,7 @@
   let elementosDelMapa = $state.raw<Elemento[]>([])
   let totalElementos = $state(0)
   let contornosDelTipo = $state.raw<Feature<Geometry>[]>([])
-  let contextoDelTipo = $state.raw<ContextoDeRelieve | null>(null)
+  let contextoDelTipo = $state.raw<ContextoGeografico | null>(null)
   let ahora = $state(Date.now())
   let texto = $state('')
   let simulacroActivo = $state<string | null>(null)
@@ -93,7 +85,7 @@
   })
 
   const escribeNombre = $derived(prueba?.modo === 'ubicacion-nombre')
-  const esSimulacro = $derived(prueba?.tipo === 'simulacro')
+  const esSimulacro = $derived(prueba !== null && tipoDeSimulacro(prueba.tipo))
   const esUnidades = $derived(prueba?.tipo === 'unidades')
   // Tipos en los que el mapa arranca mudo y solo se dibuja lo ya Acertado o Desbloqueado.
   const conCascada = $derived(esSimulacro || esUnidades)
@@ -369,6 +361,9 @@
             <p class:fallo={pista.escrito !== null}>
               {pista.escrito !== null ? `Escribiste: ${pista.escrito}. ¿Cuál es?` : '¿Cuál es?'}
             </p>
+            {#if pista.escrito !== null && partida.preguntado?.desambiguacion}
+              <p class="desambiguacion">{partida.preguntado.desambiguacion}</p>
+            {/if}
             {#each pista.opciones as opcion (opcion.id)}
               <button type="button" onclick={() => elegirOpcionDePista(opcion.id)}>{opcion.nombreMostrado}</button>
             {/each}
@@ -450,6 +445,9 @@
             Elegiste {correccion.elegido.nombreMostrado} · Era {correccion.correcto.nombreMostrado}
           {/if}
         </p>
+        {#if correccionTrasFallo(correccion) && correccion.correcto.desambiguacion}
+          <p class="desambiguacion">{correccion.correcto.desambiguacion}</p>
+        {/if}
         <div class="barra" style:animation-duration="{correccion.duracion}ms"></div>
       </div>
     {:else if repaso && escribeNombre}
@@ -579,6 +577,11 @@
     color: #b45309;
   }
 
+  .desambiguacion {
+    font-size: 0.9375rem;
+    color: #6b7280;
+  }
+
   .pendientes {
     margin: 0;
     color: #6b7280;
@@ -619,6 +622,11 @@
     margin: 0 0 0.5rem;
     font-size: 1.125rem;
     color: #b45309;
+  }
+
+  .correccion .desambiguacion {
+    font-size: 0.9375rem;
+    color: #6b7280;
   }
 
   .correccion.conPista p {

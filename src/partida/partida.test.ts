@@ -741,6 +741,12 @@ describe('Pista de área', () => {
     expect(trasElRepaso(catalogoDePrueba(), { tipo: 'picos', modo: 'nombre-ubicar' }).pistaDeArea).toEqual(['d', 'f'])
   })
 
+  it('un elemento que trae su propia Pista de área la usa en lugar de sus Vecinos', () => {
+    const conCuenca = catalogoDePrueba({ pistaDeArea: ['a', 'b', 'e'] })
+
+    expect(trasElRepaso(conCuenca, { tipo: 'rios', modo: 'nombre-ubicar' }).pistaDeArea).toEqual(['a', 'b', 'e'])
+  })
+
   it('una comunidad sin Vecinos se ilumina a sí misma', () => {
     expect(trasElRepaso(catalogoDePrueba({ vecinos: [] }), comunidadesNombreUbicar).pistaDeArea).toEqual(['e'])
   })
@@ -1079,7 +1085,7 @@ describe('Simulacro: desbloqueados y elegir pregunta', () => {
   }
   const dependeDeA: Elemento = { id: 'c', nombre: 'C', nombreMostrado: 'C', alias: [], vecinos: [], desbloqueaCon: ['a'] }
   const simulacro: Elemento[] = [sinDependencias, tambienSinDependencias, dependeDeA]
-  const simulacroNombreUbicar: Prueba = { tipo: 'simulacro', modo: 'nombre-ubicar' }
+  const simulacroNombreUbicar: Prueba = { tipo: 'simulacro-relieve', modo: 'nombre-ubicar' }
   const azarSinBarajar = () => 0.99
 
   it('al principio, desbloqueados son solo los elementos sin dependencias pendientes', () => {
@@ -1110,6 +1116,42 @@ describe('Simulacro: desbloqueados y elegir pregunta', () => {
     partida = responder(partida, 'a')
 
     expect(partida.desbloqueados).toContain('c')
+  })
+})
+
+describe('Ríos que se confunden entre sí', () => {
+  const rios = catalogo('rios')
+  const riosNombrar: Prueba = { tipo: 'rios', modo: 'ubicacion-nombre' }
+
+  function preguntando(id: string): Partida {
+    const soloEse = [rios.find((rio) => rio.id === id)!, ...rios.filter((rio) => rio.id !== id)]
+    return iniciarPartida(riosNombrar, soloEse, () => 0.99, reloj)
+  }
+
+  it('el nombre de otro río nunca vale por errata, aunque se diferencien en una letra', () => {
+    const conAragon = responderConTexto(preguntando('aragon'), 'Alagón')
+    const conAlagon = responderConTexto(preguntando('alagon'), 'Aragón')
+    const conGuadiana = responderConTexto(preguntando('guadiana'), 'Guadiana Menor')
+
+    expect(conAragon.acertados).not.toContain('aragon')
+    expect(conAlagon.acertados).not.toContain('alagon')
+    expect(conGuadiana.acertados).not.toContain('guadiana')
+    expect(conAragon.pista?.escrito).toBe('Alagón')
+  })
+
+  it('el propio nombre sí se acepta sin tildes y con una errata', () => {
+    expect(responderConTexto(preguntando('aragon'), 'aragon').acertados).toContain('aragon')
+    expect(responderConTexto(preguntando('guadalquivir'), 'guadalquivi').acertados).toContain('guadalquivir')
+    expect(responderConTexto(preguntando('ciguela'), 'Gigüela').acertados).toContain('ciguela')
+  })
+
+  it('los distractores de la Pista son hermanos de cuenca, nunca el río de otra', () => {
+    const { pista } = pedirPista(preguntando('aragon'))
+    const hermanosDelEbro = rios.filter((rio) => rio.cuenca === 'ebro').map((rio) => rio.id)
+
+    expect(pista?.opciones).toHaveLength(4)
+    expect(pista?.opciones.map((opcion) => opcion.id).filter((id) => id !== 'aragon').every((id) => hermanosDelEbro.includes(id))).toBe(true)
+    expect(pista?.opciones.map((opcion) => opcion.id)).not.toContain('alagon')
   })
 })
 
