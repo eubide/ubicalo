@@ -1277,9 +1277,9 @@ describe('Grandes unidades: la cascada decide el Preguntado sin que el alumno el
 })
 
 describe('Grandes unidades: partida completa sobre el catálogo real', () => {
-  it('recorre las catorce unidades sin quedarse nunca sin nada que preguntar', () => {
+  it.each([0, 0.3, 0.5, 0.99])('recorre las catorce unidades sin quedarse nunca sin nada que preguntar (azar %s)', (valor) => {
     const unidades = catalogo('unidades')
-    let partida = iniciarPartida(pruebaDe('unidades', 'localizar'), unidades, Math.random, reloj)
+    let partida = iniciarPartida(pruebaDe('unidades', 'localizar'), unidades, () => valor, reloj)
     const orden: string[] = []
 
     while (!partida.terminada) {

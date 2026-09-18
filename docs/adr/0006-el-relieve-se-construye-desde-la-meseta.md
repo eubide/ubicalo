@@ -15,5 +15,5 @@ Cada mancha toma su color solo al acertarla, y ese color es su altura en la ramp
 
 - El Preguntado tiene que estar siempre Desbloqueado. En el Simulacro lo garantiza el alumno, que elige tocando; aquí lo garantiza el motor, que adelanta en la cola el primero que ya se puede responder y lo trae de la siguiente Vuelta si en esta no queda ninguno. Sin eso, fallar la Meseta bloquearía la partida entera.
 - Las dependencias entre depresión, reborde y cordillera exterior son seis entradas escritas a mano: la capa dice que las depresiones están «entre los rebordes y las cordilleras exteriores», pero no cuál con cuál.
-- Canarias no se define respecto a la Meseta y no depende de nada por geografía; se cuelga de las cuatro cordilleras exteriores para que la partida abra siempre con la Meseta y cierre con el relieve volcánico.
+- Canarias no se define respecto a la Meseta y no depende de nada por geografía; se cuelga de las trece unidades peninsulares para que la partida abra siempre con la Meseta y cierre con el relieve volcánico.
 - La rampa vive en `src/app.css` como variables y la usan el mapa y la barra de contexto; la leyenda del mapa pasa a ser esa rampa en este Tipo, porque aquí todas las formas son manchas y los iconos de clase no distinguen nada.

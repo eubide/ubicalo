@@ -726,12 +726,9 @@ describe('Catálogo de grandes unidades', () => {
   })
 
   it('deja Canarias para el final, porque no se define respecto a la Meseta', () => {
-    expect(porId.get('montanas-de-canarias')?.desbloqueaCon).toEqual([
-      'pirineos',
-      'montes-vascos',
-      'cordillera-costero-catalana',
-      'cordilleras-beticas',
-    ])
+    const peninsulares = [...porId.keys()].filter((id) => id !== 'montanas-de-canarias')
+
+    expect(porId.get('montanas-de-canarias')?.desbloqueaCon).toEqual(peninsulares)
   })
 })
 

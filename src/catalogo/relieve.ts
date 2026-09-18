@@ -247,8 +247,6 @@ function catalogoDeTodo(): Elemento[] {
   return [...cordilleras, ...sierras, ...picos, ...alturas]
 }
 
-const EXTERIORES = ['pirineos', 'montes-vascos', 'cordillera-costero-catalana', 'cordilleras-beticas']
-
 // Cada depresión queda encajada entre un reborde de la Meseta y una cordillera exterior, así que la rama
 // se pregunta en ese orden; lo que no está aquí cuelga directamente de la Meseta.
 const DESBLOQUEA_CON: Record<string, string[]> = {
@@ -258,18 +256,24 @@ const DESBLOQUEA_CON: Record<string, string[]> = {
   'montes-vascos': ['depresion-del-ebro'],
   'cordillera-costero-catalana': ['depresion-del-ebro'],
   'cordilleras-beticas': ['depresion-del-guadalquivir'],
+}
+
+function desbloqueaConDeUnidad({ id, papel }: Elemento, peninsulares: string[]): string[] {
   // Canarias no se define respecto a la Meseta, así que cierra la partida con la Península ya entera.
-  'montanas-de-canarias': EXTERIORES,
+  if (papel === 'volcanico') return peninsulares
+  return DESBLOQUEA_CON[id] ?? (papel === 'meseta' ? [] : ['meseta'])
 }
 
 function catalogoDeUnidades(): Elemento[] {
-  return elementosDeClases(CLASES_DEL_MAPA.unidades).map((elemento) => {
+  const unidades = elementosDeClases(CLASES_DEL_MAPA.unidades)
+  const peninsulares = unidades.filter(({ papel }) => papel !== 'volcanico').map(({ id }) => id)
+  return unidades.map((elemento) => {
     const { papel } = elemento
     if (!papel) throw new Error(`${elemento.id} sin papel`)
     return {
       ...elemento,
       pregunta: etiquetaDePapel[papel],
-      desbloqueaCon: DESBLOQUEA_CON[elemento.id] ?? (papel === 'meseta' ? [] : ['meseta']),
+      desbloqueaCon: desbloqueaConDeUnidad(elemento, peninsulares),
     }
   })
 }
