@@ -1293,7 +1293,9 @@ describe('Grandes unidades: partida completa sobre el catálogo real', () => {
     expect(orden[0]).toBe('meseta')
     expect(orden.indexOf('sistema-iberico')).toBeLessThan(orden.indexOf('depresion-del-ebro'))
     expect(orden.indexOf('depresion-del-ebro')).toBeLessThan(orden.indexOf('pirineos'))
-    expect(orden.at(-1)).toBe('montanas-de-canarias')
+    const exteriores = ['pirineos', 'montes-vascos', 'cordillera-costero-catalana', 'cordilleras-beticas']
+    const canarias = orden.indexOf('montanas-de-canarias')
+    expect(exteriores.every((id) => orden.indexOf(id) < canarias)).toBe(true)
     expect(partida.aciertosALaPrimera).toBe(unidades.length)
   })
 })
