@@ -12,7 +12,13 @@
   --exterior: #94663c;
   --volcanico: #a95440;
 
-  /* Señales: un estado, un color, el mismo en todos los Tipos. El relleno dice qué es un Elemento y el
+  /* Un color por familia en la portada. Relieve e Hidrografía adelantan el del mapa: el marrón de las
+     cordilleras exteriores y el azul de los cauces. */
+  --familia-politico: #7a5c9e;
+  --familia-relieve: var(--exterior);
+  --familia-hidrografia: #3c7fb1;
+
+  /* Señales: un estado, un color, el mismo en todos los Alcances. El relleno dice qué es un Elemento y el
      borde si sigue en juego: punteado abierto, continuo cerrado. En una línea el borde es la funda. */
   --senal-frontera: #dce9fa;
   --senal-frontera-borde: #6b93d6;

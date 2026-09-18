@@ -122,8 +122,10 @@ Nunca compactes a mitad de una fase.
 - [x] Siguiente bloque: relieve (cordilleras, sierras, picos) con `grill-with-docs` → spec #36 → tickets #37–#45 → `implement` → `code-review` (dos ejes, hallazgos corregidos) → PR #46, spec cerrada
 - [x] Bloque Simulacro: spec #47 → tickets #48–#52 → PR #53, spec cerrada
 - [x] Bloque Grandes unidades: la Meseta y las depresiones, spec #63 → PR #64. Sin tickets: cupo en una sesión desde la conversación, como los cambios tras probar con usuarios
-- [ ] Probar el relieve en un móvil real: pulsadores de sierras y picos, rótulos apilados en el Repaso de Jerarquía, y las manchas de Montes Vascos y Montes de Toledo, que a ancho de móvil quedan por debajo de los 44 px de pulsador
+- [ ] Probar el relieve en un móvil real: pulsadores de sierras y picos, rótulos apilados en el Repaso de Pertenencia, y las manchas de Montes Vascos y Montes de Toledo, que a ancho de móvil quedan por debajo de los 44 px de pulsador
 - [x] Bloque Ríos: spec #54 → tickets #55–#61 → PR #62, spec cerrada. La rama salió antes que Grandes unidades, así que se integró con `git merge main` y los nueve conflictos resueltos a mano
 - [x] Bloque Señales: un solo código de color y borde para los tres juegos de estado que dejó el merge de Ríos. Salió de `/mattpocock-skills:grill-me` sobre el bucle de pregunta, sin spec ni tickets → ADR-0007
 - [ ] Probar las Señales en un móvil real: el punteado del borde a ancho de móvil, la funda de los cauces sobre una vertiente, la leyenda de Señales cuando conviven cinco estados, y los Rótulos de ríos acertados cuando se amontonan en una cuenca
+- [x] Bloque Portada: tres Familias en lugar de once Tipos, con Alcance y Dirección en su sitio → ADR-0008. Sin spec ni tickets: el ADR ya traía la lista de consecuencias
+- [ ] Probar la portada en un móvil real: las tres tarjetas a 375 px, los dos botones de dirección en una fila, y la silueta de España junto al nombre
 - [ ] Siguiente bloque: despliegue (dominio y Terraform), o cabos y golfos con `/mattpocock-skills:grill-with-docs`

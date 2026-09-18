@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { catalogo, catalogoDelMapa, contextoDe, contornos, type Tipo } from './catalogo'
+import { geoPath } from 'd3-geo'
+import { geoConicConformalSpain } from 'd3-composite-projections'
+import { catalogo, catalogoDelMapa, contextoDe, contornos, siluetaDeEspana, type Alcance } from './catalogo'
+import { esIdDeAltura } from './relieve'
 
-function nombresDelCatalogo(tipo: Tipo) {
-  return catalogo(tipo).map(({ vecinos: _v, comunidad: _c, cordillera: _cord, clase: _cl, altura: _a, ...nombres }) => nombres)
+function nombresDelCatalogo(alcance: Alcance) {
+  return catalogo(alcance).map(({ vecinos: _v, comunidad: _c, cordillera: _cord, clase: _cl, altura: _a, ...nombres }) => nombres)
 }
 
 describe('Catálogo de comunidades autónomas', () => {
@@ -48,7 +51,7 @@ describe('Catálogo de comunidades autónomas', () => {
       nombreMostrado: 'Comunitat Valenciana (Comunidad Valenciana)',
       alias: ['Comunidad Valenciana', 'Valencia'],
     })
-    expect(elementos.filter((elemento) => elemento.alias.length > 0)).toHaveLength(11)
+    expect(elementos.filter((elemento) => elemento.alias.length > 0)).toHaveLength(10)
   })
 
   it('acepta como alias las formas cortas habituales sin cambiar el nombre mostrado', () => {
@@ -64,7 +67,6 @@ describe('Catálogo de comunidades autónomas', () => {
     expect(porId('13').alias).toEqual(['Madrid'])
     expect(porId('14').alias).toEqual(['Murcia'])
     expect(porId('15').alias).toEqual(['Navarra'])
-    expect(porId('17').alias).toEqual(['Rioja'])
     expect(porId('18').alias).toEqual(['Ceuta'])
     expect(porId('19').alias).toEqual(['Melilla'])
   })
@@ -139,7 +141,7 @@ describe('Catálogo de provincias', () => {
       nombreMostrado: 'Illes Balears (Islas Baleares)',
       alias: ['Islas Baleares', 'Baleares'],
     })
-    expect(elementos.filter((elemento) => elemento.alias.length > 0)).toHaveLength(13)
+    expect(elementos.filter((elemento) => elemento.alias.length > 0)).toHaveLength(12)
   })
 
   it('la provincia de Madrid tiene como vecinos exactamente Toledo, Ávila, Segovia, Guadalajara y Cuenca', () => {
@@ -154,7 +156,7 @@ describe('Catálogo de provincias', () => {
     const elementos = nombresDelCatalogo('provincias')
     const porId = (id: string) => elementos.find((elemento) => elemento.id === id)!
 
-    expect(porId('26')).toEqual({ id: '26', nombre: 'La Rioja', nombreMostrado: 'La Rioja', alias: ['Rioja'] })
+    expect(porId('26')).toEqual({ id: '26', nombre: 'La Rioja', nombreMostrado: 'La Rioja', alias: [] })
     expect(porId('38')).toEqual({
       id: '38',
       nombre: 'Santa Cruz de Tenerife',
@@ -185,8 +187,8 @@ describe('Catálogo de provincias', () => {
   })
 
   it('solo Ceuta y Melilla son ciudades autónomas, como provincias y como comunidades', () => {
-    const ciudadesAutonomas = (tipo: Tipo) =>
-      catalogo(tipo)
+    const ciudadesAutonomas = (alcance: Alcance) =>
+      catalogo(alcance)
         .filter((elemento) => elemento.ciudadAutonoma)
         .map((elemento) => elemento.nombre)
 
@@ -269,7 +271,7 @@ describe('Catálogo de cordilleras y sierras', () => {
 
 describe('Catálogo de picos', () => {
   it('entrega un pico por cordillera, en el orden de las cordilleras', () => {
-    const picos = catalogo('picos')
+    const picos = catalogoDelMapa('picos')
     const cordilleras = catalogo('cordilleras-y-sierras').filter((elemento) => elemento.clase === 'cordillera')
 
     expect(picos.map((elemento) => elemento.nombre)).toEqual([
@@ -303,12 +305,7 @@ describe('Catálogo de picos', () => {
   it('acepta las otras formas habituales como alias', () => {
     const elementos = nombresDelCatalogo('picos')
 
-    expect(elementos).toContainEqual({
-      id: 'torre-cerredo',
-      nombre: 'Torre Cerredo',
-      nombreMostrado: 'Torre Cerredo',
-      alias: ['Torrecerredo', 'Torre de Cerredo'],
-    })
+    expect(elementos).toContainEqual({ id: 'torre-cerredo', nombre: 'Torre Cerredo', nombreMostrado: 'Torre Cerredo', alias: [] })
     expect(elementos).toContainEqual({ id: 'aizkorri', nombre: 'Aizkorri', nombreMostrado: 'Aizkorri', alias: ['Aketegi'] })
     expect(elementos).toContainEqual({ id: 'aneto', nombre: 'Aneto', nombreMostrado: 'Aneto', alias: [] })
   })
@@ -322,9 +319,9 @@ describe('Catálogo de picos', () => {
   })
 })
 
-describe('Catálogo de jerarquía', () => {
+describe('Catálogo de Pertenencia', () => {
   it('pregunta sierras y picos hacia su cordillera, y cordilleras hacia su pico', () => {
-    const elementos = catalogo('jerarquia')
+    const elementos = catalogo('pertenencia-relieve')
     const porNombre = (nombre: string) => elementos.find((elemento) => elemento.nombre === nombre)!
 
     expect(elementos).toHaveLength(40)
@@ -346,44 +343,50 @@ describe('Catálogo de jerarquía', () => {
   })
 
   it('los vecinos son los del elemento que se toca, para que la Pista de área ilumine lo tocable', () => {
-    const elementos = catalogo('jerarquia')
-    const mapa = catalogoDelMapa('jerarquia')
+    const elementos = catalogo('pertenencia-relieve')
+    const mapa = catalogoDelMapa('pertenencia-relieve')
     const porId = (lista: typeof elementos, id: string) => lista.find((elemento) => elemento.id === id)!
 
     expect(porId(elementos, 'sierra-de-gredos').vecinos).toEqual(porId(mapa, 'sistema-central').vecinos)
     expect(porId(elementos, 'pirineos').vecinos).toEqual(porId(mapa, 'aneto').vecinos)
   })
 
-  it('el mapa de la jerarquía son las 11 cordilleras y los 11 picos', () => {
-    const mapa = catalogoDelMapa('jerarquia')
+  it('el mapa de Pertenencia son las 11 cordilleras y los 11 picos', () => {
+    const mapa = catalogoDelMapa('pertenencia-relieve')
 
     expect(mapa).toHaveLength(22)
     expect(mapa.map((elemento) => elemento.clase)).toEqual([...Array(11).fill('cordillera'), ...Array(11).fill('pico')])
-    expect(contornos('jerarquia').map((contorno) => contorno.id)).toEqual(mapa.map((elemento) => elemento.id))
-    expect(catalogoDelMapa('picos')).toEqual(catalogo('picos'))
+    expect(contornos('pertenencia-relieve').map((contorno) => contorno.id)).toEqual(mapa.map((elemento) => elemento.id))
+    expect(catalogoDelMapa('picos')).toHaveLength(11)
   })
 })
 
-describe('Catálogo de alturas', () => {
-  it('pregunta la altura de Moncayo, Aneto, Teide y Mulhacén y acepta la cifra con o sin punto', () => {
-    const elementos = catalogo('alturas')
+describe('Catálogo de picos', () => {
+  it('son los once picos y las cuatro alturas, que no se tocan en el mapa', () => {
+    const elementos = catalogo('picos')
 
-    expect(elementos.map((elemento) => elemento.pregunta)).toEqual([
+    expect(elementos).toHaveLength(15)
+    expect(elementos.filter((elemento) => esIdDeAltura(elemento.id)).map((elemento) => elemento.pregunta)).toEqual([
       'Altura del Moncayo',
       'Altura del Aneto',
       'Altura del Teide',
       'Altura del Mulhacén',
     ])
-    expect(elementos.find((elemento) => elemento.id === 'aneto')).toEqual({
-      id: 'aneto',
+    expect(catalogoDelMapa('picos').some((elemento) => esIdDeAltura(elemento.id))).toBe(false)
+  })
+
+  it('una altura se acepta con o sin punto de millar y rotula su pico en el Repaso', () => {
+    expect(catalogo('picos').find((elemento) => elemento.id === 'altura-aneto')).toEqual({
+      id: 'altura-aneto',
       nombre: '3404',
       nombreMostrado: '3.404 m',
       alias: ['3.404', '3404 m', '3.404 m'],
-      vecinos: [],
+      vecinos: ['altura-moncayo', 'altura-teide', 'altura-mulhacen'],
       clase: 'pico',
       cordillera: 'pirineos',
       pregunta: 'Altura del Aneto',
       rotulo: 'Aneto · 3.404 m',
+      seEscribe: true,
     })
   })
 })
@@ -394,23 +397,18 @@ describe('Contexto geográfico del relieve', () => {
     expect(contextoDe('comunidades')).toBeNull()
   })
 
-  it('el relieve lleva el contorno de España y los ríos; picos y alturas además las cordilleras en tenue', () => {
+  it('el relieve lleva el contorno de España y los ríos; los picos además las cordilleras en tenue', () => {
     expect(contextoDe('cordilleras-y-sierras')?.contorno.geometry.type).toBe('MultiPolygon')
     expect(contextoDe('cordilleras-y-sierras')?.rios.length).toBeGreaterThan(20)
     expect(contextoDe('cordilleras-y-sierras')?.tenues).toEqual([])
-    expect(contextoDe('jerarquia')?.tenues).toEqual([])
+    expect(contextoDe('pertenencia-relieve')?.tenues).toEqual([])
     expect(contextoDe('picos')?.tenues).toHaveLength(11)
-    expect(contextoDe('alturas')?.tenues).toHaveLength(11)
-  })
-
-  it('los contornos de alturas son los cuatro picos examinados, en el orden de los apuntes', () => {
-    expect(contornos('alturas').map((contorno) => contorno.id)).toEqual(['moncayo', 'aneto', 'teide', 'mulhacen'])
   })
 })
 
-describe('Catálogo de simulacro', () => {
+describe('Catálogo de Todo en Relieve', () => {
   it('entrega las 44 piezas del relieve: cordilleras, sierras, picos y las cuatro alturas', () => {
-    const elementos = catalogo('simulacro-relieve')
+    const elementos = catalogo('todo-relieve')
 
     expect(elementos).toHaveLength(44)
     expect(elementos.filter((elemento) => elemento.clase === 'cordillera')).toHaveLength(11)
@@ -419,21 +417,21 @@ describe('Catálogo de simulacro', () => {
   })
 
   it('las 11 cordilleras están desbloqueadas desde el principio', () => {
-    const cordilleras = catalogo('simulacro-relieve').filter((elemento) => elemento.clase === 'cordillera')
+    const cordilleras = catalogo('todo-relieve').filter((elemento) => elemento.clase === 'cordillera')
 
     expect(cordilleras).toHaveLength(11)
     expect(cordilleras.every((elemento) => elemento.desbloqueaCon?.length === 0)).toBe(true)
   })
 
   it('una sierra se desbloquea al acertar su cordillera', () => {
-    const elementos = catalogo('simulacro-relieve')
+    const elementos = catalogo('todo-relieve')
     const gredos = elementos.find((elemento) => elemento.id === 'sierra-de-gredos')!
 
     expect(gredos.desbloqueaCon).toEqual(['sistema-central'])
   })
 
   it('un pico se desbloquea al acertar su cordillera y todas sus sierras', () => {
-    const elementos = catalogo('simulacro-relieve')
+    const elementos = catalogo('todo-relieve')
     const almanzor = elementos.find((elemento) => elemento.id === 'almanzor')!
 
     expect(almanzor.desbloqueaCon).toHaveLength(5)
@@ -444,13 +442,13 @@ describe('Catálogo de simulacro', () => {
   })
 
   it('el pico de una cordillera sin sierras se desbloquea solo con la cordillera', () => {
-    const aizkorri = catalogo('simulacro-relieve').find((elemento) => elemento.id === 'aizkorri')!
+    const aizkorri = catalogo('todo-relieve').find((elemento) => elemento.id === 'aizkorri')!
 
     expect(aizkorri.desbloqueaCon).toEqual(['montes-vascos'])
   })
 
   it('las cuatro alturas se desbloquean con su pico, y su id no coincide con el del pico', () => {
-    const alturas = catalogo('simulacro-relieve').filter((elemento) => elemento.id.startsWith('altura-'))
+    const alturas = catalogo('todo-relieve').filter((elemento) => elemento.id.startsWith('altura-'))
 
     expect(alturas).toHaveLength(4)
     const anetoAltura = alturas.find((elemento) => elemento.id === 'altura-aneto')!
@@ -459,12 +457,12 @@ describe('Catálogo de simulacro', () => {
     expect(anetoAltura.nombreMostrado).toBe('3.404 m')
   })
 
-  it('el mapa del simulacro son las 40 piezas con geometría propia, sin las alturas', () => {
-    const mapa = catalogoDelMapa('simulacro-relieve')
+  it('el mapa de Todo son las 40 piezas con geometría propia, sin las alturas', () => {
+    const mapa = catalogoDelMapa('todo-relieve')
 
     expect(mapa).toHaveLength(40)
     expect(mapa.every((elemento) => elemento.id.startsWith('altura-') === false)).toBe(true)
-    expect(contornos('simulacro-relieve')).toHaveLength(40)
+    expect(contornos('todo-relieve')).toHaveLength(40)
   })
 })
 
@@ -601,7 +599,7 @@ describe('Pista de área de los ríos', () => {
 
 describe('Catálogo de jerarquía de ríos', () => {
   it('pregunta los 24 afluentes hacia su río principal, y ningún río propio', () => {
-    const elementos = catalogo('jerarquia-rios')
+    const elementos = catalogo('pertenencia-rios')
     const porNombre = (nombre: string) => elementos.find((elemento) => elemento.nombre === nombre)!
 
     expect(elementos).toHaveLength(24)
@@ -612,7 +610,7 @@ describe('Catálogo de jerarquía de ríos', () => {
   })
 
   it('el Jiloca se responde con el Ebro y el Záncara con el Guadiana, aunque desemboquen en un afluente', () => {
-    const elementos = catalogo('jerarquia-rios')
+    const elementos = catalogo('pertenencia-rios')
     const respuestaDe = (id: string) => elementos.find((elemento) => elemento.id === id)!.respuesta
 
     expect(respuestaDe('jiloca')).toBe('ebro')
@@ -621,8 +619,8 @@ describe('Catálogo de jerarquía de ríos', () => {
   })
 
   it('los vecinos son los del río que hay que tocar, para que la Pista de área ilumine lo tocable', () => {
-    const elementos = catalogo('jerarquia-rios')
-    const mapa = catalogoDelMapa('jerarquia-rios')
+    const elementos = catalogo('pertenencia-rios')
+    const mapa = catalogoDelMapa('pertenencia-rios')
     const porId = (lista: typeof elementos, id: string) => lista.find((elemento) => elemento.id === id)!
 
     expect(porId(elementos, 'segre').vecinos).toEqual(porId(mapa, 'ebro').vecinos)
@@ -631,17 +629,17 @@ describe('Catálogo de jerarquía de ríos', () => {
   })
 
   it('el mapa de la jerarquía de ríos son los 41 ríos', () => {
-    const mapa = catalogoDelMapa('jerarquia-rios')
+    const mapa = catalogoDelMapa('pertenencia-rios')
 
     expect(mapa).toHaveLength(41)
-    expect(contornos('jerarquia-rios').map((contorno) => contorno.id)).toEqual(mapa.map((elemento) => elemento.id))
-    expect(contextoDe('jerarquia-rios')?.tenues).toEqual([])
+    expect(contornos('pertenencia-rios').map((contorno) => contorno.id)).toEqual(mapa.map((elemento) => elemento.id))
+    expect(contextoDe('pertenencia-rios')?.tenues).toEqual([])
   })
 })
 
-describe('Catálogo de simulacro de ríos', () => {
+describe('Catálogo de Todo en Hidrografía', () => {
   it('entrega las 44 piezas: 3 vertientes, 17 ríos del nivel superior y 24 afluentes', () => {
-    const elementos = catalogo('simulacro-rios')
+    const elementos = catalogo('todo-rios')
     const deClase = (clase: string) => elementos.filter((elemento) => elemento.clase === clase)
 
     expect(elementos).toHaveLength(44)
@@ -652,7 +650,7 @@ describe('Catálogo de simulacro de ríos', () => {
   })
 
   it('solo las tres vertientes están desbloqueadas desde el principio', () => {
-    const elementos = catalogo('simulacro-rios')
+    const elementos = catalogo('todo-rios')
     const sinDependencias = elementos.filter((elemento) => elemento.desbloqueaCon?.length === 0)
 
     expect(sinDependencias.map((elemento) => elemento.id)).toEqual([
@@ -664,7 +662,7 @@ describe('Catálogo de simulacro de ríos', () => {
   })
 
   it('un río del nivel superior se desbloquea al acertar su vertiente', () => {
-    const elementos = catalogo('simulacro-rios')
+    const elementos = catalogo('todo-rios')
     const porId = (id: string) => elementos.find((elemento) => elemento.id === id)!
 
     expect(porId('ebro').desbloqueaCon).toEqual(['vertiente-mediterranea'])
@@ -673,7 +671,7 @@ describe('Catálogo de simulacro de ríos', () => {
   })
 
   it('un afluente se desbloquea al acertar el río principal de su cuenca, aunque desemboque en otro afluente', () => {
-    const elementos = catalogo('simulacro-rios')
+    const elementos = catalogo('todo-rios')
     const porId = (id: string) => elementos.find((elemento) => elemento.id === id)!
 
     expect(porId('segre').desbloqueaCon).toEqual(['ebro'])
@@ -683,18 +681,18 @@ describe('Catálogo de simulacro de ríos', () => {
   })
 
   it('las vertientes se tocan como manchas y los ríos como líneas', () => {
-    const formas = contornos('simulacro-rios')
+    const formas = contornos('todo-rios')
 
     expect(formas).toHaveLength(44)
     expect(formas.slice(0, 3).every((forma) => forma.geometry.type !== 'LineString')).toBe(true)
     expect(formas.slice(3).every((forma) => forma.geometry.type === 'LineString')).toBe(true)
-    expect(catalogoDelMapa('simulacro-rios').map((elemento) => elemento.id)).toEqual(
+    expect(catalogoDelMapa('todo-rios').map((elemento) => elemento.id)).toEqual(
       formas.map((forma) => String(forma.id)),
     )
   })
 
   it('los vecinos de una vertiente son las otras dos', () => {
-    const cantabrica = catalogo('simulacro-rios').find((elemento) => elemento.id === 'vertiente-cantabrica')!
+    const cantabrica = catalogo('todo-rios').find((elemento) => elemento.id === 'vertiente-cantabrica')!
 
     expect(cantabrica.vecinos.sort()).toEqual(['vertiente-atlantica', 'vertiente-mediterranea'])
   })
@@ -728,11 +726,47 @@ describe('Catálogo de grandes unidades', () => {
   })
 
   it('deja Canarias para el final, porque no se define respecto a la Meseta', () => {
-    expect(porId.get('montanas-de-canarias')?.desbloqueaCon).toEqual([
-      'pirineos',
-      'montes-vascos',
-      'cordillera-costero-catalana',
-      'cordilleras-beticas',
-    ])
+    const peninsulares = [...porId.keys()].filter((id) => id !== 'montanas-de-canarias')
+
+    expect(porId.get('montanas-de-canarias')?.desbloqueaCon).toEqual(peninsulares)
+  })
+})
+
+describe('Lo que basta escribir en el relieve y la hidrografía', () => {
+  function elementoDe(alcance: Alcance, id: string) {
+    return catalogo(alcance).find((elemento) => elemento.id === id)!
+  }
+
+  it('las tres vertientes se responden sin el genérico, que sigue en el nombre mostrado', () => {
+    expect(elementoDe('todo-rios', 'vertiente-mediterranea')).toMatchObject({
+      nombreMostrado: 'Vertiente Mediterránea',
+      alias: ['Mediterránea'],
+    })
+    expect(elementoDe('todo-rios', 'vertiente-cantabrica').alias).toEqual(['Cantábrica'])
+    expect(elementoDe('todo-rios', 'vertiente-atlantica').alias).toEqual(['Atlántica'])
+  })
+
+  it('las dos depresiones se responden con el río que las nombra', () => {
+    expect(elementoDe('unidades', 'depresion-del-guadalquivir')).toMatchObject({
+      nombreMostrado: 'Depresión del Guadalquivir',
+      alias: ['Guadalquivir'],
+    })
+    expect(elementoDe('unidades', 'depresion-del-ebro').alias).toEqual(['Ebro'])
+  })
+
+  it('el Turó de l\'Home se responde con "Turó", donde la regla general no llega', () => {
+    expect(elementoDe('picos', 'turo-de-l-home')).toMatchObject({
+      nombreMostrado: "Turó de l'Home",
+      alias: ['Turó'],
+    })
+  })
+})
+
+describe('Silueta de España', () => {
+  it('es una sola mancha que se puede trazar', () => {
+    const espana = siluetaDeEspana()
+
+    expect(espana.geometry.type).toBe('MultiPolygon')
+    expect(geoPath(geoConicConformalSpain().fitExtent([[0, 0], [52, 34]], espana))(espana)).toMatch(/^M/)
   })
 })

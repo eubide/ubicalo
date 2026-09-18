@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Feature, FeatureCollection, Geometry } from 'geojson'
   import { catalogo, catalogoDelMapa, contextoDe, contornos, etiquetaDeClase, type ContextoGeografico, type Elemento } from './catalogo/catalogo'
-  import { esIdDeAltura, idDeAltura, nombreDePapel, PAPELES, textoDeAltura } from './catalogo/relieve'
+  import { esIdDeAltura, idDeAltura, nombreDePapel, PAPELES, picoDeAltura, textoDeAltura } from './catalogo/relieve'
   import { esDeHidrografia } from './catalogo/hidrografia'
   import contextoGeografico from './datos/contexto-geografico.json'
   import Mapa from './mapa/Mapa.svelte'
@@ -35,7 +35,7 @@
     tiempoJugado,
     type Partida,
   } from './partida/partida'
-  import { esSimulacro as tipoDeSimulacro, indicacionDeRespuesta, pruebaDe, type Prueba } from './prueba/prueba'
+  import { enCascada, seEligeLaPregunta, type Prueba } from './prueba/prueba'
   import SeleccionPrueba from './seleccion/SeleccionPrueba.svelte'
 
   const contexto = contextoGeografico as FeatureCollection
@@ -49,8 +49,12 @@
   }
 
   const competicion = crearCompeticion(almacenDelNavegador())
+  // Lo ya jugado responde a la vez si es la primera visita y por dónde se quedó la anterior.
+  let jugadas = $state.raw(competicion.historial())
 
-  let retoRecibido = $state<Reto | null>(retoDeEnlace(location.href))
+  const recibido = retoDeEnlace(location.href)
+  let retoRecibido = $state<Reto | null>(recibido === 'caducado' ? null : recibido)
+  const retoCaducado = recibido === 'caducado'
   let aBatir = $state<Reto | null>(null)
   let retoSuperado = $state<boolean | null>(null)
   let resultado = $state<ResultadoDeRegistro | null>(null)
@@ -59,14 +63,14 @@
   let confirmandoAbandono = $state(false)
   let partida = $state<Partida | null>(null)
   let prueba = $state<Prueba | null>(null)
-  let elementosDelTipo = $state.raw<Elemento[]>([])
+  let elementosDelAlcance = $state.raw<Elemento[]>([])
   let elementosDelMapa = $state.raw<Elemento[]>([])
   let totalElementos = $state(0)
-  let contornosDelTipo = $state.raw<Feature<Geometry>[]>([])
-  let contextoDelTipo = $state.raw<ContextoGeografico | null>(null)
+  let contornosDelAlcance = $state.raw<Feature<Geometry>[]>([])
+  let contextoDelAlcance = $state.raw<ContextoGeografico | null>(null)
   let ahora = $state(Date.now())
   let texto = $state('')
-  let simulacroActivo = $state<string | null>(null)
+  let preguntaElegida = $state<string | null>(null)
   let mostrarCorrecto = $state(false)
   let campoDeTexto = $state<HTMLInputElement | null>(null)
   let pistaAbierta = $state<HTMLElement | null>(null)
@@ -85,46 +89,47 @@
     pistaAbierta?.focus()
   })
 
-  const escribeNombre = $derived(prueba?.modo === 'ubicacion-nombre')
-  const esSimulacro = $derived(prueba !== null && tipoDeSimulacro(prueba.tipo))
-  const esUnidades = $derived(prueba?.tipo === 'unidades')
-  // Tipos en los que el mapa arranca mudo y solo se dibuja lo ya Acertado o Desbloqueado.
-  const conCascada = $derived(esSimulacro || esUnidades)
+  // La cifra de una Altura se escribe venga la Prueba en la dirección que venga.
+  const escribeNombre = $derived(prueba?.direccion === 'nombrar' || (partida?.preguntado?.seEscribe ?? false))
+  const esTodo = $derived(prueba !== null && seEligeLaPregunta(prueba.alcance))
+  const esUnidades = $derived(prueba?.alcance === 'unidades')
+  // Alcances en los que el mapa arranca mudo y solo se dibuja lo ya Acertado o Desbloqueado.
+  const conCascada = $derived(prueba !== null && enCascada(prueba.alcance))
   // Solo lo ya visible (Acertado o Desbloqueado); el resto del mapa mudo sigue sin dibujarse.
   const contornosVisibles = $derived(
     conCascada && partida
-      ? contornosDelTipo.filter(
+      ? contornosDelAlcance.filter(
           (contorno) => partida!.acertados.includes(String(contorno.id)) || partida!.desbloqueados.includes(String(contorno.id)),
         )
-      : contornosDelTipo,
+      : contornosDelAlcance,
   )
   // Todo lo que depende de un elemento, directa o indirectamente, siguiendo desbloqueaCon al revés.
   function descendientesDe(id: string): Elemento[] {
-    const directos = elementosDelTipo.filter((elemento) => (elemento.desbloqueaCon ?? []).includes(id))
+    const directos = elementosDelAlcance.filter((elemento) => (elemento.desbloqueaCon ?? []).includes(id))
     return directos.flatMap((hijo) => [hijo, ...descendientesDe(hijo.id)])
   }
 
-  // En el Simulacro, una rama solo se pinta de verde cuando ella y todo lo que cuelga de ella están
+  // En Todo, una rama solo se pinta de verde cuando ella y todo lo que cuelga de ella están
   // Acertados. Todo lo demás visible y sin terminar (nunca tocado o respondido a medias) se ve igual,
   // en amarillo, para que "queda algo por hacer aquí" tenga siempre el mismo aspecto.
   const acertadosVisibles = $derived.by(() => {
-    if (!esSimulacro || !partida) return partida?.acertados ?? []
+    if (!esTodo || !partida) return partida?.acertados ?? []
     const acertadosSet = new Set(partida.acertados)
     return partida.acertados.filter((id) => descendientesDe(id).every((hijo) => acertadosSet.has(hijo.id)))
   })
   // Este elemento ya está Acertado, pero algo de lo que cuelga de él todavía no.
   const parcialesVisibles = $derived(
-    esSimulacro && partida ? partida.acertados.filter((id) => !acertadosVisibles.includes(id) && !esIdDeAltura(id)) : [],
+    esTodo && partida ? partida.acertados.filter((id) => !acertadosVisibles.includes(id) && !esIdDeAltura(id)) : [],
   )
   // La Frontera: visible, Desbloqueado y todavía sin acertar. Es lo que el alumno puede tocar ahora.
   const fronteraVisible = $derived(
-    esSimulacro && partida
+    esTodo && partida
       ? contornosVisibles.map((contorno) => String(contorno.id)).filter((id) => !partida!.acertados.includes(id))
       : [],
   )
   // El examen de ríos se entrega como un mapa rotulado, así que la partida lo va escribiendo: lo que ya
   // tiene nombre encima es lo que no hay que volver a tocar.
-  const esHidrografia = $derived(prueba !== null && esDeHidrografia(prueba.tipo))
+  const esHidrografia = $derived(prueba !== null && esDeHidrografia(prueba.alcance))
   const nombres = $derived(
     esHidrografia && partida
       ? partida.acertados.map((id) => ({ id, texto: nombreDe(id) })).filter(({ texto }) => texto !== '')
@@ -140,12 +145,16 @@
       .map((elemento) => ({ id: respuestaDe(elemento), texto: elemento.rotulo ?? elemento.nombreMostrado })) ?? [],
   )
 
-  // En el Simulacro la cifra no se muestra hasta acertarla; antes, si el pico ya está nombrado,
-  // se avisa de que le falta la altura, para que "por qué sigue en naranja" tenga respuesta a la vista.
+  // Los picos cuya cifra pregunta esta Prueba: Picos y Todo.
+  const alturasPreguntadas = $derived(
+    new Set(elementosDelAlcance.filter((elemento) => elemento.seEscribe).map((elemento) => picoDeAltura(elemento.id))),
+  )
+  // Mientras la cifra se pregunte, no se muestra hasta acertarla; antes, si el pico ya está nombrado, se
+  // avisa de que le falta la altura, para que "por qué sigue en naranja" tenga respuesta a la vista.
   const alturas = $derived(
     elementosDelMapa.flatMap((elemento) => {
       if (elemento.altura === undefined) return []
-      if (esSimulacro && !(partida?.acertados.includes(idDeAltura(elemento.id)) ?? false)) {
+      if (alturasPreguntadas.has(elemento.id) && !(partida?.acertados.includes(idDeAltura(elemento.id)) ?? false)) {
         const picoAcertado = partida?.acertados.includes(elemento.id) ?? false
         return picoAcertado ? [{ id: elemento.id, texto: 'Falta la altura' }] : []
       }
@@ -165,7 +174,7 @@
     if (!esUnidades || !partida) return []
     const acertados = new Set(partida.acertados)
     return PAPELES.map((papel) => {
-      const delPapel = elementosDelTipo.filter((elemento) => elemento.papel === papel)
+      const delPapel = elementosDelAlcance.filter((elemento) => elemento.papel === papel)
       return {
         papel,
         nombre: nombreDePapel[papel],
@@ -176,10 +185,10 @@
     }).filter(({ total }) => total > 0)
   })
 
-  const preguntaDeAltura = $derived((simulacroActivo && esIdDeAltura(simulacroActivo)) ?? false)
+  const preguntaDeAltura = $derived(partida?.preguntado?.seEscribe ?? false)
   // La forma que se está respondiendo ahora mismo, para remarcarla; una Altura remarca su propio pico.
-  const activoEnSimulacro = $derived(
-    simulacroActivo ? (esIdDeAltura(simulacroActivo) ? simulacroActivo.slice(idDeAltura('').length) : simulacroActivo) : null,
+  const formaDeLaPreguntaElegida = $derived(
+    preguntaElegida ? (esIdDeAltura(preguntaElegida) ? picoDeAltura(preguntaElegida) : preguntaElegida) : null,
   )
 
   const DURACION_RESPUESTA_CORRECTA = 3_000
@@ -208,13 +217,13 @@
   }
 
   // La Diana: el Elemento que se pregunta ahora. En Ubicación → nombre es el que se señala para que el
-  // alumno lo nombre; en Jerarquía, la Cordillera que se muestra para preguntar por su Pico.
+  // alumno lo nombre; en Pertenencia, la Cordillera que se muestra para preguntar por su Pico.
   const diana = $derived.by(() => {
     if (!correccion && partida?.preguntado?.destacar) return [partida.preguntado.id]
     if (!escribeNombre) return []
     if (repaso) return rotulos.map((rotulo) => rotulo.id)
     // El alumno elige qué tocar; solo se señala la respuesta correcta mientras se ve la Corrección.
-    if (esSimulacro) return correccion ? [correccion.correcto.id] : []
+    if (esTodo) return correccion ? [correccion.correcto.id] : []
     const id = (correccion?.correcto ?? partida?.preguntado)?.id
     return id === undefined ? [] : [id]
   })
@@ -238,7 +247,7 @@
     if (!correccion) return
     confirmandoAbandono = false
     return cerrarAlCabo(correccion.duracion, (partidaEnCorreccion) => {
-      simulacroActivo = null
+      preguntaElegida = null
       return cerrarCorreccion(partidaEnCorreccion)
     })
   })
@@ -248,24 +257,27 @@
     return cerrarAlCabo(DURACION_REPASO_UBICACION_NOMBRE, cerrarRepaso)
   })
 
-  function empezar(pedida: Prueba) {
-    const elegida = pruebaDe(pedida.tipo, pedida.modo)
-    const elementos = catalogo(elegida.tipo)
+  function empezar(elegida: Prueba) {
+    const elementos = catalogo(elegida.alcance)
     prueba = elegida
     resultado = null
     reto = null
     retoSuperado = null
-    aBatir =
-      retoRecibido?.prueba.tipo === elegida.tipo && retoRecibido.prueba.modo === elegida.modo ? retoRecibido : null
-    elementosDelTipo = elementos
-    elementosDelMapa = catalogoDelMapa(elegida.tipo)
+    aBatir = esElRetoRecibido(elegida) ? retoRecibido : null
+    elementosDelAlcance = elementos
+    elementosDelMapa = catalogoDelMapa(elegida.alcance)
     totalElementos = elementos.length
-    contornosDelTipo = contornos(elegida.tipo)
-    contextoDelTipo = contextoDe(elegida.tipo)
+    contornosDelAlcance = contornos(elegida.alcance)
+    contextoDelAlcance = contextoDe(elegida.alcance)
     ahora = Date.now()
     texto = ''
-    simulacroActivo = null
+    preguntaElegida = null
     partida = iniciarPartida(elegida, elementos, Math.random, Date.now, elementosDelMapa)
+  }
+
+  function esElRetoRecibido(elegida: Prueba): boolean {
+    if (!retoRecibido) return false
+    return retoRecibido.prueba.alcance === elegida.alcance && retoRecibido.prueba.direccion === elegida.direccion
   }
 
   function nombreDe(id: string): string {
@@ -289,16 +301,16 @@
     if (partida.terminada) registrar(partida)
   }
 
-  // Tocar un elemento en el Simulacro lo elige como pregunta; responderlo es cosa del formulario de texto.
+  // Tocar un elemento en Todo lo elige como pregunta; responderlo es cosa del formulario de texto.
   // Un pico ya acertado con su Altura pendiente redirige al toque hacia esa pregunta.
-  function elegirEnSimulacro(id: string) {
+  function elegirPreguntaEnElMapa(id: string) {
     if (!partida) return
     const objetivoAltura = idDeAltura(id)
     const objetivo = partida.desbloqueados.includes(objetivoAltura) ? objetivoAltura : id
     const elegida = elegirPregunta(partida, objetivo)
     if (elegida === partida) return
     partida = elegida
-    simulacroActivo = objetivo
+    preguntaElegida = objetivo
   }
 
   $effect(() => {
@@ -319,6 +331,7 @@
   }
 
   function elegirOtraPrueba() {
+    jugadas = competicion.historial()
     partida = null
     prueba = null
     resultado = null
@@ -343,7 +356,7 @@
     if (!partida || partida.terminada) return
     partida = responderConTexto(partida, texto)
     if (partida.terminada) registrar(partida)
-    if (!partida.pista && !partida.correccion) simulacroActivo = null
+    if (!partida.pista && !partida.correccion) preguntaElegida = null
     texto = ''
     campoDeTexto?.focus()
   }
@@ -356,7 +369,14 @@
 
 <main>
   {#if !partida}
-    <SeleccionPrueba alElegir={empezar} marcaDe={(elegida) => competicion.marca(elegida)} reto={retoRecibido} />
+    <SeleccionPrueba
+      alElegir={empezar}
+      marcaDe={(elegida) => competicion.marca(elegida)}
+      reto={retoRecibido}
+      {retoCaducado}
+      ultima={jugadas[0]?.prueba ?? null}
+      yaHaJugado={jugadas.length > 0}
+    />
   {:else}
     <header>
       {#if partida.terminada}
@@ -372,6 +392,8 @@
           {resultado}
           {reto}
           {retoSuperado}
+          prueba={partida.prueba}
+          alJugar={empezar}
           alElegirOtraPrueba={elegirOtraPrueba}
         />
       {:else}
@@ -406,7 +428,7 @@
           </div>
         {:else if repaso}
           <p class="pregunta">{escribeNombre ? 'Repaso: fíjate en dónde están' : 'Repaso: toca cada nombre'}</p>
-        {:else if escribeNombre && !correccion && (!esSimulacro || simulacroActivo)}
+        {:else if escribeNombre && !correccion && (!esTodo || preguntaElegida)}
           <form class="pregunta" onsubmit={enviarTexto}>
             {#if enunciado}
               <span class="enunciado">{enunciado}</span>
@@ -415,14 +437,14 @@
               bind:this={campoDeTexto}
               bind:value={texto}
               aria-label={enunciado ?? 'Nombre del elemento iluminado'}
-              placeholder={preguntaDeAltura ? 'Metros' : ((prueba && indicacionDeRespuesta[prueba.tipo]) ?? '¿Cómo se llama?')}
+              placeholder={preguntaDeAltura ? 'Metros' : '¿Cómo se llama?'}
               autocomplete="off"
               autocapitalize="off"
               spellcheck="false"
             />
             <button type="submit">Responder</button>
           </form>
-        {:else if esSimulacro && !correccion}
+        {:else if esTodo && !correccion}
           <p class="pregunta">Toca una forma para responderla</p>
         {:else}
           <p class="pregunta">
@@ -448,11 +470,11 @@
 
     <Mapa
       contornos={contornosVisibles}
-      contextoDeRelieve={contextoDelTipo}
+      contextoDeRelieve={contextoDelAlcance}
       rampa={esUnidades}
       frontera={fronteraVisible}
       parcial={parcialesVisibles}
-      tentativa={esSimulacro ? activoEnSimulacro : null}
+      tentativa={esTodo ? formaDeLaPreguntaElegida : null}
       {destello}
       {contexto}
       acertados={acertadosVisibles}
@@ -466,7 +488,7 @@
       {nombres}
       {alturas}
       fallados={falladosVisibles}
-      alElegir={esSimulacro ? elegirEnSimulacro : elegir}
+      alElegir={esTodo ? elegirPreguntaEnElMapa : elegir}
       {nombreDe}
       {textoDeTentativa}
     />

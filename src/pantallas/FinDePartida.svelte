@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Elemento } from '../catalogo/catalogo'
   import type { ResultadoDeRegistro, Reto } from '../competicion/competicion'
+  import { etiquetaDeAlcance, pruebaDe, siguienteAlcance, type Prueba } from '../prueba/prueba'
   import CompartirReto from './CompartirReto.svelte'
   import { formatearTiempo } from './tiempo'
 
@@ -16,10 +17,14 @@
     resultado: ResultadoDeRegistro | null
     reto: Reto | null
     retoSuperado: boolean | null
+    prueba: Prueba
+    alJugar: (prueba: Prueba) => void
     alElegirOtraPrueba: () => void
   }
 
-  let { puntuacion, aciertosALaPrimera, totalElementos, tiempo, fallos, pistasUsadas, fallados, abandonada, resultado, reto, retoSuperado, alElegirOtraPrueba }: Props = $props()
+  let { puntuacion, aciertosALaPrimera, totalElementos, tiempo, fallos, pistasUsadas, fallados, abandonada, resultado, reto, retoSuperado, prueba, alJugar, alElegirOtraPrueba }: Props = $props()
+
+  const siguiente = $derived(pruebaDe(siguienteAlcance(prueba.alcance), prueba.direccion))
 </script>
 
 <section class="fin">
@@ -66,7 +71,13 @@
   {#if reto}
     <CompartirReto {reto} />
   {/if}
-  <button type="button" onclick={alElegirOtraPrueba}>Elegir otra prueba</button>
+  <div class="acciones">
+    <button type="button" class="principal" onclick={() => alJugar(siguiente)}>
+      Seguir con {etiquetaDeAlcance[siguiente.alcance]}
+    </button>
+    <button type="button" onclick={() => alJugar(prueba)}>Repetir</button>
+    <button type="button" onclick={alElegirOtraPrueba}>Elegir otra prueba</button>
+  </div>
 </section>
 
 <style>
@@ -98,14 +109,26 @@
     color: #6b7280;
   }
 
+  .acciones {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+  }
+
   button {
     font: inherit;
-    margin-top: 0.75rem;
     padding: 0.5rem 1rem;
     border: 1px solid #d1d5db;
     border-radius: 0.5rem;
     background: #fff;
     cursor: pointer;
+  }
+
+  button.principal {
+    border-color: #2f7a4a;
+    color: #2f7a4a;
+    font-weight: 600;
   }
 
   button:hover {
