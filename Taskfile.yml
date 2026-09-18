@@ -57,6 +57,15 @@ tasks:
       - task: build
       - rm -rf dist
 
+  deploy:
+    desc: Publica origin/main en GitHub Pages y espera a que termine
+    cmds:
+      - gh workflow run pages.yml --ref main
+      # gh workflow run no devuelve el id de la ejecución que crea.
+      - sleep 5
+      - gh run watch --exit-status $(gh run list --workflow=pages.yml --limit 1 --json databaseId --jq '.[0].databaseId')
+      - echo https://eubide.github.io/ubicalo/
+
   datos:contexto:
     desc: Regenera los países del contexto geográfico desde world-atlas
     cmds:
