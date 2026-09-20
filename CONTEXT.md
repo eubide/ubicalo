@@ -257,7 +257,7 @@ Unos cinco minutos de Nombrar sobre la Familia elegida, con hasta 12 Elementos d
 _Evitar_: ronda, sesión, lote, repaso
 
 **Simulacro**:
-Lo único de la aplicación que se parece al examen: la Familia elegida entera sobre el mapa mudo, con todos sus Elementos visibles y sin nombre desde el principio. El alumno elige el orden, toca, escribe, y el Rótulo queda como lo escribió; puede cambiarlo hasta entregar. No hay Pista, Corrección ni Repaso, y nada se juzga hasta la entrega, que llega cuando el alumno quiere o cuando se acaban los 20 minutos. Se corrige con Juicio estricto y da una nota lineal sobre 10, porque un fallo no resta; un Elemento en blanco no es un Fallo. La primera vez se llama «¿Qué te sabes ya?» y no lleva cuenta atrás. Alimenta el Dominio y sobrevive a un corte.
+Lo único de la aplicación que se parece al examen: la Familia elegida entera sobre el mapa mudo, con todos sus Elementos visibles y sin nombre desde el principio. El alumno elige el orden, toca, escribe, y el Rótulo queda como lo escribió; puede cambiarlo hasta entregar. No hay Pista, Corrección ni Repaso, y nada se juzga hasta la entrega, que llega cuando el alumno quiere o cuando se acaban los 20 minutos. Se corrige con Juicio estricto y da una nota lineal sobre 10, porque un fallo no resta; un Elemento en blanco no es un Fallo. La primera vez se llama «¿Qué te sabes ya?» y no lleva cuenta atrás. Alimenta el Dominio y sobrevive a un corte. El de Político son dos mapas, Comunidades y Provincias, sobre una sola cuenta atrás: un conmutador cambia de uno a otro sin perder lo escrito, porque tocar Zaragoza no dice si se quiere escribir Zaragoza o Aragón; la Nota es una sola, sobre los 71.
 _Evitar_: examen, prueba final, test
 
 **Nota**:
