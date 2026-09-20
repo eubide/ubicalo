@@ -9,6 +9,7 @@ import {
   elegirOpcion,
   elegirPregunta,
   iniciarPartida,
+  juzgarTexto,
   marcarEnRepaso,
   pedirPista,
   responder,
@@ -306,6 +307,100 @@ describe('Se responde con lo que distingue al Elemento', () => {
 
     expect(partida.fallos).toBe(1)
     expect(partida.pista?.escrito).toBe('de la')
+  })
+})
+
+describe('Juicio estricto', () => {
+  const cadiz: Elemento = { id: 'ca', nombre: 'Cádiz', nombreMostrado: 'Cádiz', alias: [], vecinos: [] }
+  const guadalquivir: Elemento = { id: 'gq', nombre: 'Guadalquivir', nombreMostrado: 'Guadalquivir', alias: [], vecinos: [] }
+  const turia: Elemento = { id: 'tu', nombre: 'Turia', nombreMostrado: 'Turia', alias: [], vecinos: [] }
+  const jucar: Elemento = { id: 'ju', nombre: 'Júcar', nombreMostrado: 'Júcar', alias: [], vecinos: [] }
+
+  const juzgar = (elemento: Elemento, texto: string, elementos: Elemento[] = [elemento]) =>
+    juzgarTexto(texto, elemento, elementos, true)
+
+  it('la tilde que falta es Fallo de tipo tilde: "Cadiz" por "Cádiz"', () => {
+    expect(juzgar(cadiz, 'Cádiz')).toEqual({ acierto: true })
+    expect(juzgar(cadiz, 'Cadiz')).toEqual({ acierto: false, fallo: { tipo: 'tilde', confundidoCon: null } })
+  })
+
+  it('la tilde que sobra o va en otra letra también es Fallo de tipo tilde', () => {
+    expect(juzgar(turia, 'Túria')).toEqual({ acierto: false, fallo: { tipo: 'tilde', confundidoCon: null } })
+    expect(juzgar(cadiz, 'Cadíz')).toEqual({ acierto: false, fallo: { tipo: 'tilde', confundidoCon: null } })
+  })
+
+  it('la errata es Fallo de tipo errata: "Guadalquibir" por "Guadalquivir"', () => {
+    expect(juzgar(guadalquivir, 'Guadalquibir')).toEqual({ acierto: false, fallo: { tipo: 'errata', confundidoCon: null } })
+  })
+
+  it('la eñe es una letra, no una tilde: "Coruna" es errata y "Mino", con menos de seis letras, otro Fallo', () => {
+    const coruna: Elemento = { id: '15', nombre: 'A Coruña', nombreMostrado: 'A Coruña', alias: ['Coruña'], vecinos: [] }
+    const mino: Elemento = { id: 'mi', nombre: 'Miño', nombreMostrado: 'Miño', alias: [], vecinos: [] }
+
+    expect(juzgar(coruna, 'Coruña')).toEqual({ acierto: true })
+    expect(juzgar(coruna, 'Coruna')).toEqual({ acierto: false, fallo: { tipo: 'errata', confundidoCon: null } })
+    expect(juzgar(coruna, 'Coruma')).toEqual({ acierto: false, fallo: { tipo: 'errata', confundidoCon: null } })
+    expect(juzgar(mino, 'Mino')).toEqual({ acierto: false, fallo: { tipo: 'otro', confundidoCon: null } })
+  })
+
+  it('cualquier otro texto es Fallo de tipo otro', () => {
+    expect(juzgar(cadiz, 'Sevilla')).toEqual({ acierto: false, fallo: { tipo: 'otro', confundidoCon: null } })
+  })
+
+  it('el nombre de otro Elemento es Fallo de tipo otro y dice con cuál se confundió, lleve o no su tilde', () => {
+    expect(juzgar(turia, 'Júcar', [turia, jucar])).toEqual({ acierto: false, fallo: { tipo: 'otro', confundidoCon: 'ju' } })
+    expect(juzgar(turia, 'Jucar', [turia, jucar])).toEqual({ acierto: false, fallo: { tipo: 'otro', confundidoCon: 'ju' } })
+  })
+
+  it('siguen valiendo los Alias y las formas cortas del catálogo, con su tilde', () => {
+    const girona: Elemento = { id: 'gi', nombre: 'Girona', nombreMostrado: 'Girona (Gerona)', alias: ['Gerona'], vecinos: [] }
+    const golfoDeCadiz: Elemento = { id: 'gc', nombre: 'Golfo de Cádiz', nombreMostrado: 'Golfo de Cádiz', alias: ['Cádiz'], vecinos: [] }
+
+    expect(juzgar(girona, 'Gerona')).toEqual({ acierto: true })
+    expect(juzgar(golfoDeCadiz, 'Cádiz')).toEqual({ acierto: true })
+    expect(juzgar(golfoDeCadiz, 'Cadiz')).toEqual({ acierto: false, fallo: { tipo: 'tilde', confundidoCon: null } })
+  })
+
+  it('siguen dando igual las mayúsculas y las palabras que no distinguen', () => {
+    const sierraDeGata: Elemento = { id: 'sg', nombre: 'Sierra de Gata', nombreMostrado: 'Sierra de Gata', alias: [], vecinos: [] }
+
+    expect(juzgar(cadiz, 'CÁDIZ')).toEqual({ acierto: true })
+    expect(juzgar(cadiz, 'cádiz')).toEqual({ acierto: true })
+    expect(juzgar(sierraDeGata, 'sierra gata')).toEqual({ acierto: true })
+  })
+
+  it('la puntuación final no cuenta: el doble espacio del móvil deja "Guadalquivir. " y sigue siendo acierto', () => {
+    expect(juzgar(guadalquivir, 'Guadalquivir. ')).toEqual({ acierto: true })
+    expect(juzgar(cadiz, 'Cádiz.')).toEqual({ acierto: true })
+    expect(juzgar(cadiz, 'Cadiz.')).toEqual({ acierto: false, fallo: { tipo: 'tilde', confundidoCon: null } })
+  })
+
+  it('una tilde escrita con marca combinante vale igual que la precompuesta', () => {
+    expect(juzgar(cadiz, 'Ca\u0301diz')).toEqual({ acierto: true })
+  })
+
+  it('sin juicio estricto la tilde y la errata se toleran y el Fallo es siempre de tipo otro', () => {
+    expect(juzgarTexto('Cadiz', cadiz, [cadiz], false)).toEqual({ acierto: true })
+    expect(juzgarTexto('Guadalquibir', guadalquivir, [guadalquivir], false)).toEqual({ acierto: true })
+    expect(juzgarTexto('Jucar', turia, [turia, jucar], false)).toEqual({ acierto: false, fallo: { tipo: 'otro', confundidoCon: 'ju' } })
+  })
+
+  it('una Partida con juicio estricto cuenta el Fallo y abre la Pista con su tipo', () => {
+    const partida = responderConTexto(
+      iniciarPartida(comunidadesLocalizar, [cadiz], azarFijo, reloj, [cadiz], { juicioEstricto: true }),
+      'Cadiz',
+    )
+
+    expect(partida.fallos).toBe(1)
+    expect(partida.pista?.escrito).toBe('Cadiz')
+    expect(partida.pista?.fallo).toEqual({ tipo: 'tilde', confundidoCon: null })
+  })
+
+  it('una Partida sin juicio estricto acierta con "Cadiz", y la Pista pedida no lleva Fallo', () => {
+    const partida = iniciarPartida(comunidadesLocalizar, [cadiz], azarFijo, reloj)
+
+    expect(responderConTexto(partida, 'Cadiz').ultimaRespuesta?.acierto).toBe(true)
+    expect(pedirPista(partida).pista?.fallo).toBeNull()
   })
 })
 
