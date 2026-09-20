@@ -10,7 +10,7 @@
     familia: Familia
     resumen: ResumenDeFamilia
     haySiguiente: boolean
-    simulacro: SimulacroEnPortada | null
+    simulacro: SimulacroEnPortada
     alSeguir: () => void
     alEmpezarSimulacro: () => void
     alVolver: () => void
@@ -18,7 +18,7 @@
 
   let { aLaPrimera, total, vuelven, familia, resumen, haySiguiente, simulacro, alSeguir, alEmpezarSimulacro, alVolver }: Props = $props()
 
-  const simulacroPrimero = $derived(simulacro !== null && (simulacro.esLoPrincipal || !haySiguiente))
+  const simulacroPrimero = $derived(simulacro.esLoPrincipal || !haySiguiente)
 
   function cuantos(cantidad: number, uno: string, varios: string): string {
     return `${cantidad} ${cantidad === 1 ? uno : varios}`
@@ -35,7 +35,7 @@
     {resumen.sinVer === 1 ? 'te queda' : 'te quedan'} {resumen.sinVer} por ver.
   </p>
   <div class="acciones">
-    {#if simulacro && simulacroPrimero}
+    {#if simulacroPrimero}
       <button type="button" class="principal" onclick={alEmpezarSimulacro}>
         {etiquetaDeSimulacro(simulacro.primeraVez)}
       </button>
@@ -43,7 +43,7 @@
     {#if haySiguiente}
       <button type="button" class:principal={!simulacroPrimero} onclick={alSeguir}>Siguiente tanda</button>
     {/if}
-    <button type="button" class:principal={!haySiguiente && !simulacro} onclick={alVolver}>Volver</button>
+    <button type="button" onclick={alVolver}>Volver</button>
   </div>
 </section>
 

@@ -32,7 +32,7 @@
     resumenDe: (familia: Familia) => ResumenDeFamilia
     tanda: RecuentoDeTanda | null
     alEmpezarTanda: () => void
-    simulacroDe: (familia: Familia) => SimulacroEnPortada | null
+    simulacroDe: (familia: Familia) => SimulacroEnPortada
     alEmpezarSimulacro: () => void
     soloMira: boolean
     alElegirFamilia: (familia: Familia) => void
@@ -159,40 +159,36 @@
         <span class="flojo" style:flex-grow={resumen.flojos}></span>
         <span class="sinVer" style:flex-grow={resumen.sinVer}></span>
       </div>
-      {#if simulacro?.ultimaNota}<p class="ultimaNota">Último simulacro: {simulacro.ultimaNota}</p>{/if}
+      {#if simulacro.ultimaNota}<p class="ultimaNota">Último simulacro: {simulacro.ultimaNota}</p>{/if}
     </section>
     {#snippet botonDeTanda()}
       {#if tanda}
-        <button type="button" class="accion {familiaElegida}" class:secundaria={simulacro?.esLoPrincipal} onclick={alEmpezarTanda}>
+        <button type="button" class="accion {familiaElegida}" class:secundaria={simulacro.esLoPrincipal} onclick={alEmpezarTanda}>
           <strong>{resumen.sinVer === resumen.total ? 'Empezar' : 'Siguiente tanda'}</strong>
           <span>{tanda.minutos === 1 ? 'un minuto' : `unos ${tanda.minutos} min`} · {deQueEstaHecha(tanda)}</span>
         </button>
       {/if}
     {/snippet}
     {#snippet botonDeSimulacro()}
-      {#if simulacro}
-        <button
-          type="button"
-          class="accion {familiaElegida}"
-          class:secundaria={!simulacro.esLoPrincipal && tanda !== null}
-          onclick={alEmpezarSimulacro}
-        >
-          <strong>{etiquetaDeSimulacro(simulacro.primeraVez)}</strong>
-          <span>{simulacro.primeraVez ? 'el mapa entero, sin reloj' : 'el mapa entero, como en tu examen'}</span>
-        </button>
-      {/if}
+      <button
+        type="button"
+        class="accion {familiaElegida}"
+        class:secundaria={!simulacro.esLoPrincipal && tanda !== null}
+        onclick={alEmpezarSimulacro}
+      >
+        <strong>{etiquetaDeSimulacro(simulacro.primeraVez)}</strong>
+        <span>{simulacro.primeraVez ? 'el examen entero, sin reloj' : 'el examen entero, como el de verdad'}</span>
+      </button>
     {/snippet}
-    {#if tanda || simulacro}
-      <div class="acciones">
-        {#if simulacro?.esLoPrincipal}
-          {@render botonDeSimulacro()}
-          {@render botonDeTanda()}
-        {:else}
-          {@render botonDeTanda()}
-          {@render botonDeSimulacro()}
-        {/if}
-      </div>
-    {/if}
+    <div class="acciones">
+      {#if simulacro.esLoPrincipal}
+        {@render botonDeSimulacro()}
+        {@render botonDeTanda()}
+      {:else}
+        {@render botonDeTanda()}
+        {@render botonDeSimulacro()}
+      {/if}
+    </div>
     <details class="practica" bind:open={practicaAbierta}>
       <summary>Práctica libre</summary>
       {#if practicaAbierta}

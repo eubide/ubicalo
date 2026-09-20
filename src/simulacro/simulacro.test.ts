@@ -16,6 +16,7 @@ import {
   ponerAlDia,
   sobreDiez,
   tiempoRestante,
+  verMapa,
 } from './simulacro'
 
 function elemento(id: string, nombre: string, alias: string[] = []): Elemento {
@@ -27,38 +28,39 @@ const turia = elemento('turia', 'Turia')
 const jucar = elemento('jucar', 'Júcar')
 const guadalquivir = elemento('guadalquivir', 'Guadalquivir')
 const elementos = [cadiz, turia, jucar, guadalquivir]
+const rios = [{ alcance: 'todo-rios' as const, elementos }]
 
 const INICIO = 1_000_000
 const VEINTE_MINUTOS = 20 * 60 * 1000
 
 function conReloj() {
-  return iniciarSimulacro('hidrografia', 'todo-rios', INICIO, DURACION_DEL_SIMULACRO)
+  return iniciarSimulacro('hidrografia', ['todo-rios'], INICIO, DURACION_DEL_SIMULACRO)
 }
 
 function sinReloj() {
-  return iniciarSimulacro('hidrografia', 'todo-rios', INICIO, null)
+  return iniciarSimulacro('hidrografia', ['todo-rios'], INICIO, null)
 }
 
 describe('Escribir en el Simulacro', () => {
   it('el Rótulo queda como lo escribió el alumno, sin juzgar nada hasta entregar', () => {
-    const simulacro = escribir(sinReloj(), 'cadiz', '  Cadiz ', INICIO + 5_000)
+    const simulacro = escribir(sinReloj(), 'todo-rios', 'cadiz', '  Cadiz ', INICIO + 5_000)
 
-    expect(simulacro.respuestas).toEqual({ cadiz: 'Cadiz' })
-    expect(corregir(simulacro, elementos)).toBeNull()
+    expect(simulacro.respuestas).toEqual({ 'todo-rios': { cadiz: 'Cadiz' } })
+    expect(corregir(simulacro, rios)).toBeNull()
   })
 
   it('un Rótulo ya escrito se puede cambiar, y escribirlo vacío lo borra', () => {
-    let simulacro = escribir(sinReloj(), 'turia', 'Jucar', INICIO)
-    simulacro = escribir(simulacro, 'turia', 'Turia', INICIO)
-    expect(simulacro.respuestas).toEqual({ turia: 'Turia' })
+    let simulacro = escribir(sinReloj(), 'todo-rios', 'turia', 'Jucar', INICIO)
+    simulacro = escribir(simulacro, 'todo-rios', 'turia', 'Turia', INICIO)
+    expect(simulacro.respuestas).toEqual({ 'todo-rios': { turia: 'Turia' } })
 
-    expect(escribir(simulacro, 'turia', '   ', INICIO).respuestas).toEqual({})
+    expect(escribir(simulacro, 'todo-rios', 'turia', '   ', INICIO).respuestas).toEqual({ 'todo-rios': {} })
   })
 
   it('los blancos son los Elementos sin nada escrito', () => {
-    const simulacro = escribir(escribir(sinReloj(), 'turia', 'Turia', INICIO), 'jucar', 'x', INICIO)
+    const simulacro = escribir(escribir(sinReloj(), 'todo-rios', 'turia', 'Turia', INICIO), 'todo-rios', 'jucar', 'x', INICIO)
 
-    expect(blancosDe(simulacro, elementos)).toEqual([cadiz, guadalquivir])
+    expect(blancosDe(simulacro, rios)).toEqual([{ alcance: 'todo-rios', blancos: [cadiz, guadalquivir] }])
   })
 })
 
@@ -71,7 +73,7 @@ describe('Cuenta atrás', () => {
   })
 
   it('con reloj son 20 minutos para el mapa entero, nunca por pregunta', () => {
-    const simulacro = escribir(conReloj(), 'turia', 'Turia', INICIO + 60_000)
+    const simulacro = escribir(conReloj(), 'todo-rios', 'turia', 'Turia', INICIO + 60_000)
 
     expect(DURACION_DEL_SIMULACRO).toBe(VEINTE_MINUTOS)
     expect(tiempoRestante(simulacro, INICIO)).toBe(VEINTE_MINUTOS)
@@ -86,17 +88,17 @@ describe('Cuenta atrás', () => {
   })
 
   it('lo que se escribe con el tiempo agotado no entra', () => {
-    const simulacro = escribir(conReloj(), 'turia', 'Turia', INICIO + VEINTE_MINUTOS + 1)
+    const simulacro = escribir(conReloj(), 'todo-rios', 'turia', 'Turia', INICIO + VEINTE_MINUTOS + 1)
 
     expect(simulacro.respuestas).toEqual({})
     expect(simulacro.entregadoEn).toBe(INICIO + VEINTE_MINUTOS)
   })
 
   it('se puede entregar antes, y una vez entregado ni se escribe ni se vuelve a entregar', () => {
-    const entregado = entregar(escribir(conReloj(), 'turia', 'Turia', INICIO), INICIO + 60_000)
+    const entregado = entregar(escribir(conReloj(), 'todo-rios', 'turia', 'Turia', INICIO), INICIO + 60_000)
 
     expect(entregado.entregadoEn).toBe(INICIO + 60_000)
-    expect(escribir(entregado, 'jucar', 'Júcar', INICIO + 61_000)).toBe(entregado)
+    expect(escribir(entregado, 'todo-rios', 'jucar', 'Júcar', INICIO + 61_000)).toBe(entregado)
     expect(entregar(entregado, INICIO + 99_000)).toBe(entregado)
   })
 })
@@ -104,41 +106,41 @@ describe('Cuenta atrás', () => {
 describe('El mapa corregido', () => {
   function entregado(respuestas: Record<string, string>) {
     const escrito = Object.entries(respuestas).reduce(
-      (simulacro, [id, texto]) => escribir(simulacro, id, texto, INICIO),
+      (simulacro, [id, texto]) => escribir(simulacro, 'todo-rios', id, texto, INICIO),
       sinReloj(),
     )
     return entregar(escrito, INICIO + 1)
   }
 
   it('distingue acierto, Fallo y blanco, con lo escrito junto a cada Elemento', () => {
-    const correcciones = corregir(entregado({ turia: 'Turia', jucar: 'Segura' }), elementos)
+    const correcciones = corregir(entregado({ turia: 'Turia', jucar: 'Segura' }), rios)
 
     expect(correcciones).toEqual([
-      { elemento: cadiz, escrito: null, resultado: 'blanco' },
-      { elemento: turia, escrito: 'Turia', resultado: 'acierto' },
-      { elemento: jucar, escrito: 'Segura', resultado: 'fallo', fallo: { tipo: 'otro', confundidoCon: null } },
-      { elemento: guadalquivir, escrito: null, resultado: 'blanco' },
+      { alcance: 'todo-rios', elemento: cadiz, escrito: null, resultado: 'blanco' },
+      { alcance: 'todo-rios', elemento: turia, escrito: 'Turia', resultado: 'acierto' },
+      { alcance: 'todo-rios', elemento: jucar, escrito: 'Segura', resultado: 'fallo', fallo: { tipo: 'otro', confundidoCon: null } },
+      { alcance: 'todo-rios', elemento: guadalquivir, escrito: null, resultado: 'blanco' },
     ])
   })
 
   it('juzga con Juicio estricto: "Cadiz" es Fallo por la tilde, "Guadalquibir" por la errata, y los Alias siguen valiendo', () => {
-    const correcciones = corregir(entregado({ cadiz: 'Cadiz', guadalquivir: 'Guadalquibir', jucar: 'Júcar' }), elementos)!
+    const correcciones = corregir(entregado({ cadiz: 'Cadiz', guadalquivir: 'Guadalquibir', jucar: 'Júcar' }), rios)!
     const de = (id: string) => correcciones.find((correccion) => correccion.elemento.id === id)
 
     expect(de('cadiz')).toMatchObject({ resultado: 'fallo', fallo: { tipo: 'tilde' } })
     expect(de('guadalquivir')).toMatchObject({ resultado: 'fallo', fallo: { tipo: 'errata' } })
     expect(de('jucar')?.resultado).toBe('acierto')
-    expect(corregir(entregado({ cadiz: 'Cádiz' }), elementos)![0].resultado).toBe('acierto')
+    expect(corregir(entregado({ cadiz: 'Cádiz' }), rios)![0].resultado).toBe('acierto')
   })
 
   it('escribir el nombre de otro Elemento dice con cuál se confundió', () => {
-    const correcciones = corregir(entregado({ turia: 'Júcar' }), elementos)!
+    const correcciones = corregir(entregado({ turia: 'Júcar' }), rios)!
 
     expect(correcciones[1]).toMatchObject({ resultado: 'fallo', fallo: { tipo: 'otro', confundidoCon: 'jucar' } })
   })
 
   it('la nota es lineal, aciertos entre total por 10 con un decimal, porque un fallo no resta', () => {
-    const nota = notaDe(corregir(entregado({ turia: 'Turia', jucar: 'Segura' }), elementos)!)
+    const nota = notaDe(corregir(entregado({ turia: 'Turia', jucar: 'Segura' }), rios)!)
 
     expect(nota).toEqual({ aciertos: 1, total: 4 })
     expect(sobreDiez(nota)).toBe('2,5')
@@ -150,12 +152,12 @@ describe('El mapa corregido', () => {
   })
 
   it('al Dominio pasan el acierto como acierto, el Fallo con su tipo y el blanco como presentado', () => {
-    const correcciones = corregir(entregado({ turia: 'Turia', cadiz: 'Cadiz' }), [cadiz, turia, jucar])!
+    const correcciones = corregir(entregado({ turia: 'Turia', cadiz: 'Cadiz' }), [{ alcance: 'todo-rios', elementos: [cadiz, turia, jucar] }])!
 
     expect(anotacionesDelSimulacro(correcciones)).toEqual([
-      { id: 'cadiz', resultado: { caso: 'fallo', tipo: 'tilde', confundidoCon: null } },
-      { id: 'turia', resultado: { caso: 'acierto' } },
-      { id: 'jucar', resultado: { caso: 'presentacion' } },
+      { alcance: 'todo-rios', id: 'cadiz', resultado: { caso: 'fallo', tipo: 'tilde', confundidoCon: null } },
+      { alcance: 'todo-rios', id: 'turia', resultado: { caso: 'acierto' } },
+      { alcance: 'todo-rios', id: 'jucar', resultado: { caso: 'presentacion' } },
     ])
   })
 })
@@ -173,7 +175,7 @@ describe('Simulacro guardado', () => {
 
   it('lo escrito y la hora de inicio se guardan, y al volver el reloj ha seguido corriendo', () => {
     const almacen = almacenEnMemoria()
-    const simulacro = escribir(conReloj(), 'turia', 'Turia', INICIO + 60_000)
+    const simulacro = escribir(conReloj(), 'todo-rios', 'turia', 'Turia', INICIO + 60_000)
     crearSimulacros(almacen).guardar(simulacro)
 
     const reanudado = crearSimulacros(almacen).enCurso()
@@ -244,12 +246,16 @@ describe('Simulacro guardado', () => {
   )
 
   it('descarta un Simulacro en curso mal formado y las respuestas de ids que ya no están en el catálogo', () => {
-    const bueno = { familia: 'hidrografia', alcance: 'todo-rios', inicio: INICIO, limite: null, entregadoEn: null }
+    const bueno = { familia: 'hidrografia', alcances: ['todo-rios'], enVista: 'todo-rios', inicio: INICIO, limite: null, entregadoEn: null }
     const con = (enCurso: unknown) =>
       crearSimulacros(almacenConDatos(JSON.stringify({ version: 1, enCurso, notas: {} }))).enCurso()
 
-    expect(con({ ...bueno, respuestas: { turia: 'Turia', 'rio-que-ya-no-esta': 'x', jucar: 7 } })?.respuestas).toEqual({ turia: 'Turia' })
-    expect(con({ ...bueno, respuestas: {}, alcance: 'lo-que-sea' })).toBeNull()
+    expect(con({ ...bueno, respuestas: { 'todo-rios': { turia: 'Turia', 'rio-que-ya-no-esta': 'x', jucar: 7 }, provincias: { '02': 'x' } } })?.respuestas).toEqual({
+      'todo-rios': { turia: 'Turia' },
+    })
+    expect(con({ ...bueno, respuestas: {}, alcances: ['lo-que-sea'] })).toBeNull()
+    expect(con({ ...bueno, respuestas: {}, enVista: 'provincias' })).toBeNull()
+    expect(con({ familia: 'hidrografia', alcance: 'todo-rios', inicio: INICIO, limite: null, entregadoEn: null, respuestas: {} })).toBeNull()
     expect(con({ ...bueno, respuestas: {}, familia: 'rios' })).toBeNull()
     expect(con({ ...bueno, respuestas: {}, familia: 'costas' })).toBeNull()
     expect(con({ ...bueno, respuestas: {}, inicio: 'ayer' })).toBeNull()
@@ -290,5 +296,106 @@ describe('Cómo se llama el Simulacro', () => {
   it('la primera vez pregunta qué te sabes ya, y después promete los 20 minutos', () => {
     expect(etiquetaDeSimulacro(true)).toBe('¿Qué te sabes ya?')
     expect(etiquetaDeSimulacro(false)).toBe('Simulacro · 20 min')
+  })
+})
+
+describe('Simulacro de Político: dos mapas sobre una sola cuenta atrás', () => {
+  const aragon = elemento('02', 'Aragón')
+  const andalucia = elemento('01', 'Andalucía')
+  const albacete = elemento('02', 'Albacete')
+  const alicante = elemento('03', 'Alicante', ['Alacant'])
+  const politico = [
+    { alcance: 'comunidades' as const, elementos: [andalucia, aragon] },
+    { alcance: 'provincias' as const, elementos: [albacete, alicante] },
+  ]
+
+  function empezado() {
+    return iniciarSimulacro('politico', ['comunidades', 'provincias'], INICIO, DURACION_DEL_SIMULACRO)
+  }
+
+  it('empieza en las Comunidades, y cambiar de mapa no pierde lo escrito en ninguno de los dos', () => {
+    let simulacro = escribir(empezado(), 'comunidades', '02', 'Aragón', INICIO)
+    expect(simulacro.enVista).toBe('comunidades')
+
+    simulacro = verMapa(simulacro, 'provincias')
+    simulacro = escribir(simulacro, 'provincias', '02', 'Albacete', INICIO)
+    simulacro = verMapa(simulacro, 'comunidades')
+
+    expect(simulacro.enVista).toBe('comunidades')
+    expect(simulacro.respuestas).toEqual({ comunidades: { '02': 'Aragón' }, provincias: { '02': 'Albacete' } })
+  })
+
+  it('cambiar de mapa no para ni reinicia la cuenta atrás, y un mapa que no es de la Familia se ignora', () => {
+    const simulacro = verMapa(empezado(), 'provincias')
+
+    expect(tiempoRestante(simulacro, INICIO + 60_000)).toBe(VEINTE_MINUTOS - 60_000)
+    expect(simulacro.inicio).toBe(INICIO)
+    expect(verMapa(simulacro, 'todo-rios')).toBe(simulacro)
+  })
+
+  it('los blancos se cuentan por mapa', () => {
+    const simulacro = escribir(empezado(), 'provincias', '03', 'Alicante', INICIO)
+
+    expect(blancosDe(simulacro, politico)).toEqual([
+      { alcance: 'comunidades', blancos: [andalucia, aragon] },
+      { alcance: 'provincias', blancos: [albacete] },
+    ])
+  })
+
+  it('la comunidad 02 y la provincia 02 se corrigen como Elementos distintos, y la nota es una sola sobre todos', () => {
+    let simulacro = escribir(empezado(), 'comunidades', '02', 'Aragón', INICIO)
+    simulacro = escribir(simulacro, 'provincias', '02', 'Aragón', INICIO)
+    const corregidos = corregir(entregar(simulacro, INICIO + 1), politico)!
+
+    expect(corregidos.map(({ alcance, elemento, resultado }) => [alcance, elemento.nombre, resultado])).toEqual([
+      ['comunidades', 'Andalucía', 'blanco'],
+      ['comunidades', 'Aragón', 'acierto'],
+      ['provincias', 'Albacete', 'fallo'],
+      ['provincias', 'Alicante', 'blanco'],
+    ])
+    expect(notaDe(corregidos)).toEqual({ aciertos: 1, total: 4 })
+  })
+
+  it('al Dominio pasa cada Elemento con su mapa', () => {
+    let simulacro = escribir(empezado(), 'comunidades', '02', 'Aragón', INICIO)
+    simulacro = escribir(simulacro, 'provincias', '02', 'Albacete', INICIO)
+    const corregidos = corregir(entregar(simulacro, INICIO + 1), politico)!
+
+    expect(anotacionesDelSimulacro(corregidos).filter(({ id }) => id === '02')).toEqual([
+      { alcance: 'comunidades', id: '02', resultado: { caso: 'acierto' } },
+      { alcance: 'provincias', id: '02', resultado: { caso: 'acierto' } },
+    ])
+  })
+
+  it('después de entregar se puede seguir cambiando de mapa para ver el corregido', () => {
+    const entregado = entregar(empezado(), INICIO + 1)
+
+    expect(verMapa(entregado, 'provincias').enVista).toBe('provincias')
+    expect(verMapa(entregado, 'provincias').entregadoEn).toBe(INICIO + 1)
+  })
+
+  it('al reanudar vuelve con los dos mapas y en el que se estaba', () => {
+    const almacen = almacenEnMemoria()
+    const simulacro = escribir(verMapa(empezado(), 'provincias'), 'provincias', '03', 'Alacant', INICIO)
+    crearSimulacros(almacen).guardar(simulacro)
+
+    const reanudado = crearSimulacros(almacen).enCurso()
+
+    expect(reanudado).toEqual(simulacro)
+    expect(reanudado?.enVista).toBe('provincias')
+  })
+
+  it('descarta un Simulacro guardado al que le falta uno de los mapas de su Familia', () => {
+    const almacen = almacenEnMemoria()
+    almacen.setItem(
+      'ubicalo:simulacro',
+      JSON.stringify({
+        version: 1,
+        enCurso: { familia: 'politico', alcances: ['provincias'], enVista: 'provincias', inicio: INICIO, limite: null, entregadoEn: null, respuestas: {} },
+        notas: {},
+      }),
+    )
+
+    expect(crearSimulacros(almacen).enCurso()).toBeNull()
   })
 })
