@@ -9,6 +9,7 @@ import {
   elegirOpcion,
   elegirPregunta,
   iniciarPartida,
+  iniciarTanda,
   juzgarTexto,
   marcarEnRepaso,
   pedirPista,
@@ -385,15 +386,16 @@ describe('Juicio estricto', () => {
     expect(juzgarTexto('Jucar', turia, [turia, jucar], false)).toEqual({ acierto: false, fallo: { tipo: 'otro', confundidoCon: 'ju' } })
   })
 
-  it('una Partida con juicio estricto cuenta el Fallo y abre la Pista con su tipo', () => {
+  it('una Partida con juicio estricto cuenta el Fallo y abre la Pista con su tipo y con quién se confundió', () => {
     const partida = responderConTexto(
-      iniciarPartida(comunidadesLocalizar, [cadiz], azarFijo, reloj, [cadiz], { juicioEstricto: true }),
-      'Cadiz',
+      iniciarPartida(comunidadesLocalizar, [turia, jucar], azarFijo, reloj, [turia, jucar], { juicioEstricto: true }),
+      'Jucar',
     )
 
+    expect(partida.preguntado).toEqual(turia)
     expect(partida.fallos).toBe(1)
-    expect(partida.pista?.escrito).toBe('Cadiz')
-    expect(partida.pista?.fallo).toEqual({ tipo: 'tilde', confundidoCon: null })
+    expect(partida.pista?.escrito).toBe('Jucar')
+    expect(partida.pista?.fallo).toEqual({ tipo: 'otro', confundidoCon: 'ju' })
   })
 
   it('una Partida sin juicio estricto acierta con "Cadiz", y la Pista pedida no lleva Fallo', () => {
@@ -1424,5 +1426,228 @@ describe('Altura: la cifra se escribe, no se toca', () => {
       'altura-mulhacen',
       'altura-teide',
     ])
+  })
+})
+
+describe('Tanda', () => {
+  const comunidadesNombrar: Prueba = pruebaDe('comunidades', 'nombrar')
+  const doce: Elemento[] = Array.from({ length: 12 }, (_, i) => ({
+    id: `e${i}`,
+    nombre: `Elemento ${i}`,
+    nombreMostrado: `Elemento ${i}`,
+    alias: [],
+    vecinos: [],
+  }))
+  const cadiz: Elemento = { id: 'ca', nombre: 'Cádiz', nombreMostrado: 'Cádiz', alias: [], vecinos: [] }
+  const guadalquivir: Elemento = { id: 'gq', nombre: 'Guadalquivir', nombreMostrado: 'Guadalquivir', alias: [], vecinos: [] }
+
+  function tanda(elementos: Elemento[], nuevos: Elemento[] = []): Partida {
+    return iniciarTanda(comunidadesNombrar, elementos, nuevos, azarFijo, reloj)
+  }
+
+  function acertar(partida: Partida): Partida {
+    return responderConTexto(partida, partida.preguntado!.nombre)
+  }
+
+  // Texto equivocado y, en la Pista que se abre, una opción que tampoco es: un Fallo con su Corrección cerrada.
+  function fallar(partida: Partida): Partida {
+    const conPista = partida.pista ? partida : responderConTexto(partida, 'Zeta')
+    const distractor = conPista.pista!.opciones.find((opcion) => opcion.id !== conPista.preguntado!.id)!
+    return cerrarCorreccion(elegirOpcion(conPista, distractor.id))
+  }
+
+  describe('Presentación', () => {
+    it('los nuevos se presentan rotulados antes de la primera pregunta, y hasta descartarlos no se responde nada', () => {
+      const nuevos = doce.slice(0, 3)
+      const partida = tanda(doce, nuevos)
+
+      expect(partida.repaso).toEqual({ elementos: nuevos, marcados: [], presentacion: true })
+      expect(responderConTexto(partida, partida.preguntado!.nombre)).toBe(partida)
+      expect(pedirPista(partida)).toBe(partida)
+    })
+
+    it('se descartan tocándolos aunque la Tanda sea de Nombrar, y al descartar el último empieza a preguntar sin Pista', () => {
+      let partida = tanda(doce, doce.slice(0, 2))
+
+      partida = marcarEnRepaso(partida, 'e0')
+      expect(partida.repaso?.marcados).toEqual(['e0'])
+
+      partida = marcarEnRepaso(partida, 'e1')
+      expect(partida.repaso).toBeNull()
+      expect(partida.pista).toBeNull()
+      expect(partida.pistaDeArea).toBeNull()
+      expect(acertar(partida).ultimaRespuesta?.acierto).toBe(true)
+    })
+
+    it('sin nuevos no hay presentación', () => {
+      expect(tanda(doce).repaso).toBeNull()
+    })
+
+    it('el Repaso por Racha de fallos de una Tanda sigue cerrándose solo y abriendo la Pista', () => {
+      let partida = tanda(doce)
+      partida = fallar(fallar(fallar(partida)))
+
+      expect(partida.repaso?.presentacion).toBeUndefined()
+      expect(marcarEnRepaso(partida, partida.repaso!.elementos[0].id)).toBe(partida)
+      expect(cerrarRepaso(partida).pista).not.toBeNull()
+    })
+  })
+
+  describe('Juicio estricto', () => {
+    it('la tilde que falta es Fallo, y la Corrección lo nombra sin pasar por la Pista', () => {
+      const corregida = responderConTexto(tanda([cadiz]), 'Cadiz')
+
+      expect(corregida.pista).toBeNull()
+      expect(corregida.fallos).toBe(1)
+      expect(corregida.correccion).toEqual({
+        elegido: cadiz,
+        correcto: cadiz,
+        duracion: 3_000,
+        escrito: 'Cadiz',
+        fallo: { tipo: 'tilde', confundidoCon: null },
+      })
+      expect(correccionTrasFallo(corregida.correccion!)).toBe(true)
+      expect(corregida.rachaDeFallos).toEqual([cadiz])
+    })
+
+    it('la errata también va directa a la Corrección con su tipo', () => {
+      const corregida = responderConTexto(tanda([guadalquivir]), 'Guadalquibir')
+
+      expect(corregida.correccion?.fallo).toEqual({ tipo: 'errata', confundidoCon: null })
+      expect(corregida.correccion?.escrito).toBe('Guadalquibir')
+    })
+
+    it('cualquier otro texto equivocado abre la Pista, como en cualquier Partida', () => {
+      const conPista = responderConTexto(tanda([cadiz, guadalquivir]), 'Sevilla')
+
+      expect(conPista.correccion).toBeNull()
+      expect(conPista.pista?.fallo).toEqual({ tipo: 'otro', confundidoCon: null })
+    })
+  })
+
+  describe('Reinserción y cierre', () => {
+    it('sin fallos pregunta cada Elemento una vez y termina', () => {
+      let partida = tanda(doce)
+      const preguntados: string[] = []
+      while (!partida.terminada) {
+        preguntados.push(partida.preguntado!.id)
+        partida = acertar(partida)
+      }
+
+      expect(preguntados.sort()).toEqual(doce.map((elemento) => elemento.id).sort())
+      expect(partida.aciertosALaPrimera).toBe(12)
+    })
+
+    it('un Fallo vuelve una vez, tres preguntas después', () => {
+      let partida = tanda(doce)
+      const fallado = partida.preguntado!.id
+      partida = fallar(partida)
+      const siguientes: string[] = []
+      for (let i = 0; i < 4; i++) {
+        siguientes.push(partida.preguntado!.id)
+        partida = acertar(partida)
+      }
+
+      expect(siguientes.slice(0, 3)).not.toContain(fallado)
+      expect(siguientes[3]).toBe(fallado)
+    })
+
+    it('si se vuelve a fallar no vuelve una segunda vez, y la Tanda termina con ese Elemento sin acertar', () => {
+      let partida = tanda(doce)
+      const fallado = partida.preguntado!.id
+      partida = fallar(partida)
+      let veces = 1
+      while (!partida.terminada) {
+        if (partida.preguntado!.id === fallado) {
+          veces++
+          partida = fallar(partida)
+        } else {
+          partida = acertar(partida)
+        }
+      }
+
+      expect(veces).toBe(2)
+      expect(partida.acertados).not.toContain(fallado)
+      expect(partida.acertados).toHaveLength(11)
+      expect(partida.abandonada).toBe(false)
+    })
+
+    it('acertar la reinserción no cuenta como acierto a la primera', () => {
+      let partida = fallar(tanda(doce))
+      while (!partida.terminada) partida = acertar(partida)
+
+      expect(partida.aciertosALaPrimera).toBe(11)
+      expect(partida.acertados).toHaveLength(12)
+    })
+
+    it('resolver con Pista sin haber fallado no vuelve en la Tanda', () => {
+      let partida = tanda(doce)
+      const conPista = partida.preguntado!.id
+      partida = cerrarCorreccion(elegirOpcion(pedirPista(partida), conPista))
+      const despues: string[] = []
+      while (!partida.terminada) {
+        despues.push(partida.preguntado!.id)
+        partida = acertar(partida)
+      }
+
+      expect(despues).not.toContain(conPista)
+      expect(despues).toHaveLength(11)
+    })
+
+    it('con pocos Elementos el Fallo vuelve al final, y con uno solo se vuelve a preguntar enseguida', () => {
+      let dos = fallar(tanda(doce.slice(0, 2)))
+      const orden: string[] = []
+      while (!dos.terminada) {
+        orden.push(dos.preguntado!.id)
+        dos = acertar(dos)
+      }
+      expect(orden).toHaveLength(2)
+      expect(new Set(orden).size).toBe(2)
+
+      const sinTilde = (partida: Partida) => cerrarCorreccion(responderConTexto(partida, 'Cadiz'))
+      const uno = sinTilde(tanda([cadiz]))
+      expect(uno.terminada).toBe(false)
+      expect(uno.preguntado?.id).toBe('ca')
+      expect(sinTilde(uno).terminada).toBe(true)
+    })
+
+    it('si la Tanda termina con un Fallo que completa la Racha, no se abre un Repaso sobre una Tanda acabada', () => {
+      let partida = tanda(doce.slice(0, 3))
+      while (!partida.terminada) partida = fallar(partida.repaso ? cerrarRepaso(partida) : partida)
+
+      expect(partida.repaso).toBeNull()
+      expect(partida.correccion).toBeNull()
+    })
+
+    it('nunca pasa de 18 preguntas: al llegar termina aunque queden Elementos por preguntar', () => {
+      let partida = tanda(doce)
+      let preguntas = 0
+      while (!partida.terminada) {
+        preguntas++
+        partida = fallar(partida)
+        if (partida.repaso) partida = cerrarRepaso(partida)
+      }
+
+      expect(preguntas).toBe(18)
+      expect(partida.abandonada).toBe(false)
+      expect(partida.preguntado).toBeNull()
+    })
+  })
+
+  it('los Elementos de un Todo se preguntan en el orden de la Tanda, sin esperar a los que los desbloquean', () => {
+    const afluente: Elemento = { ...cadiz, id: 'af', nombre: 'Afluente', desbloqueaCon: ['rio-que-no-esta-en-la-tanda'] }
+    const partida = tanda([afluente])
+
+    expect(partida.preguntado?.id).toBe('af')
+    expect(acertar(partida).terminada).toBe(true)
+  })
+
+  it('una Partida que no es Tanda sigue dando Vueltas hasta acertarlo todo', () => {
+    let partida = iniciarPartida(comunidadesNombrar, doce.slice(0, 3), azarFijo, reloj)
+    partida = fallar(partida)
+    partida = acertar(acertar(partida))
+
+    expect(partida.terminada).toBe(false)
+    expect(partida.vuelta).toBe(2)
   })
 })

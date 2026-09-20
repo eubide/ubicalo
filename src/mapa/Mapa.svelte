@@ -363,8 +363,11 @@
 
   // Los cauces se dibujan sobre las manchas, así que un toque sobre un río que cruza una vertiente
   // le llega a las dos. Gana el río, que es el blanco fino.
+  // Con Rótulos a la vista solo se toca lo rotulado: el arco de un Golfo sin Rótulo no le quita el toque
+  // al Tramo de costa rotulado que tiene debajo.
   function pulsarMancha(evento: MouseEvent, id: string) {
-    if (cauceBajoElPuntero(evento) === null) pulsarElemento(id)
+    const cauce = cauceBajoElPuntero(evento)
+    if (cauce === null || (rotulados.includes(id) && !rotulados.includes(cauce))) pulsarElemento(id)
   }
 
   // Los pulsadores se pisan entre ellos y con los arcos: el Cabo de la Nao y el de San Antonio están

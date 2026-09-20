@@ -237,7 +237,7 @@ Las Pruebas, con sus Marcas y sus Retos, plegadas en la portada bajo la Familia 
 _Evitar_: modo libre, entrenamiento, catálogo
 
 **Juicio estricto**:
-Forma de juzgar el texto escrito como lo juzga el profesor: la tilde que falta y la errata son Fallo, y el Fallo lleva su tipo, que es tilde, errata u otro. Siguen valiendo los Alias, las formas cortas, las mayúsculas indistintas y las palabras que no distinguen. Solo lo usan la Tanda y el Simulacro; las Partidas de las Pruebas siguen tolerando la tilde y la errata.
+Forma de juzgar el texto escrito como lo juzga el profesor: la tilde que falta y la errata son Fallo, y el Fallo lleva su tipo, que es tilde, errata u otro. Siguen valiendo los Alias, las formas cortas, las mayúsculas indistintas y las palabras que no distinguen. Solo lo usan la Tanda y el Simulacro; las Partidas de las Pruebas siguen tolerando la tilde y la errata. En una Tanda, un Fallo de tilde o de errata no abre la Pista: va directo a la Corrección, que lo nombra.
 _Evitar_: modo examen, corrección dura, ortografía
 
 **Dominio**:
@@ -253,8 +253,12 @@ Estado de un Elemento cuya última respuesta fue un acierto sin ayuda con Juicio
 _Evitar_: dominado, aprendido, acertado
 
 **Tanda**:
-Unos cinco minutos de Nombrar sobre la Familia elegida, con hasta 12 Elementos de un solo mapa: primero los Flojos, después los Sabidos que no se han visto hoy y entre 3 y 6 nuevos mientras quede algo sin ver. Los nuevos llegan con el nivel de arriba entero y luego por ramas completas, y dentro de la Tanda se barajan. Solo se rellena con Sabidos de hoy cuando trae nuevos, así que al final puede ser corta. Se encadenan mientras quede algo Flojo o sin ver.
+Unos cinco minutos de Nombrar sobre la Familia elegida, con hasta 12 Elementos de un solo mapa: primero los Flojos, después los Sabidos que no se han visto hoy y entre 3 y 6 nuevos mientras quede algo sin ver. Los nuevos llegan con el nivel de arriba entero y luego por ramas completas, y dentro de la Tanda se barajan. Solo se rellena con Sabidos de hoy cuando trae nuevos, así que al final puede ser corta. Se encadenan mientras quede algo Flojo o sin ver. Es una Partida con Juicio estricto que no da Vueltas: un Fallo vuelve una sola vez, tres preguntas después, y acertarlo ahí no lo saca de Flojo; nunca pasa de 18 preguntas, así que puede terminar con Flojos. No tiene Puntuación, reloj, Marca ni Reto, y cada respuesta se anota en el Dominio al darse.
 _Evitar_: ronda, sesión, lote, repaso
+
+**Presentación**:
+Lo primero de una Tanda que trae nuevos: se enseñan rotulados sobre el mapa, con el mecanismo del Repaso, y no se pregunta nada hasta que el alumno los descarta. Presentar un Elemento lo deja en Flojo.
+_Evitar_: tutorial, introducción, lección
 
 ## Relaciones
 

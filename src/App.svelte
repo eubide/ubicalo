@@ -6,6 +6,7 @@
   import contextoGeografico from './datos/contexto-geografico.json'
   import Mapa from './mapa/Mapa.svelte'
   import FinDePartida from './pantallas/FinDePartida.svelte'
+  import FinDeTanda from './pantallas/FinDeTanda.svelte'
   import PuntuacionYTiempo from './pantallas/PuntuacionYTiempo.svelte'
   import {
     almacenEnMemoria,
@@ -18,7 +19,8 @@
     type ResultadoDeRegistro,
     type Reto,
   } from './competicion/competicion'
-  import { crearDominio, diaLocal, familiaDeEnlace } from './dominio/dominio'
+  import { alcancesDeExamen, crearDominio, diaLocal, familiaDeEnlace } from './dominio/dominio'
+  import { anotacionesDe, cierreDe, componerTanda, recuentoDe, type Tanda } from './dominio/tanda'
   import {
     abandonar,
     cerrarCorreccion,
@@ -28,6 +30,7 @@
     elegirOpcion,
     elegirPregunta,
     iniciarPartida,
+    iniciarTanda,
     marcarEnRepaso,
     responder,
     responderConTexto,
@@ -35,8 +38,9 @@
     resumirPartida,
     tiempoJugado,
     type Partida,
+    type TipoDeFallo,
   } from './partida/partida'
-  import { enCascada, seEligeLaPregunta, type Familia, type Prueba } from './prueba/prueba'
+  import { enCascada, pruebaDe, seEligeLaPregunta, type Familia, type Prueba } from './prueba/prueba'
   import SeleccionPrueba from './seleccion/SeleccionPrueba.svelte'
 
   const contexto = contextoGeografico as FeatureCollection
@@ -51,11 +55,24 @@
 
   const almacen = almacenDelNavegador()
   const competicion = crearCompeticion(almacen)
-  const dominio = crearDominio(almacen, () => diaLocal(new Date()))
+  function hoy(): string {
+    return diaLocal(new Date())
+  }
+
+  const dominio = crearDominio(almacen, hoy)
   const propuesta = familiaDeEnlace(location.href)
   if (propuesta) dominio.proponerFamilia(propuesta)
   let familiaElegida = $state(dominio.familia())
   let soloMira = $state(false)
+  let tandaPropuesta = $state.raw(proponerTanda())
+  let tandaEnJuego = $state.raw<Tanda | null>(null)
+
+  function proponerTanda(): Tanda | null {
+    const familia = dominio.familia()
+    if (!familia) return null
+    const examen = alcancesDeExamen(familia).map((alcance) => ({ alcance, elementos: catalogo(alcance) }))
+    return componerTanda(examen, (alcance) => dominio.entradas(alcance), hoy(), Math.random)
+  }
   // Lo ya jugado responde a la vez si es la primera visita y por dónde se quedó la anterior.
   let jugadas = $state.raw(competicion.historial())
 
@@ -98,10 +115,12 @@
 
   // La cifra de una Altura se escribe venga la Prueba en la dirección que venga.
   const escribeNombre = $derived(prueba?.direccion === 'nombrar' || (partida?.preguntado?.seEscribe ?? false))
-  const esTodo = $derived(prueba !== null && seEligeLaPregunta(prueba.alcance))
+  const enTanda = $derived(tandaEnJuego !== null)
+  // Una Tanda pregunta lo que trae, en su orden y sobre el mapa entero, aunque su catálogo sea el de un Todo.
+  const esTodo = $derived(prueba !== null && !enTanda && seEligeLaPregunta(prueba.alcance))
   const esUnidades = $derived(prueba?.alcance === 'unidades')
   // Alcances en los que el mapa arranca mudo y solo se dibuja lo ya Acertado o Desbloqueado.
-  const conCascada = $derived(prueba !== null && enCascada(prueba.alcance))
+  const conCascada = $derived(prueba !== null && !enTanda && enCascada(prueba.alcance))
   // Solo lo ya visible (Acertado o Desbloqueado); el resto del mapa mudo sigue sin dibujarse.
   const contornosVisibles = $derived(
     conCascada && partida
@@ -149,12 +168,22 @@
   const rotulos = $derived(
     repaso?.elementos
       .filter((elemento) => !repaso.marcados.includes(elemento.id))
-      .map((elemento) => ({ id: respuestaDe(elemento), texto: elemento.rotulo ?? elemento.nombreMostrado })) ?? [],
+      .map((elemento) => ({ id: formaDe(respuestaDe(elemento)), texto: elemento.rotulo ?? elemento.nombreMostrado })) ?? [],
   )
+  const enPresentacion = $derived(repaso?.presentacion ?? false)
+
+  // Una Altura no tiene forma propia en el mapa: se rotula y se señala sobre su Pico.
+  function formaDe(id: string): string {
+    return esIdDeAltura(id) ? picoDeAltura(id) : id
+  }
 
   // Los picos cuya cifra pregunta esta Prueba: Picos y Todo.
   const alturasPreguntadas = $derived(
-    new Set(elementosDelAlcance.filter((elemento) => elemento.seEscribe).map((elemento) => picoDeAltura(elemento.id))),
+    new Set(
+      (enTanda && prueba ? catalogo(prueba.alcance) : elementosDelAlcance)
+        .filter((elemento) => elemento.seEscribe)
+        .map((elemento) => picoDeAltura(elemento.id)),
+    ),
   )
   // Mientras la cifra se pregunte, no se muestra hasta acertarla; antes, si el pico ya está nombrado, se
   // avisa de que le falta la altura, para que "por qué sigue en naranja" tenga respuesta a la vista.
@@ -232,7 +261,8 @@
     // El alumno elige qué tocar; solo se señala la respuesta correcta mientras se ve la Corrección.
     if (esTodo) return correccion ? [correccion.correcto.id] : []
     const id = (correccion?.correcto ?? partida?.preguntado)?.id
-    return id === undefined ? [] : [id]
+    if (id === undefined) return []
+    return [enTanda ? formaDe(id) : id]
   })
 
   // El rojo del Fallo dura mientras el Elemento siga Pendiente; al terminar se ven todos los que costaron
@@ -260,17 +290,15 @@
   })
 
   $effect(() => {
-    if (!repaso || !escribeNombre) return
+    if (!repaso || !escribeNombre || enPresentacion) return
     return cerrarAlCabo(DURACION_REPASO_UBICACION_NOMBRE, cerrarRepaso)
   })
 
-  function empezar(elegida: Prueba) {
-    const elementos = catalogo(elegida.alcance)
+  function prepararElMapa(elegida: Prueba, elementos: Elemento[]) {
     prueba = elegida
     resultado = null
     reto = null
     retoSuperado = null
-    aBatir = esElRetoRecibido(elegida) ? retoRecibido : null
     elementosDelAlcance = elementos
     elementosDelMapa = catalogoDelMapa(elegida.alcance)
     totalElementos = elementos.length
@@ -279,12 +307,41 @@
     ahora = Date.now()
     texto = ''
     preguntaElegida = null
+  }
+
+  function empezar(elegida: Prueba) {
+    const elementos = catalogo(elegida.alcance)
+    prepararElMapa(elegida, elementos)
+    aBatir = esElRetoRecibido(elegida) ? retoRecibido : null
+    tandaEnJuego = null
     partida = iniciarPartida(elegida, elementos, Math.random, Date.now, elementosDelMapa)
+  }
+
+  function empezarTanda() {
+    // Se compone al tocar: la portada puede llevar abierta desde ayer.
+    const tanda = proponerTanda()
+    tandaPropuesta = tanda
+    if (!tanda) return
+    const elegida = pruebaDe(tanda.alcance, 'nombrar')
+    const nuevos = tanda.elementos.filter((elemento) => tanda.nuevos.includes(elemento.id))
+    prepararElMapa(elegida, tanda.elementos)
+    aBatir = null
+    tandaEnJuego = tanda
+    partida = iniciarTanda(elegida, tanda.elementos, nuevos, Math.random, Date.now, elementosDelMapa)
+  }
+
+  function pasar(siguiente: Partida) {
+    if (partida && tandaEnJuego) {
+      for (const { id, resultado } of anotacionesDe(partida, siguiente)) dominio.anotar(tandaEnJuego.alcance, id, resultado)
+      if (siguiente.terminada) tandaPropuesta = proponerTanda()
+    }
+    partida = siguiente
   }
 
   function elegirFamilia(familia: Familia) {
     dominio.elegirFamilia(familia)
     familiaElegida = familia
+    tandaPropuesta = proponerTanda()
   }
 
   function esElRetoRecibido(elegida: Prueba): boolean {
@@ -306,10 +363,11 @@
   function elegir(id: string) {
     if (!partida || partida.terminada) return
     if (partida.repaso) {
-      partida = marcarEnRepaso(partida, id)
+      // El Rótulo de una Altura va sobre su Pico, así que tocar el Pico descarta los dos.
+      pasar(marcarEnRepaso(marcarEnRepaso(partida, id), idDeAltura(id)))
       return
     }
-    partida = responder(partida, id)
+    pasar(responder(partida, id))
     if (partida.terminada) registrar(partida)
   }
 
@@ -338,19 +396,22 @@
       return
     }
     confirmandoAbandono = false
-    partida = abandonar(partida)
-    registrar(partida)
+    pasar(abandonar(partida))
+    if (tandaEnJuego) elegirOtraPrueba()
+    else registrar(partida)
   }
 
   function elegirOtraPrueba() {
     jugadas = competicion.historial()
     partida = null
     prueba = null
+    tandaEnJuego = null
     resultado = null
     retoSuperado = null
   }
 
   function registrar(acabada: Partida) {
+    if (tandaEnJuego) return
     const jugada = prueba && resumirPartida(acabada, prueba)
     if (!jugada) return
     resultado = competicion.registrar(jugada)
@@ -366,7 +427,7 @@
   function enviarTexto(evento: SubmitEvent) {
     evento.preventDefault()
     if (!partida || partida.terminada) return
-    partida = responderConTexto(partida, texto)
+    pasar(responderConTexto(partida, texto))
     if (partida.terminada) registrar(partida)
     if (!partida.pista && !partida.correccion) preguntaElegida = null
     texto = ''
@@ -375,7 +436,16 @@
 
   function elegirOpcionDePista(id: string) {
     if (!partida || partida.terminada) return
-    partida = elegirOpcion(partida, id)
+    pasar(elegirOpcion(partida, id))
+  }
+
+  // La virgulilla de la eñe no es una tilde.
+  const TILDES = /[\u0300-\u0302\u0304-\u036f]/u
+
+  function correccionDeTexto(escrito: string, tipo: TipoDeFallo, nombre: string): string {
+    if (tipo === 'errata') return `Escribiste ${escrito} · Casi: ${nombre}`
+    const llevaTilde = TILDES.test(escrito.normalize('NFD'))
+    return `Escribiste ${escrito} · ${llevaTilde ? 'Revisa la tilde' : 'Te falta la tilde'}: ${nombre}`
   }
 </script>
 
@@ -390,13 +460,25 @@
       yaHaJugado={jugadas.length > 0}
       {familiaElegida}
       resumenDe={(familia) => dominio.resumen(familia)}
+      tanda={tandaPropuesta && recuentoDe(tandaPropuesta, dominio.entradas(tandaPropuesta.alcance))}
+      alEmpezarTanda={empezarTanda}
       {soloMira}
       alElegirFamilia={elegirFamilia}
       alMirar={(mira) => (soloMira = mira)}
     />
   {:else}
     <header>
-      {#if partida.terminada}
+      {#if partida.terminada && tandaEnJuego && familiaElegida}
+        <FinDeTanda
+          {...cierreDe(tandaEnJuego, dominio.entradas(tandaEnJuego.alcance))}
+          total={tandaEnJuego.elementos.length}
+          familia={familiaElegida}
+          resumen={dominio.resumen(familiaElegida)}
+          haySiguiente={tandaPropuesta !== null}
+          alSeguir={empezarTanda}
+          alVolver={elegirOtraPrueba}
+        />
+      {:else if partida.terminada}
         <FinDePartida
           puntuacion={partida.puntuacion}
           aciertosALaPrimera={partida.aciertosALaPrimera}
@@ -444,7 +526,14 @@
             {/each}
           </div>
         {:else if repaso}
-          <p class="pregunta">{escribeNombre ? 'Repaso: fíjate en dónde están' : 'Repaso: toca cada nombre'}</p>
+          <p class="pregunta">
+            {#if enPresentacion}
+              Esto es nuevo: toca cada nombre cuando lo tengas
+              <button type="button" class="yaEsta" onclick={() => partida && pasar(cerrarRepaso(partida))}>Ya está</button>
+            {:else}
+              {escribeNombre ? 'Repaso: fíjate en dónde están' : 'Repaso: toca cada nombre'}
+            {/if}
+          </p>
         {:else if escribeNombre && !correccion && (!esTodo || preguntaElegida)}
           <form class="pregunta" onsubmit={enviarTexto}>
             {#if enunciado}
@@ -471,7 +560,9 @@
             {/if}
           </p>
         {/if}
-        <PuntuacionYTiempo puntuacion={partida.puntuacion} tiempo={tiempoJugado(partida, ahora)} {aBatir} />
+        {#if !enTanda}
+          <PuntuacionYTiempo puntuacion={partida.puntuacion} tiempo={tiempoJugado(partida, ahora)} {aBatir} />
+        {/if}
         <p class="pendientes">{partida.pendientes} / {totalElementos}</p>
         <button type="button" class="abandonar" class:confirmando={confirmandoAbandono} onclick={pulsarAbandonar}>
           {confirmandoAbandono ? '¿Seguro? Abandonar' : 'Abandonar'}
@@ -499,7 +590,7 @@
       correcto={correccion ? respuestaDe(correccion.correcto) : null}
       preguntado={correccion ? null : (partida.preguntado?.id ?? null)}
       {diana}
-      dianaSeToca={!escribeNombre}
+      dianaSeToca={!escribeNombre || enPresentacion}
       pistaDeArea={partida.pistaDeArea ?? []}
       {rotulos}
       {nombres}
@@ -513,7 +604,9 @@
     {#if correccion}
       <div class="correccion" class:conPista={!correccionTrasFallo(correccion)} role="status">
         <p>
-          {#if !correccionTrasFallo(correccion)}
+          {#if correccion.fallo && correccion.escrito !== undefined}
+            {correccionDeTexto(correccion.escrito, correccion.fallo.tipo, correccion.correcto.nombreMostrado)}
+          {:else if !correccionTrasFallo(correccion)}
             Con pista: {correccion.correcto.nombreMostrado}
           {:else if !escribeNombre && correccion.correcto.respuesta}
             Tocaste {correccion.elegido.nombreMostrado} · {correccion.correcto.nombreMostrado} → {nombreDeLaRespuesta(correccion.correcto)}
@@ -528,7 +621,7 @@
         {/if}
         <div class="barra" style:animation-duration="{correccion.duracion}ms"></div>
       </div>
-    {:else if repaso && escribeNombre}
+    {:else if repaso && escribeNombre && !enPresentacion}
       <div class="repaso" role="status">
         <div class="barra" style:animation-duration="{DURACION_REPASO_UBICACION_NOMBRE}ms"></div>
       </div>
@@ -685,6 +778,19 @@
     margin: 0.5rem 0;
     color: #2f7a4a;
     min-height: 1.5rem;
+  }
+
+  .yaEsta {
+    display: block;
+    margin-top: 0.5rem;
+    font: inherit;
+    font-size: 1rem;
+    font-weight: 400;
+    padding: 0.375rem 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.5rem;
+    background: #fff;
+    cursor: pointer;
   }
 
   .correccion,

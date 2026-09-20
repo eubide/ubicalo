@@ -4,6 +4,7 @@
   import { siluetaDeEspana, type Alcance } from '../catalogo/catalogo'
   import type { Marca, Reto } from '../competicion/competicion'
   import type { ResumenDeFamilia } from '../dominio/dominio'
+  import type { RecuentoDeTanda } from '../dominio/tanda'
   import { formatearTiempo } from '../pantallas/tiempo'
   import {
     alcancesDe,
@@ -28,6 +29,8 @@
     yaHaJugado: boolean
     familiaElegida: Familia | null
     resumenDe: (familia: Familia) => ResumenDeFamilia
+    tanda: RecuentoDeTanda | null
+    alEmpezarTanda: () => void
     soloMira: boolean
     alElegirFamilia: (familia: Familia) => void
     alMirar: (soloMira: boolean) => void
@@ -42,6 +45,8 @@
     yaHaJugado,
     familiaElegida,
     resumenDe,
+    tanda,
+    alEmpezarTanda,
     soloMira,
     alElegirFamilia,
     alMirar,
@@ -56,6 +61,15 @@
     relieve: 'montañas',
     hidrografia: 'ríos',
     costas: 'cabos y golfos',
+  }
+
+  function deQueEstaHecha({ flojos, sabidos, nuevos }: RecuentoDeTanda): string {
+    const partes = [
+      flojos > 0 ? `${flojos} ${flojos === 1 ? 'flojo' : 'flojos'}` : '',
+      sabidos > 0 ? `${sabidos} ${sabidos === 1 ? 'sabido' : 'sabidos'}` : '',
+      nuevos > 0 ? `${nuevos} ${nuevos === 1 ? 'nuevo' : 'nuevos'}` : '',
+    ].filter((parte) => parte !== '')
+    return partes.length > 1 ? `${partes.slice(0, -1).join(', ')} y ${partes.at(-1)}` : partes.join('')
   }
 
   function elegirFamilia(familia: Familia) {
@@ -140,6 +154,12 @@
         <span class="sinVer" style:flex-grow={resumen.sinVer}></span>
       </div>
     </section>
+    {#if tanda}
+      <button type="button" class="tanda {familiaElegida}" onclick={alEmpezarTanda}>
+        <strong>{resumen.sinVer === resumen.total ? 'Empezar' : 'Siguiente tanda'}</strong>
+        <span>{tanda.minutos === 1 ? 'un minuto' : `unos ${tanda.minutos} min`} · {deQueEstaHecha(tanda)}</span>
+      </button>
+    {/if}
     <details class="practica" bind:open={practicaAbierta}>
       <summary>Práctica libre</summary>
       {#if practicaAbierta}
@@ -267,7 +287,13 @@
     gap: 0.625rem;
   }
 
-  .examinarse {
+  .tanda {
+    width: 100%;
+    margin-bottom: 1rem;
+  }
+
+  .examinarse,
+  .tanda {
     padding: 0.75rem 1rem;
     border-color: var(--familia);
     background: var(--familia);
@@ -275,11 +301,14 @@
   }
 
   .examinarse strong,
-  .examinarse span {
+  .examinarse span,
+  .tanda strong,
+  .tanda span {
     display: block;
   }
 
-  .examinarse strong {
+  .examinarse strong,
+  .tanda strong {
     font-size: 1.1875rem;
   }
 

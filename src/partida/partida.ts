@@ -34,10 +34,13 @@ export interface Correccion {
   elegido: Elemento
   correcto: Elemento
   duracion: number
+  // Lo que escribió el alumno cuando el Fallo es de tilde o de errata: acertó el Elemento y no el nombre.
+  escrito?: string
+  fallo?: FalloDeTexto
 }
 
-export function correccionTrasFallo({ elegido, correcto }: Correccion): boolean {
-  return elegido.id !== correcto.id
+export function correccionTrasFallo({ elegido, correcto, fallo }: Correccion): boolean {
+  return elegido.id !== correcto.id || fallo !== undefined
 }
 
 export const DURACION_CORRECCION_TRAS_FALLO = 3_000
@@ -47,9 +50,15 @@ export const DURACION_CORRECCION_CON_PISTA = 2_000
 export interface Repaso {
   elementos: Elemento[]
   marcados: string[]
+  // Los nuevos de una Tanda, rotulados antes de la primera pregunta: se descartan tocándolos sea cual sea la Dirección.
+  presentacion?: true
 }
 
 const FALLOS_PARA_REPASO = 3
+
+const PREGUNTAS_HASTA_LA_REINSERCION = 3
+
+const TOPE_DE_PREGUNTAS_DE_UNA_TANDA = 18
 
 export const DURACION_REPASO_UBICACION_NOMBRE = 4_000
 
@@ -60,6 +69,9 @@ export interface Partida {
   azar: Azar
   reloj: Reloj
   juicioEstricto: boolean
+  esTanda: boolean
+  reinsertados: string[]
+  preguntasHechas: number
   inicio: number
   fin: number | null
   pausadaDesde: number | null
@@ -198,6 +210,9 @@ export function iniciarPartida(
       azar,
       reloj,
       juicioEstricto,
+      esTanda: false,
+      reinsertados: [],
+      preguntasHechas: 0,
       inicio: ahora,
       pausadaDesde: null,
       tiempoEnPausa: 0,
@@ -221,6 +236,22 @@ export function iniciarPartida(
   )
 }
 
+// Los Elementos de un Todo traen su cascada, que en una Tanda no aplica: se preguntan los que trae, estén o
+// no acertados aquellos de los que cuelgan.
+export function iniciarTanda(
+  prueba: Prueba,
+  elementos: Elemento[],
+  nuevos: Elemento[],
+  azar: Azar,
+  reloj: Reloj,
+  tocables: Elemento[] = elementos,
+): Partida {
+  const sinCascada = elementos.map(({ desbloqueaCon: _, ...elemento }) => elemento)
+  const partida = { ...iniciarPartida(prueba, sinCascada, azar, reloj, tocables, { juicioEstricto: true }), esTanda: true }
+  if (nuevos.length === 0) return partida
+  return { ...partida, repaso: { elementos: nuevos, marcados: [], presentacion: true }, pausadaDesde: partida.mostradoEn }
+}
+
 function esperandoRespuesta(partida: Partida): boolean {
   return !partida.pista && !partida.correccion && !partida.repaso
 }
@@ -235,11 +266,18 @@ export function responder(partida: Partida, idElegido: string): Partida {
   return abrirCorreccion(resolver(partida, false), elegido, correcto)
 }
 
-function abrirCorreccion(partida: Partida, elegido: Elemento, correcto: Elemento): Partida {
+function abrirCorreccion(
+  partida: Partida,
+  elegido: Elemento,
+  correcto: Elemento,
+  deTexto?: Pick<Correccion, 'escrito' | 'fallo'>,
+): Partida {
+  const trasFallo = elegido.id !== correcto.id || deTexto?.fallo !== undefined
   const correccion = {
     elegido,
     correcto,
-    duracion: elegido.id !== correcto.id ? DURACION_CORRECCION_TRAS_FALLO : DURACION_CORRECCION_CON_PISTA,
+    ...deTexto,
+    duracion: trasFallo ? DURACION_CORRECCION_TRAS_FALLO : DURACION_CORRECCION_CON_PISTA,
   }
   const rachaDeFallos = correccionTrasFallo(correccion) ? [...partida.rachaDeFallos, correcto] : partida.rachaDeFallos
   return { ...partida, correccion, rachaDeFallos, pausadaDesde: partida.mostradoEn }
@@ -247,7 +285,7 @@ function abrirCorreccion(partida: Partida, elegido: Elemento, correcto: Elemento
 
 export function cerrarCorreccion(partida: Partida): Partida {
   if (!partida.correccion) return partida
-  if (partida.rachaDeFallos.length >= FALLOS_PARA_REPASO) {
+  if (partida.rachaDeFallos.length >= FALLOS_PARA_REPASO && !partida.terminada) {
     const elementos = partida.rachaDeFallos.filter(
       (elemento, i, racha) => racha.findIndex((otro) => otro.id === elemento.id) === i,
     )
@@ -258,7 +296,7 @@ export function cerrarCorreccion(partida: Partida): Partida {
 
 export function marcarEnRepaso(partida: Partida, id: string): Partida {
   const { repaso } = partida
-  if (!repaso || partida.prueba.direccion === 'nombrar') return partida
+  if (!repaso || (partida.prueba.direccion === 'nombrar' && !repaso.presentacion)) return partida
   const tocados = repaso.elementos
     .filter((elemento) => respuestaDe(elemento) === id && !repaso.marcados.includes(elemento.id))
     .map((elemento) => elemento.id)
@@ -271,6 +309,7 @@ export function marcarEnRepaso(partida: Partida, id: string): Partida {
 export function cerrarRepaso(partida: Partida): Partida {
   if (!partida.repaso) return partida
   const reanudada = { ...reanudar(partida, partida.reloj()), repaso: null }
+  if (partida.repaso.presentacion) return reanudada
   if (partida.prueba.direccion === 'nombrar') return abrirPista(reanudada, null)
   return { ...reanudada, pistaDeArea: pistaDeAreaDe(partida) }
 }
@@ -407,7 +446,11 @@ export function responderConTexto(partida: Partida, texto: string): Partida {
   if (texto.trim() === '') return pedirPista(partida)
   const juicio = juzgarTexto(texto, partida.cola[0], partida.elementos, partida.juicioEstricto)
   if (juicio.acierto) return resolver(partida, true)
-  return abrirPista(anotarFallo(partida), sinPuntuacionFinal(texto), juicio.fallo)
+  const escrito = sinPuntuacionFinal(texto)
+  if (juicio.fallo.tipo === 'otro') return abrirPista(anotarFallo(partida), escrito, juicio.fallo)
+  const correcto = partida.cola[0]
+  const fallada = avanzar(anotarFallo(partida), { acierto: false, conPista: false, correcto }, true, partida.reloj())
+  return abrirCorreccion(fallada, correcto, correcto, { escrito, fallo: juicio.fallo })
 }
 
 const PUNTOS_POR_FALLO = 25
@@ -454,7 +497,31 @@ export function pedirPista(partida: Partida): Partida {
   return abrirPista(partida, null)
 }
 
+function avanzarEnTanda(partida: Partida, respuesta: Respuesta, siguePendiente: boolean, ahora: number): Partida {
+  const [correcto, ...resto] = partida.cola
+  const preguntasHechas = partida.preguntasHechas + 1
+  const fallado = partida.fallados.some((elemento) => elemento.id === correcto.id)
+  const vuelve = siguePendiente && fallado && !partida.reinsertados.includes(correcto.id)
+  const cola = vuelve
+    ? [...resto.slice(0, PREGUNTAS_HASTA_LA_REINSERCION), correcto, ...resto.slice(PREGUNTAS_HASTA_LA_REINSERCION)]
+    : resto
+  return construir(
+    {
+      ...partida,
+      pista: null,
+      pistaDeArea: null,
+      preguntasHechas,
+      cola: preguntasHechas >= TOPE_DE_PREGUNTAS_DE_UNA_TANDA ? [] : cola,
+      reinsertados: vuelve ? [...partida.reinsertados, correcto.id] : partida.reinsertados,
+      acertados: siguePendiente ? partida.acertados : [...partida.acertados, correcto.id],
+      ultimaRespuesta: respuesta,
+    },
+    ahora,
+  )
+}
+
 function avanzar(partida: Partida, respuesta: Respuesta, siguePendiente: boolean, ahora: number): Partida {
+  if (partida.esTanda) return avanzarEnTanda(partida, respuesta, siguePendiente, ahora)
   const [correcto, ...resto] = partida.cola
   return construir(
     {
@@ -479,7 +546,7 @@ function resolver(partida: Partida, acierto: boolean): Partida {
   }
   const segundos = (ahora - partida.mostradoEn) / 1000
   const bonus = Math.round(BONUS_MAXIMO_DE_RAPIDEZ * Math.max(0, 1 - segundos / SEGUNDOS_HASTA_PERDER_EL_BONUS))
-  const aLaPrimera = partida.vuelta === 1
+  const aLaPrimera = partida.vuelta === 1 && !partida.reinsertados.includes(correcto.id)
   const puntos = aLaPrimera ? PUNTOS_POR_ACIERTO_A_LA_PRIMERA + bonus : PUNTOS_POR_ACIERTO_EN_VUELTA_POSTERIOR
   return avanzar(
     {
