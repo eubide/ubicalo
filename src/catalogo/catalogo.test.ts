@@ -828,12 +828,12 @@ describe('Catálogo de Pertenencia en Costas', () => {
     expect(elementoDe('golfo-de-valencia').pistaDeArea).toEqual(['costa-levantina'])
   })
 
-  it('el mapa de Pertenencia son los 5 Tramos y los 20 Elementos de la costa', () => {
+  it('el mapa de Pertenencia son solo los 5 Tramos: no hay nada más que tocar', () => {
     const formas = contornos('pertenencia-costas')
 
-    expect(formas).toHaveLength(25)
-    expect(catalogoDelMapa('pertenencia-costas')).toHaveLength(25)
-    expect(formas.filter(({ geometry }) => geometry.type === 'MultiPolygon')).toHaveLength(5)
+    expect(formas).toHaveLength(5)
+    expect(catalogoDelMapa('pertenencia-costas')).toHaveLength(5)
+    expect(formas.every(({ geometry }) => geometry.type === 'MultiPolygon')).toBe(true)
   })
 
   it('los Vecinos de un Tramo son los otros cuatro', () => {

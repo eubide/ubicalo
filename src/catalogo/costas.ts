@@ -35,7 +35,10 @@ export function propiedadesDeCosta(contorno: Feature<Geometry>): PropiedadesDeCo
 
 const CONTORNOS_DEL_MAPA: Record<AlcanceDeCostas, Feature<Geometry>[]> = {
   'cabos-y-golfos': cabosYGolfos,
-  'pertenencia-costas': laCostaEntera,
+  // En Pertenencia se toca el Tramo, y dibujar encima los Cabos y los Golfos le robaba el toque a
+  // casi la mitad de la Costa Cantábrica: el blanco fino gana al grueso y el alumno fallaba tocando
+  // donde debía. Aquí no hay nada más que tocar, así que no se dibuja nada más.
+  'pertenencia-costas': tramos,
   'todo-costas': laCostaEntera,
 }
 
