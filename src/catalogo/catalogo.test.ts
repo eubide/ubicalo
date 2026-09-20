@@ -8,7 +8,9 @@ import intersect from '@turf/intersect'
 import type { Feature, FeatureCollection, Geometry, MultiPolygon, Point, Position } from 'geojson'
 import paises from '../datos/contexto-geografico.json'
 import { catalogo, catalogoDelMapa, contextoDe, contornos, siluetaDeEspana, type Alcance } from './catalogo'
-import { esIdDeAltura } from './relieve'
+import { esDeRelieve, esIdDeAltura } from './relieve'
+import { esDeHidrografia } from './hidrografia'
+import { esDeCostas } from './costas'
 
 function nombresDelCatalogo(alcance: Alcance) {
   return catalogo(alcance).map(({ vecinos: _v, comunidad: _c, cordillera: _cord, clase: _cl, altura: _a, ...nombres }) => nombres)
@@ -1052,5 +1054,21 @@ describe('Silueta de España', () => {
 
     expect(espana.geometry.type).toBe('MultiPolygon')
     expect(geoPath(geoConicConformalSpain().fitExtent([[0, 0], [52, 34]], espana))(espana)).toMatch(/^M/)
+  })
+})
+
+// La firma de los tres guardias acepta cualquier string, así que tienen que rechazar los nombres que
+// todo objeto hereda. Con `in` los daban por buenos, igual que hacía la migración del Dominio.
+describe('Un Alcance que no existe no cuela por heredado', () => {
+  it.each(['toString', 'constructor', 'hasOwnProperty', '__proto__'])('«%s» no es un Alcance', (heredado) => {
+    expect(esDeRelieve(heredado)).toBe(false)
+    expect(esDeHidrografia(heredado)).toBe(false)
+    expect(esDeCostas(heredado)).toBe(false)
+  })
+
+  it('los Alcances de verdad siguen pasando', () => {
+    expect(esDeCostas('golfos')).toBe(true)
+    expect(esDeRelieve('picos')).toBe(true)
+    expect(esDeHidrografia('rios')).toBe(true)
   })
 })

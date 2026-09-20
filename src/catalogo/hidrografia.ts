@@ -38,7 +38,7 @@ const CONTORNOS_DEL_MAPA: Record<AlcanceDeHidrografia, Feature<Geometry>[]> = {
 }
 
 export function esDeHidrografia(alcance: string): alcance is AlcanceDeHidrografia {
-  return alcance in CONTORNOS_DEL_MAPA
+  return Object.hasOwn(CONTORNOS_DEL_MAPA, alcance)
 }
 
 const propiedadesPorId = new Map(

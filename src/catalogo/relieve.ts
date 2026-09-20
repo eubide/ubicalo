@@ -121,7 +121,7 @@ const CLASES_DEL_MAPA: Record<AlcanceDeRelieve, Clase[]> = {
 }
 
 export function esDeRelieve(alcance: string): alcance is AlcanceDeRelieve {
-  return alcance in CLASES_DEL_MAPA
+  return Object.hasOwn(CLASES_DEL_MAPA, alcance)
 }
 
 // Nada del relieve comparte frontera: los vecinos son los más cercanos por centroide.

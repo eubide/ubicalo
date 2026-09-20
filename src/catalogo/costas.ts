@@ -42,7 +42,7 @@ const CONTORNOS_DEL_MAPA: Record<AlcanceDeCostas, Feature<Geometry>[]> = {
 }
 
 export function esDeCostas(alcance: string): alcance is AlcanceDeCostas {
-  return alcance in CONTORNOS_DEL_MAPA
+  return Object.hasOwn(CONTORNOS_DEL_MAPA, alcance)
 }
 
 const VECINOS_POR_CERCANIA = 3
