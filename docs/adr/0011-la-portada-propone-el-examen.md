@@ -41,6 +41,23 @@ El Dominio tiene tres estados por Elemento y no Cajas. Sin ver: no hay entrada. 
 - La aplicación nunca cambia la Familia elegida por su cuenta: lo que cae en el examen lo sabe el alumno.
 - Político es una sola Familia con dos mapas, Comunidades y Provincias, sobre una sola cuenta atrás en el Simulacro; una Tanda de Político es de uno solo, para que el mapa no cambie a mitad.
 - La nota del Simulacro es lineal, aciertos entre total, porque un fallo no resta; y se dice siempre sobre qué se calcula, porque no hay lista oficial: «Sobre los 44 de Ubícalo; tu profesor puede preguntar otros».
-- Cuántas Tandas hacen falta para ver una Familia entera y dejarla sin Flojos no se sabe todavía. Se medirá con alumnos sintéticos contra el compositor de Tandas y se apuntará aquí; si Político pasa de 25, el reparto se revisa antes de construir la portada.
+- **Una Tanda solo se rellena con Sabidos de hoy cuando trae nuevos.** La regla de partida era rellenar siempre hasta 12, y los alumnos sintéticos la tumbaron: volver a preguntar lo Sabido hace cinco minutos solo le da a quien acierta el 70 % otra ocasión de fallarlo, así que Político tardaba una mediana de 132 Tandas en verse entero, porque las Provincias esperan a las Comunidades, y quien acierta el 50 % seguía con Flojos tras 150 Tandas en las cuatro Familias. Sin nuevos que traer, la Tanda son los Flojos y lo Sabido otro día, y puede ser corta: el botón promete el tiempo, no el número.
+- Con esa regla, Tandas encadenadas el mismo día, como mediana y máximo de cinco alumnos sintéticos por caso. El alumno sintético no aprende: acierta siempre con la misma probabilidad, así que es el peor caso y no un alumno real.
+
+  | Familia | Acierta | Verla entera | Quedarse sin Flojos |
+  |---|---|---|---|
+  | Político (71) | 50 % | 16 · 21 | 22 · 29 |
+  | Político (71) | 70 % | 16 · 19 | 17 · 20 |
+  | Político (71) | 90 % | 14 · 17 | 15 · 18 |
+  | Relieve (44) e Hidrografía (44) | 50 % | 9 · 9 | 13 · 22 |
+  | Relieve (44) e Hidrografía (44) | 70 % | 8 · 8 | 9 · 10 |
+  | Relieve (44) e Hidrografía (44) | 90 % | 8 · 8 | 8 · 9 |
+  | Costas (25) | 50 % | 5 · 5 | 11 · 12 |
+  | Costas (25) | 70 % | 5 · 5 | 7 · 7 |
+  | Costas (25) | 90 % | 5 · 5 | 6 · 6 |
+
+  Político al 70 % queda en 16, por debajo de las 25 que obligaban a revisar el reparto. El test falla si alguna Familia pasa de 25 Tandas para verse entera o de 30 para quedarse sin Flojos.
+- **Los nuevos entran con el nivel de arriba entero y después por ramas completas**: las tres Vertientes, y luego cada Río principal seguido de sus Afluentes; los cinco Tramos de costa, y luego los Cabos y Golfos de cada uno; las once Cordilleras, y luego las Sierras, el Pico y la Altura de cada una. En Político ninguna Provincia entra hasta que se han visto todas las Comunidades, y entran por comunidad.
+- **En Político la Tanda es del mapa que más tiene por repasar**, contando Flojos y Sabidos de otros días; a igualdad, de las Comunidades. Con las Comunidades siempre delante, el segundo día empezaba por una mediana de cuatro Tandas de Comunidades, alguna de uno o dos Elementos, antes de repasar una sola Provincia. La tabla de arriba no cambia con esta regla, porque mide un solo día y en él las Provincias no tienen nada que repasar hasta que empiezan.
 - Quedan fuera hasta ver a alumnos usar esto: el Reto de Simulacro, reinsertar los pares que se confunden, el mapa mudo imprimible, quitar Elementos de la Familia con «Esto no me entra», Localizar dentro de las Tandas, la fecha de examen y medir el uso.
 - `CONTEXT.md` gana **Dominio**, **Flojo**, **Sabido** y **Juicio estricto**, y «simulacro» sale de las palabras a evitar de **Todo**; Familia elegida, Tanda, Simulacro y Práctica libre entran con lo que las construye.

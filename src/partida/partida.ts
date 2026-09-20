@@ -89,7 +89,7 @@ export interface Partida {
 
 type CamposDerivados = 'fin' | 'mostradoEn' | 'preguntado' | 'pendientes' | 'terminada' | 'desbloqueados'
 
-function barajar<T>(lista: T[], azar: Azar): T[] {
+export function barajar<T>(lista: T[], azar: Azar): T[] {
   const copia = [...lista]
   for (let i = copia.length - 1; i > 0; i--) {
     const j = Math.floor(azar() * (i + 1))
