@@ -137,11 +137,11 @@ Dirección en la que se ilumina un Elemento y el alumno escribe su nombre.
 _Evitar_: ubicación → nombre, identificar
 
 **Señales**:
-El código con el que el mapa dice en qué estado está cada Elemento, el mismo en todos los Alcances. El color dice qué es: azul lo que está en juego, verde lo Acertado, rojo el Fallo, amarillo la ayuda. El borde dice si sigue en juego: punteado abierto, continuo cerrado. Un Elemento lleva como mucho una Señal, la de mayor prioridad, y lo que pasa ahora gana al historial. En una línea el borde es la funda que la envuelve.
+El código con el que el mapa dice en qué estado está cada Elemento, el mismo en todos los Alcances. El color dice qué es: azul lo que está en juego, verde lo Acertado, rojo el Fallo, amarillo la ayuda. El borde dice si sigue en juego: punteado abierto, continuo cerrado. Un Elemento lleva como mucho una Señal, la de mayor prioridad, y lo que pasa ahora gana al historial. En una línea el borde es la funda que la envuelve. El halo de la Diana no es una Señal: no dice en qué estado está el Elemento, señala al que ya lleva la suya.
 _Evitar_: leyenda, paleta, estilos, colores
 
 **Diana**:
-El Elemento que se pregunta ahora, marcado sobre el mapa. En Nombrar es el que el alumno tiene que nombrar; en Pertenencia, la Cordillera que se muestra para preguntar por su Pico. Solo se toca cuando la Dirección es Localizar.
+El Elemento que se pregunta ahora, marcado sobre el mapa. En Nombrar es el que el alumno tiene que nombrar; en Pertenencia, la Cordillera que se muestra para preguntar por su Pico. Solo se toca cuando la Dirección es Localizar. Cuando es un punto o una línea late un halo encima, porque un Cabo mide ocho píxeles sobre novecientos sesenta de mapa y su color es el de sus vecinos; una mancha se ve sola y no lo lleva. El halo se queda quieto si el alumno ha pedido menos animación al sistema.
 _Evitar_: objetivo, foco, iluminado, destacado
 
 **Frontera**:

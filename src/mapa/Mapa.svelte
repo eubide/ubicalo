@@ -362,6 +362,19 @@
     return trazado.centroid(mayor)
   }
 
+  // La Diana de un Cabo mide ocho píxeles sobre novecientos sesenta de mapa, y su azul es el de sus
+  // vecinos: el color solo no la encuentra. Una mancha sí se ve sola, así que no lleva halo.
+  const RADIO_DEL_HALO = 14
+
+  const halos = $derived.by(() =>
+    diana.flatMap((id) => {
+      const contorno = contornos.find((candidato) => String(candidato.id) === id)
+      if (!contorno || (contorno.geometry.type !== 'Point' && contorno.geometry.type !== 'LineString')) return []
+      const [x, y] = centroDelRotulo(contorno)
+      return [{ id, x, y }]
+    }),
+  )
+
   const rotulados = $derived(rotulos.map((rotulo) => rotulo.id))
 
   // Varios rótulos sobre el mismo elemento (Pertenencia) se apilan hacia abajo.
@@ -473,6 +486,11 @@
         <!-- Encima de todos los elementos para que los vecinos no tapen el contorno grueso. -->
         <path class="correcto" d={trazado(contornoCorrecto)} />
       {/if}
+      {#each halos as halo (halo.id)}
+        <g class="halo" transform="translate({halo.x} {halo.y}) scale({1 / vista.escala})">
+          <circle r={RADIO_DEL_HALO} />
+        </g>
+      {/each}
       {#each manchas.filter((contorno) => senal(String(contorno.id)) === 'fallo') as contorno (contorno.id)}
         {@const [x, y] = centroDelRotulo(contorno)}
         {@const brazo = radioAspa / vista.escala}
@@ -728,6 +746,38 @@
   /* El borde dice si el Elemento sigue en juego; el color solo dice qué es. */
   .elementos path.abierta {
     stroke-dasharray: 4 2.5;
+  }
+
+  /* El halo no es una Señal más: es el dedo que señala a la que ya la lleva. */
+  .halo {
+    pointer-events: none;
+  }
+
+  .halo circle {
+    fill: none;
+    stroke: var(--senal-diana-borde);
+    stroke-width: 2;
+    vector-effect: non-scaling-stroke;
+    animation: latido 1.4s ease-out infinite;
+  }
+
+  @keyframes latido {
+    from {
+      transform: scale(0.55);
+      opacity: 0.9;
+    }
+    to {
+      transform: scale(1.55);
+      opacity: 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .halo circle {
+      animation: none;
+      transform: scale(1.25);
+      opacity: 0.85;
+    }
   }
 
   /* En Grandes unidades el color final es la rampa, un cambio demasiado suave para leerse como acierto. */
