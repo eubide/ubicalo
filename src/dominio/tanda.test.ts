@@ -1,10 +1,22 @@
 import { describe, expect, it } from 'vitest'
 import { catalogo, type Alcance, type Elemento } from '../catalogo/catalogo'
 import { almacenEnMemoria } from '../competicion/competicion'
-import type { Azar } from '../partida/partida'
+import {
+  abandonar,
+  cerrarCorreccion,
+  cerrarRepaso,
+  elegirOpcion,
+  iniciarTanda,
+  marcarEnRepaso,
+  pedirPista,
+  responderConTexto,
+  type Azar,
+  type Partida,
+} from '../partida/partida'
+import { pruebaDe } from '../prueba/prueba'
 import type { Familia } from '../prueba/prueba'
 import { crearDominio, type Resultado } from './dominio'
-import { componerTanda, type CatalogoDeExamen, type Tanda } from './tanda'
+import { anotacionesDe, cierreDe, componerTanda, recuentoDe, type CatalogoDeExamen, type Tanda } from './tanda'
 
 const AYER = '2026-09-19'
 const HOY = '2026-09-20'
@@ -156,6 +168,42 @@ describe('Tamaño y prioridad de la Tanda', () => {
     quien.elDia('2026-09-21')
     expect(quien.tanda(rios)?.elementos).toHaveLength(12)
     expect(quien.tanda(rios)?.nuevos).toEqual([])
+  })
+})
+
+describe('Lo que promete el botón de la Tanda', () => {
+  it('una Tanda llena son unos 5 minutos, y dice cuántos Flojos, cuántos Sabidos y cuántos nuevos trae', () => {
+    const quien = alumno()
+    quien.elDia(AYER)
+    quien.anota('todo-rios', idsDeRios.slice(0, 4), ACIERTO)
+    quien.anota('todo-rios', idsDeRios.slice(4, 8), FALLO)
+    quien.elDia(HOY)
+
+    const tanda = quien.tanda(rios)!
+
+    expect(recuentoDe(tanda, quien.dominio.entradas('todo-rios'))).toEqual({ minutos: 5, flojos: 4, nuevos: 4, sabidos: 4 })
+  })
+
+  it('la primera Tanda, de 6 nuevos, promete la mitad, y una de dos Elementos un minuto', () => {
+    const quien = alumno()
+    expect(recuentoDe(quien.tanda(rios)!, {})).toEqual({ minutos: 3, flojos: 0, nuevos: 6, sabidos: 0 })
+
+    quien.anota('todo-rios', idsDeRios, ACIERTO)
+    quien.anota('todo-rios', idsDeRios.slice(0, 2), FALLO)
+    expect(recuentoDe(quien.tanda(rios)!, quien.dominio.entradas('todo-rios')).minutos).toBe(1)
+  })
+})
+
+describe('Lo que dice el fin de la Tanda', () => {
+  it('cuenta, de los Elementos de la Tanda, los que quedan Sabidos y los que quedan Flojos', () => {
+    const quien = alumno()
+    const tanda = quien.tanda(rios)!
+    const ids = tanda.elementos.map((elemento) => elemento.id)
+    quien.anota('todo-rios', ids, { caso: 'presentacion' })
+    quien.anota('todo-rios', ids.slice(0, 4), ACIERTO)
+    quien.anota('todo-rios', [idsDeRios[30]], ACIERTO)
+
+    expect(cierreDe(tanda, quien.dominio.entradas('todo-rios'))).toEqual({ aLaPrimera: 4, vuelven: 2 })
   })
 })
 
@@ -336,4 +384,112 @@ describe('Alumnos sintéticos', () => {
       }
     },
   )
+})
+
+describe('Lo que una Tanda anota en el Dominio', () => {
+  const [turia, jucar, segura, ebro] = ['turia', 'jucar', 'segura', 'ebro'].map(
+    (id) => rios[0].elementos.find((elemento) => elemento.id === id)!,
+  )
+  const reloj = () => 0
+
+  function tandaDe(elementos: Elemento[], nuevos: Elemento[] = []): Partida {
+    return iniciarTanda(pruebaDe('todo-rios', 'nombrar'), elementos, nuevos, azarCon(1), reloj)
+  }
+
+  function preguntando(elemento: Elemento): Partida {
+    return tandaDe([elemento])
+  }
+
+  it('un acierto sin ayuda anota acierto', () => {
+    const antes = preguntando(turia)
+
+    expect(anotacionesDe(antes, responderConTexto(antes, 'Turia'))).toEqual([{ id: 'turia', resultado: { caso: 'acierto' } }])
+  })
+
+  it('una tilde que falta anota el Fallo con su tipo', () => {
+    const antes = preguntando(jucar)
+
+    expect(anotacionesDe(antes, responderConTexto(antes, 'Jucar'))).toEqual([
+      { id: 'jucar', resultado: { caso: 'fallo', tipo: 'tilde', confundidoCon: null } },
+    ])
+  })
+
+  it('el nombre de otro Elemento anota el Fallo con el id que respondió el alumno', () => {
+    const antes = tandaDe([turia, jucar])
+    const preguntado = antes.preguntado!
+    const otro = preguntado.id === 'turia' ? jucar : turia
+
+    expect(anotacionesDe(antes, responderConTexto(antes, otro.nombre))).toEqual([
+      { id: preguntado.id, resultado: { caso: 'fallo', tipo: 'otro', confundidoCon: otro.id } },
+    ])
+  })
+
+  it('pedir la Pista y elegir una opción que no es anota el Fallo con la opción elegida', () => {
+    const conPista = pedirPista(tandaDe([turia, jucar, segura, ebro]))
+    const distractor = conPista.pista!.opciones.find((opcion) => opcion.id !== conPista.preguntado!.id)!
+
+    expect(anotacionesDe(conPista, elegirOpcion(conPista, distractor.id))).toEqual([
+      { id: conPista.preguntado!.id, resultado: { caso: 'fallo', tipo: 'otro', confundidoCon: distractor.id } },
+    ])
+  })
+
+  it('tras un texto equivocado, equivocarse también en la Pista no anota otro Fallo ni pisa con quién se confundió', () => {
+    const conPista = responderConTexto(tandaDe([turia, jucar, segura, ebro]), 'Zeta')
+    const distractor = conPista.pista!.opciones.find((opcion) => opcion.id !== conPista.preguntado!.id)!
+
+    expect(anotacionesDe(conPista, elegirOpcion(conPista, distractor.id))).toEqual([])
+  })
+
+  it('resolver con Pista sin haber fallado anota acierto con Pista', () => {
+    const conPista = pedirPista(preguntando(turia))
+
+    expect(anotacionesDe(conPista, elegirOpcion(conPista, 'turia'))).toEqual([
+      { id: 'turia', resultado: { caso: 'acierto-con-pista' } },
+    ])
+  })
+
+  it('acertar en la Pista tras un texto equivocado no anota nada más: el Fallo ya lo dejó en Flojo', () => {
+    const conPista = responderConTexto(preguntando(turia), 'Zeta')
+
+    expect(anotacionesDe(conPista, elegirOpcion(conPista, 'turia'))).toEqual([])
+  })
+
+  it('acertar la reinserción no anota nada: no saca el Elemento de Flojo', () => {
+    const reinsertada = cerrarCorreccion(responderConTexto(preguntando(jucar), 'Jucar'))
+
+    expect(reinsertada.preguntado?.id).toBe('jucar')
+    expect(anotacionesDe(reinsertada, responderConTexto(reinsertada, 'Júcar'))).toEqual([])
+  })
+
+  it('descartar un nuevo de la presentación lo anota como presentado, y el último cierra la presentación', () => {
+    const antes = tandaDe([turia, jucar], [turia, jucar])
+    const unoDescartado = marcarEnRepaso(antes, 'turia')
+
+    expect(anotacionesDe(antes, unoDescartado)).toEqual([{ id: 'turia', resultado: { caso: 'presentacion' } }])
+    expect(anotacionesDe(unoDescartado, marcarEnRepaso(unoDescartado, 'jucar'))).toEqual([
+      { id: 'jucar', resultado: { caso: 'presentacion' } },
+    ])
+  })
+
+  it('cerrar la presentación de una vez anota como presentados todos los que quedaban', () => {
+    const antes = marcarEnRepaso(tandaDe([turia, jucar, segura], [turia, jucar, segura]), 'turia')
+
+    expect(anotacionesDe(antes, cerrarRepaso(antes))).toEqual([
+      { id: 'jucar', resultado: { caso: 'presentacion' } },
+      { id: 'segura', resultado: { caso: 'presentacion' } },
+    ])
+  })
+
+  it('abandonar durante la presentación no da por presentado lo que no se descartó', () => {
+    const antes = marcarEnRepaso(tandaDe([turia, jucar, segura], [turia, jucar, segura]), 'turia')
+
+    expect(anotacionesDe(antes, abandonar(antes))).toEqual([])
+  })
+
+  it('lo que no cambia nada no anota nada', () => {
+    const antes = preguntando(turia)
+
+    expect(anotacionesDe(antes, antes)).toEqual([])
+    expect(anotacionesDe(antes, pedirPista(antes))).toEqual([])
+  })
 })

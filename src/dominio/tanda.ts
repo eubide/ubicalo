@@ -1,6 +1,6 @@
 import type { Alcance, Elemento } from '../catalogo/catalogo'
-import { barajar, type Azar } from '../partida/partida'
-import type { Entrada } from './dominio'
+import { barajar, type Azar, type Partida } from '../partida/partida'
+import type { Entrada, Resultado } from './dominio'
 
 export interface CatalogoDeExamen {
   alcance: Alcance
@@ -87,4 +87,66 @@ export function componerTanda(
     elementos: barajar([...repaso, ...nuevos, ...sabidosDeHoy.slice(0, huecosDeRelleno)], azar),
     nuevos: nuevos.map((elemento) => elemento.id),
   }
+}
+
+export interface RecuentoDeTanda {
+  minutos: number
+  flojos: number
+  nuevos: number
+  sabidos: number
+}
+
+const MINUTOS_DE_UNA_TANDA_LLENA = 5
+
+export function recuentoDe(tanda: Tanda, entradas: Record<string, Entrada>): RecuentoDeTanda {
+  const flojos = tanda.elementos.filter((elemento) => entradas[elemento.id]?.estado === 'flojo').length
+  return {
+    minutos: Math.max(1, Math.round((tanda.elementos.length * MINUTOS_DE_UNA_TANDA_LLENA) / ELEMENTOS_POR_TANDA)),
+    flojos,
+    nuevos: tanda.nuevos.length,
+    sabidos: tanda.elementos.length - flojos - tanda.nuevos.length,
+  }
+}
+
+export function cierreDe(tanda: Tanda, entradas: Record<string, Entrada>): { aLaPrimera: number; vuelven: number } {
+  const estados = tanda.elementos.map((elemento) => entradas[elemento.id]?.estado)
+  return {
+    aLaPrimera: estados.filter((estado) => estado === 'sabido').length,
+    vuelven: estados.filter((estado) => estado === 'flojo').length,
+  }
+}
+
+export interface Anotacion {
+  id: string
+  resultado: Resultado
+}
+
+function presentados(antes: Partida, despues: Partida): string[] {
+  if (!antes.repaso?.presentacion || despues.abandonada) return []
+  const descartados = despues.repaso?.marcados ?? antes.repaso.elementos.map((elemento) => elemento.id)
+  return descartados.filter((id) => !antes.repaso!.marcados.includes(id))
+}
+
+function resultadoDe(antes: Partida, despues: Partida, preguntado: Elemento): Resultado | null {
+  if (despues.fallos > antes.fallos) {
+    // El texto equivocado ya se anotó con quién se confundió: equivocarse además en la Pista no lo pisa.
+    if (antes.pista?.fallo) return null
+    const deTexto = despues.correccion?.fallo ?? (antes.pista ? undefined : despues.pista?.fallo)
+    return { caso: 'fallo', ...(deTexto ?? { tipo: 'otro', confundidoCon: despues.correccion?.elegido.id ?? null }) }
+  }
+  const respuesta = despues.ultimaRespuesta
+  if (!respuesta || despues.preguntasHechas === antes.preguntasHechas) return null
+  // Acertar lo que vuelve tras un Fallo no lo saca de Flojo, y resolver con Pista lo ya fallado no añade nada.
+  if (respuesta.acierto) return antes.reinsertados.includes(preguntado.id) ? null : { caso: 'acierto' }
+  const yaFallado = antes.fallados.some((elemento) => elemento.id === preguntado.id)
+  return respuesta.conPista && !yaFallado ? { caso: 'acierto-con-pista' } : null
+}
+
+// Lo que un paso de la Tanda deja escrito en el Dominio: se anota al darse cada respuesta, para que una
+// Tanda cortada no pierda nada.
+export function anotacionesDe(antes: Partida, despues: Partida): Anotacion[] {
+  const presentaciones = presentados(antes, despues).map((id): Anotacion => ({ id, resultado: { caso: 'presentacion' } }))
+  const preguntado = antes.preguntado
+  const resultado = preguntado && !antes.repaso ? resultadoDe(antes, despues, preguntado) : null
+  return resultado && preguntado ? [...presentaciones, { id: preguntado.id, resultado }] : presentaciones
 }

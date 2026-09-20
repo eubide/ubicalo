@@ -119,6 +119,10 @@ function trasAnotar(anterior: Entrada | undefined, resultado: Resultado, visto: 
   return { estado: resultado.caso === 'acierto' ? 'sabido' : 'flojo', visto, fallos, tipoDeFallo, confundidoCon }
 }
 
+export function alcancesDeExamen(familia: Familia): Alcance[] {
+  return ALCANCES_DE_EXAMEN[familia]
+}
+
 export function familiaDeEnlace(enlace: string): Familia | null {
   if (!URL.canParse(enlace)) return null
   const familia = new URL(enlace).searchParams.get(PARAMETRO_DE_FAMILIA)
