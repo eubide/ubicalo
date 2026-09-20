@@ -145,7 +145,7 @@ El Elemento que se pregunta ahora, marcado sobre el mapa. En Nombrar es el que e
 _Evitar_: objetivo, foco, iluminado, destacado
 
 **Frontera**:
-Los Elementos Desbloqueados que el alumno todavía no ha acertado: lo que puede tocar en este turno. Crece con cada Acierto y solo se muestra donde el alumno elige, es decir en Todo.
+Los Elementos Desbloqueados que el alumno todavía no ha acertado: lo que puede tocar en este turno. Crece con cada Acierto y solo se muestra donde el alumno elige: en Todo y, hasta que entrega, en el Simulacro, donde es el mapa entero.
 _Evitar_: candidatos, disponibles, siguiente nivel, por responder
 
 **Tentativa**:
@@ -256,6 +256,14 @@ _Evitar_: dominado, aprendido, acertado
 Unos cinco minutos de Nombrar sobre la Familia elegida, con hasta 12 Elementos de un solo mapa: primero los Flojos, después los Sabidos que no se han visto hoy y entre 3 y 6 nuevos mientras quede algo sin ver. Los nuevos llegan con el nivel de arriba entero y luego por ramas completas, y dentro de la Tanda se barajan. Solo se rellena con Sabidos de hoy cuando trae nuevos, así que al final puede ser corta. Se encadenan mientras quede algo Flojo o sin ver. Es una Partida con Juicio estricto que no da Vueltas: un Fallo vuelve una sola vez, tres preguntas después, y acertarlo ahí no lo saca de Flojo; nunca pasa de 18 preguntas, así que puede terminar con Flojos. No tiene Puntuación, reloj, Marca ni Reto, y cada respuesta se anota en el Dominio al darse.
 _Evitar_: ronda, sesión, lote, repaso
 
+**Simulacro**:
+Lo único de la aplicación que se parece al examen: la Familia elegida entera sobre el mapa mudo, con todos sus Elementos visibles y sin nombre desde el principio. El alumno elige el orden, toca, escribe, y el Rótulo queda como lo escribió; puede cambiarlo hasta entregar. No hay Pista, Corrección ni Repaso, y nada se juzga hasta la entrega, que llega cuando el alumno quiere o cuando se acaban los 20 minutos. Se corrige con Juicio estricto y da una nota lineal sobre 10, porque un fallo no resta; un Elemento en blanco no es un Fallo. La primera vez se llama «¿Qué te sabes ya?» y no lleva cuenta atrás. Alimenta el Dominio y sobrevive a un corte.
+_Evitar_: examen, prueba final, test
+
+**Nota**:
+El resultado de un Simulacro: aciertos entre total, sobre 10 y con un decimal, siempre junto a «sobre los de Ubícalo», porque no hay lista oficial. La de la primera vez, sin reloj, se guarda pero no se enseña como nota: se cuenta en positivo. No es la Puntuación de una Partida.
+_Evitar_: puntuación, calificación, score
+
 **Presentación**:
 Lo primero de una Tanda que trae nuevos: se enseñan rotulados sobre el mapa, con el mecanismo del Repaso, y no se pregunta nada hasta que el alumno los descarta. Presentar un Elemento lo deja en Flojo.
 _Evitar_: tutorial, introducción, lección
@@ -277,6 +285,7 @@ _Evitar_: tutorial, introducción, lección
 - Cada **Elemento** está en el **Dominio** sin ver, **Flojo** o **Sabido**
 - Un **Fallo** juzgado con **Juicio estricto** lleva su tipo: tilde, errata u otro
 - Una **Tanda** sale del **Dominio**: repasa lo **Flojo** y lo **Sabido** otro día, y trae **Elementos** nuevos
+- Un **Simulacro** mide la **Familia elegida** entera y deja en el **Dominio** lo acertado como **Sabido** y lo demás como **Flojo**; la **Tanda** siguiente trabaja lo que destapa
 
 ## Ambigüedades resueltas
 

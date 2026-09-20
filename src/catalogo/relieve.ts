@@ -322,6 +322,11 @@ export function esIdDeAltura(id: string): boolean {
 }
 
 // El pico al que le falta la cifra: es su forma la que se remarca y la que se rotula en el Repaso.
+// Una Altura no tiene forma propia en el mapa: se rotula, se señala y se escribe sobre su Pico.
+export function formaDe(id: string): string {
+  return esIdDeAltura(id) ? picoDeAltura(id) : id
+}
+
 export function picoDeAltura(id: string): string {
   return id.slice(PREFIJO_DE_ALTURA.length)
 }

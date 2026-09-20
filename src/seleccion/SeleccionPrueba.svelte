@@ -5,6 +5,7 @@
   import type { Marca, Reto } from '../competicion/competicion'
   import type { ResumenDeFamilia } from '../dominio/dominio'
   import type { RecuentoDeTanda } from '../dominio/tanda'
+  import { etiquetaDeSimulacro, type SimulacroEnPortada } from '../simulacro/simulacro'
   import { formatearTiempo } from '../pantallas/tiempo'
   import {
     alcancesDe,
@@ -31,6 +32,8 @@
     resumenDe: (familia: Familia) => ResumenDeFamilia
     tanda: RecuentoDeTanda | null
     alEmpezarTanda: () => void
+    simulacroDe: (familia: Familia) => SimulacroEnPortada | null
+    alEmpezarSimulacro: () => void
     soloMira: boolean
     alElegirFamilia: (familia: Familia) => void
     alMirar: (soloMira: boolean) => void
@@ -47,6 +50,8 @@
     resumenDe,
     tanda,
     alEmpezarTanda,
+    simulacroDe,
+    alEmpezarSimulacro,
     soloMira,
     alElegirFamilia,
     alMirar,
@@ -141,6 +146,7 @@
     {/each}
   {:else if vista === 'elegida' && familiaElegida}
     {@const resumen = resumenDe(familiaElegida)}
+    {@const simulacro = simulacroDe(familiaElegida)}
     <section class="elegida {familiaElegida}">
       <p class="examen">
         <span class="deQue">Te examinas de</span>
@@ -153,12 +159,39 @@
         <span class="flojo" style:flex-grow={resumen.flojos}></span>
         <span class="sinVer" style:flex-grow={resumen.sinVer}></span>
       </div>
+      {#if simulacro?.ultimaNota}<p class="ultimaNota">Último simulacro: {simulacro.ultimaNota}</p>{/if}
     </section>
-    {#if tanda}
-      <button type="button" class="tanda {familiaElegida}" onclick={alEmpezarTanda}>
-        <strong>{resumen.sinVer === resumen.total ? 'Empezar' : 'Siguiente tanda'}</strong>
-        <span>{tanda.minutos === 1 ? 'un minuto' : `unos ${tanda.minutos} min`} · {deQueEstaHecha(tanda)}</span>
-      </button>
+    {#snippet botonDeTanda()}
+      {#if tanda}
+        <button type="button" class="accion {familiaElegida}" class:secundaria={simulacro?.esLoPrincipal} onclick={alEmpezarTanda}>
+          <strong>{resumen.sinVer === resumen.total ? 'Empezar' : 'Siguiente tanda'}</strong>
+          <span>{tanda.minutos === 1 ? 'un minuto' : `unos ${tanda.minutos} min`} · {deQueEstaHecha(tanda)}</span>
+        </button>
+      {/if}
+    {/snippet}
+    {#snippet botonDeSimulacro()}
+      {#if simulacro}
+        <button
+          type="button"
+          class="accion {familiaElegida}"
+          class:secundaria={!simulacro.esLoPrincipal && tanda !== null}
+          onclick={alEmpezarSimulacro}
+        >
+          <strong>{etiquetaDeSimulacro(simulacro.primeraVez)}</strong>
+          <span>{simulacro.primeraVez ? 'el mapa entero, sin reloj' : 'el mapa entero, como en tu examen'}</span>
+        </button>
+      {/if}
+    {/snippet}
+    {#if tanda || simulacro}
+      <div class="acciones">
+        {#if simulacro?.esLoPrincipal}
+          {@render botonDeSimulacro()}
+          {@render botonDeTanda()}
+        {:else}
+          {@render botonDeTanda()}
+          {@render botonDeSimulacro()}
+        {/if}
+      </div>
     {/if}
     <details class="practica" bind:open={practicaAbierta}>
       <summary>Práctica libre</summary>
@@ -287,13 +320,27 @@
     gap: 0.625rem;
   }
 
-  .tanda {
-    width: 100%;
+  .acciones {
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
     margin-bottom: 1rem;
   }
 
+  .accion.secundaria {
+    background: #fff;
+    color: var(--familia);
+  }
+
+  .ultimaNota {
+    margin: 0.5rem 0 0;
+    font-size: 0.875rem;
+    color: #4b5563;
+    font-variant-numeric: tabular-nums;
+  }
+
   .examinarse,
-  .tanda {
+  .accion {
     padding: 0.75rem 1rem;
     border-color: var(--familia);
     background: var(--familia);
@@ -302,13 +349,13 @@
 
   .examinarse strong,
   .examinarse span,
-  .tanda strong,
-  .tanda span {
+  .accion strong,
+  .accion span {
     display: block;
   }
 
   .examinarse strong,
-  .tanda strong {
+  .accion strong {
     font-size: 1.1875rem;
   }
 
