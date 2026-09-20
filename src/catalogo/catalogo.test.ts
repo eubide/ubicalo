@@ -954,7 +954,7 @@ describe('Las manchas de mar de los Golfos', () => {
         const comun = intersect(featureCollection([una as never, otra as never]))
         const km2 = comun ? areaDe(comun) / 1e6 : 0
 
-        expect(`${una.id} con ${otra.id}: ${km2 < 1 ? 'sin solape' : km2.toFixed(1) + ' km²'}`).toBe(
+        expect(`${una.id} con ${otra.id}: ${km2 < 0.01 ? 'sin solape' : km2.toFixed(2) + ' km²'}`).toBe(
           `${una.id} con ${otra.id}: sin solape`,
         )
       }

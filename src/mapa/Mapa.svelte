@@ -138,7 +138,7 @@
   const CLASES_DE_RIO: ClaseDelMapa[] = ['rio-principal', 'rio-propio', 'afluente']
 
   // Una mancha del relieve toma su color del Papel; las de agua y las de costa, el de su Clase.
-  const MANCHAS_CON_COLOR_PROPIO: ClaseDelMapa[] = ['vertiente', 'tramo-de-costa', 'golfo']
+  const MANCHAS_CON_COLOR_PROPIO: ClaseDelMapa[] = ['vertiente', 'tramo-de-costa', 'golfo', 'estrecho']
 
   function claseDibujada(contorno: Feature<Geometry>): ClaseDelMapa | '' {
     const clase = claseDe(contorno)
@@ -370,9 +370,8 @@
     if (cauce === null || (rotulados.includes(id) && !rotulados.includes(cauce))) pulsarElemento(id)
   }
 
-  // Los pulsadores se pisan entre ellos y con los arcos: el Cabo de la Nao y el de San Antonio están
-  // a cuatro píxeles y el Estrecho entero cabe dentro del de la Punta de Tarifa. Cuál de los círculos
-  // recibe el clic depende del orden de pintado, así que no decide él.
+  // Los pulsadores se pisan entre ellos: el Cabo de la Nao y el de San Antonio están a cuatro
+  // píxeles. Cuál de los círculos recibe el clic depende del orden de pintado, así que no decide él.
   function pulsarTocable(evento: MouseEvent, id: string) {
     evento.stopPropagation()
     pulsarElemento(tocableBajoElPuntero(evento) ?? id)
@@ -600,11 +599,8 @@
       {#if hayClase('cabo')}
         <li><svg viewBox="0 0 20 14" aria-hidden="true"><circle class="cabo" cx="10" cy="7" r="4" /></svg> Cabo</li>
       {/if}
-      {#if hayClase('golfo')}
-        <li><svg viewBox="0 0 20 14" aria-hidden="true"><path class="golfo" d="M1,3C5,3 6,10 10,10S16,4 19,4V13H1Z" /></svg> Golfo</li>
-      {/if}
-      {#if hayClase('estrecho')}
-        <li><svg viewBox="0 0 20 14" aria-hidden="true"><path class="cauce" d="M1,11C6,11 5,4 10,4S15,10 19,3" /></svg> Estrecho</li>
+      {#if hayClase('golfo') || hayClase('estrecho')}
+        <li><svg viewBox="0 0 20 14" aria-hidden="true"><path class="golfo" d="M1,3C5,3 6,10 10,10S16,4 19,4V13H1Z" /></svg> Golfo o estrecho</li>
       {/if}
     </ul>
   {/if}
@@ -710,6 +706,7 @@
   /* El Golfo se dibuja sobre el mar y no sobre tierra, así que tiñe más que la Vertiente para
      separarse del fondo en vez de confundirse con él. */
   .elementos path.golfo,
+  .elementos path.estrecho,
   .leyenda .golfo {
     fill: #b9d7ea;
     stroke: #3c7fb1;

@@ -268,8 +268,11 @@ const ORILLA_AFRICANA = [
 function anilloDeMarruecos() {
   const mundo = JSON.parse(readFileSync(require.resolve('world-atlas/countries-10m.json'), 'utf8'))
   const marruecos = feature(mundo, mundo.objects.countries).features.find((pais) => pais.id === '504')
-  const [exterior] = marruecos.geometry.coordinates
-  return exterior.slice(0, -1)
+  const anillos =
+    marruecos.geometry.type === 'Polygon'
+      ? [marruecos.geometry.coordinates[0]]
+      : marruecos.geometry.coordinates.map(([exterior]) => exterior)
+  return anillos.reduce((uno, otro) => (otro.length > uno.length ? otro : uno)).slice(0, -1)
 }
 
 function manchaDelEstrecho(arco) {
@@ -282,7 +285,8 @@ function manchaDelEstrecho(arco) {
   const cerrado = { type: 'Polygon', coordinates: [[...anillo, anillo[0]]] }
   let agua = enFeature(cerrado)
   for (const suelo of tierra) {
-    agua = quitar(agua, suelo) ?? agua
+    agua = quitar(agua, suelo)
+    if (!agua) throw new Error(`${arco.id} se queda sin agua al recortar contra la tierra`)
   }
   console.log(`${arco.properties.nombre}: entre ${cortes[0].nombre} y ${cortes[1].nombre}`)
   return { ...agua, id: arco.id, properties: arco.properties }
@@ -358,7 +362,11 @@ function manchaDe(arco) {
 // son paralelas y entre los dos cortes queda una cuña. El orden del listado decide de quién es.
 function sinSolapes(manchas) {
   return manchas.reduce((limpias, mancha) => {
-    const resto = limpias.reduce((queda, anterior) => quitar(queda, anterior) ?? queda, mancha)
+    const resto = limpias.reduce((queda, anterior) => {
+      const recortada = quitar(queda, anterior)
+      if (!recortada) throw new Error(`${mancha.id} cae entero dentro de ${anterior.id}`)
+      return recortada
+    }, mancha)
     return [...limpias, { ...resto, id: mancha.id, properties: mancha.properties }]
   }, [])
 }
@@ -373,7 +381,7 @@ function sinMigas(mancha) {
 
 // Dos manchas que comparten límite se tocan por el borde, y eso es lo correcto: el Golfo de Cádiz y
 // el Estrecho se dan la mano en la Punta de Tarifa. Lo que no puede haber es mar contado dos veces.
-const SOLAPE = 1
+const SOLAPE = 0.01
 
 function comprobarManchas(manchas) {
   for (const [i, una] of manchas.entries()) {
