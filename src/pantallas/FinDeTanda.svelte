@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { ResumenDeFamilia } from '../dominio/dominio'
   import { etiquetaDeFamilia, type Familia } from '../prueba/prueba'
+  import { etiquetaDeSimulacro, type SimulacroEnPortada } from '../simulacro/simulacro'
 
   interface Props {
     aLaPrimera: number
@@ -9,11 +10,15 @@
     familia: Familia
     resumen: ResumenDeFamilia
     haySiguiente: boolean
+    simulacro: SimulacroEnPortada | null
     alSeguir: () => void
+    alEmpezarSimulacro: () => void
     alVolver: () => void
   }
 
-  let { aLaPrimera, total, vuelven, familia, resumen, haySiguiente, alSeguir, alVolver }: Props = $props()
+  let { aLaPrimera, total, vuelven, familia, resumen, haySiguiente, simulacro, alSeguir, alEmpezarSimulacro, alVolver }: Props = $props()
+
+  const simulacroPrimero = $derived(simulacro !== null && (simulacro.esLoPrincipal || !haySiguiente))
 
   function cuantos(cantidad: number, uno: string, varios: string): string {
     return `${cantidad} ${cantidad === 1 ? uno : varios}`
@@ -30,10 +35,15 @@
     {resumen.sinVer === 1 ? 'te queda' : 'te quedan'} {resumen.sinVer} por ver.
   </p>
   <div class="acciones">
-    {#if haySiguiente}
-      <button type="button" class="principal" onclick={alSeguir}>Siguiente tanda</button>
+    {#if simulacro && simulacroPrimero}
+      <button type="button" class="principal" onclick={alEmpezarSimulacro}>
+        {etiquetaDeSimulacro(simulacro.primeraVez)}
+      </button>
     {/if}
-    <button type="button" class:principal={!haySiguiente} onclick={alVolver}>Volver</button>
+    {#if haySiguiente}
+      <button type="button" class:principal={!simulacroPrimero} onclick={alSeguir}>Siguiente tanda</button>
+    {/if}
+    <button type="button" class:principal={!haySiguiente && !simulacro} onclick={alVolver}>Volver</button>
   </div>
 </section>
 

@@ -1,13 +1,14 @@
 <script lang="ts">
   import type { Feature, FeatureCollection, Geometry } from 'geojson'
-  import { catalogo, catalogoDelMapa, contextoDe, contornos, etiquetaDeClase, type ContextoGeografico, type Elemento } from './catalogo/catalogo'
-  import { esIdDeAltura, idDeAltura, nombreDePapel, PAPELES, picoDeAltura, textoDeAltura } from './catalogo/relieve'
+  import { catalogo, catalogoDelMapa, contextoDe, contornos, etiquetaDeClase, type Alcance, type ContextoGeografico, type Elemento } from './catalogo/catalogo'
+  import { esIdDeAltura, formaDe, idDeAltura, nombreDePapel, PAPELES, picoDeAltura, textoDeAltura } from './catalogo/relieve'
   import { esDeHidrografia } from './catalogo/hidrografia'
   import contextoGeografico from './datos/contexto-geografico.json'
   import Mapa from './mapa/Mapa.svelte'
   import FinDePartida from './pantallas/FinDePartida.svelte'
   import FinDeTanda from './pantallas/FinDeTanda.svelte'
   import PuntuacionYTiempo from './pantallas/PuntuacionYTiempo.svelte'
+  import { llevaTilde } from './pantallas/tilde'
   import {
     almacenEnMemoria,
     crearCompeticion,
@@ -42,6 +43,19 @@
   } from './partida/partida'
   import { enCascada, pruebaDe, seEligeLaPregunta, type Familia, type Prueba } from './prueba/prueba'
   import SeleccionPrueba from './seleccion/SeleccionPrueba.svelte'
+  import PantallaSimulacro from './simulacro/PantallaSimulacro.svelte'
+  import {
+    anotacionesDelSimulacro,
+    crearSimulacros,
+    DURACION_DEL_SIMULACRO,
+    esLoPrincipal,
+    iniciarSimulacro,
+    notaDe,
+    sobreDiez,
+    type ElementoCorregido,
+    type Simulacro,
+    type SimulacroEnPortada,
+  } from './simulacro/simulacro'
 
   const contexto = contextoGeografico as FeatureCollection
 
@@ -66,6 +80,56 @@
   let soloMira = $state(false)
   let tandaPropuesta = $state.raw(proponerTanda())
   let tandaEnJuego = $state.raw<Tanda | null>(null)
+  const simulacros = crearSimulacros(almacen)
+  let simulacroEnCurso = $state.raw<Simulacro | null>(simulacros.enCurso())
+  let tandasSeguidas = $state(0)
+
+  // La pantalla del Simulacro lleva un solo mapa: una Familia con dos no lo ofrece.
+  function alcanceDeSimulacro(familia: Familia): Alcance | null {
+    const alcances = alcancesDeExamen(familia)
+    return alcances.length === 1 ? alcances[0] : null
+  }
+
+  function empezarSimulacro() {
+    const alcance = familiaElegida && alcanceDeSimulacro(familiaElegida)
+    if (!familiaElegida || !alcance) return
+    const primeraVez = simulacros.notas(familiaElegida) === null
+    const simulacro = iniciarSimulacro(familiaElegida, alcance, Date.now(), primeraVez ? null : DURACION_DEL_SIMULACRO)
+    simulacros.guardar(simulacro)
+    partida = null
+    tandaEnJuego = null
+    simulacroEnCurso = simulacro
+  }
+
+  function entregarSimulacro(corregidos: ElementoCorregido[]) {
+    if (!simulacroEnCurso) return
+    const { familia, alcance, limite } = simulacroEnCurso
+    for (const { id, resultado } of anotacionesDelSimulacro(corregidos)) dominio.anotar(alcance, id, resultado)
+    simulacros.cerrar(familia, notaDe(corregidos), limite !== null)
+    tandasSeguidas = 0
+    tandaPropuesta = proponerTanda()
+  }
+
+  function salirDelSimulacro(entregado: boolean) {
+    if (!entregado) simulacros.descartar()
+    simulacroEnCurso = null
+    tandaPropuesta = proponerTanda()
+  }
+
+  function tandaTrasElSimulacro() {
+    simulacroEnCurso = null
+    empezarTanda()
+  }
+
+  function simulacroDe(familia: Familia): SimulacroEnPortada | null {
+    if (!alcanceDeSimulacro(familia)) return null
+    const notas = simulacros.notas(familia)
+    return {
+      primeraVez: notas === null,
+      ultimaNota: notas?.ultimaConReloj ? sobreDiez(notas.ultima) : null,
+      esLoPrincipal: esLoPrincipal(tandasSeguidas, dominio.resumen(familia)),
+    }
+  }
 
   function proponerTanda(): Tanda | null {
     const familia = dominio.familia()
@@ -171,11 +235,6 @@
       .map((elemento) => ({ id: formaDe(respuestaDe(elemento)), texto: elemento.rotulo ?? elemento.nombreMostrado })) ?? [],
   )
   const enPresentacion = $derived(repaso?.presentacion ?? false)
-
-  // Una Altura no tiene forma propia en el mapa: se rotula y se señala sobre su Pico.
-  function formaDe(id: string): string {
-    return esIdDeAltura(id) ? picoDeAltura(id) : id
-  }
 
   // Los picos cuya cifra pregunta esta Prueba: Picos y Todo.
   const alturasPreguntadas = $derived(
@@ -334,6 +393,7 @@
     if (partida && tandaEnJuego) {
       for (const { id, resultado } of anotacionesDe(partida, siguiente)) dominio.anotar(tandaEnJuego.alcance, id, resultado)
       if (siguiente.terminada) tandaPropuesta = proponerTanda()
+      if (siguiente.terminada && !siguiente.abandonada) tandasSeguidas += 1
     }
     partida = siguiente
   }
@@ -439,18 +499,24 @@
     pasar(elegirOpcion(partida, id))
   }
 
-  // La virgulilla de la eñe no es una tilde.
-  const TILDES = /[\u0300-\u0302\u0304-\u036f]/u
-
   function correccionDeTexto(escrito: string, tipo: TipoDeFallo, nombre: string): string {
     if (tipo === 'errata') return `Escribiste ${escrito} · Casi: ${nombre}`
-    const llevaTilde = TILDES.test(escrito.normalize('NFD'))
-    return `Escribiste ${escrito} · ${llevaTilde ? 'Revisa la tilde' : 'Te falta la tilde'}: ${nombre}`
+    return `Escribiste ${escrito} · ${llevaTilde(escrito) ? 'Revisa la tilde' : 'Te falta la tilde'}: ${nombre}`
   }
 </script>
 
 <main>
-  {#if !partida}
+  {#if simulacroEnCurso}
+    <PantallaSimulacro
+      inicial={simulacroEnCurso}
+      {contexto}
+      hayTanda={tandaPropuesta !== null}
+      alGuardar={(simulacro) => simulacros.guardar(simulacro)}
+      alEntregar={entregarSimulacro}
+      alEmpezarTanda={tandaTrasElSimulacro}
+      alSalir={salirDelSimulacro}
+    />
+  {:else if !partida}
     <SeleccionPrueba
       alElegir={empezar}
       marcaDe={(elegida) => competicion.marca(elegida)}
@@ -462,6 +528,8 @@
       resumenDe={(familia) => dominio.resumen(familia)}
       tanda={tandaPropuesta && recuentoDe(tandaPropuesta, dominio.entradas(tandaPropuesta.alcance))}
       alEmpezarTanda={empezarTanda}
+      simulacroDe={simulacroDe}
+      alEmpezarSimulacro={empezarSimulacro}
       {soloMira}
       alElegirFamilia={elegirFamilia}
       alMirar={(mira) => (soloMira = mira)}
@@ -475,7 +543,9 @@
           familia={familiaElegida}
           resumen={dominio.resumen(familiaElegida)}
           haySiguiente={tandaPropuesta !== null}
+          simulacro={simulacroDe(familiaElegida)}
           alSeguir={empezarTanda}
+          alEmpezarSimulacro={empezarSimulacro}
           alVolver={elegirOtraPrueba}
         />
       {:else if partida.terminada}
