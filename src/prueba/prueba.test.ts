@@ -2,11 +2,13 @@ import { describe, expect, it } from 'vitest'
 import type { Alcance } from '../catalogo/catalogo'
 import {
   direccionesDe,
+  enCascada,
   familiaDe,
   FAMILIAS,
   nombreDePrueba,
   preguntasDe,
   pruebaDe,
+  seEligeLaPregunta,
   siguienteAlcance,
 } from './prueba'
 
@@ -56,6 +58,22 @@ describe('Alcance', () => {
   it('una dirección que el Alcance no admite se cambia por la suya', () => {
     expect(pruebaDe('unidades', 'nombrar')).toEqual({ familia: 'relieve', alcance: 'unidades', direccion: 'localizar' })
     expect(pruebaDe('todo-rios', 'localizar').direccion).toBe('nombrar')
+  })
+
+  // Todo de Costas no tiene niveles, pero sigue siendo un Todo: el alumno elige qué responder.
+  it('en los Alcances de Todo el alumno elige el orden, y en Grandes unidades lo elige el motor', () => {
+    expect(seEligeLaPregunta('todo-costas')).toBe(true)
+    expect(seEligeLaPregunta('todo-relieve')).toBe(true)
+    expect(seEligeLaPregunta('todo-rios')).toBe(true)
+    expect(seEligeLaPregunta('unidades')).toBe(false)
+    expect(seEligeLaPregunta('cabos')).toBe(false)
+    expect(seEligeLaPregunta('golfos')).toBe(false)
+  })
+
+  it('los Alcances que arrancan con el mapa mudo son los de Todo y Grandes unidades', () => {
+    expect(enCascada('todo-costas')).toBe(true)
+    expect(enCascada('unidades')).toBe(true)
+    expect(enCascada('cabos')).toBe(false)
   })
 
   it('el siguiente Alcance da la vuelta dentro de su familia', () => {

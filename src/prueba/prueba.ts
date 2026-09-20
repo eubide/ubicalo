@@ -62,7 +62,9 @@ const RASGOS: Partial<Record<Alcance, Rasgos>> = {
   'pertenencia-rios': { direccionFija: 'localizar' },
   'todo-relieve': { direccionFija: 'nombrar', cascada: 'la elige el alumno' },
   'todo-rios': { direccionFija: 'nombrar', cascada: 'la elige el alumno' },
-  'todo-costas': { direccionFija: 'nombrar' },
+  // Costas no tiene niveles que desbloquear, pero sigue siendo un Todo: el alumno elige el orden. Los
+  // veinte se ven desde el primer turno porque su desbloqueaCon viene vacío.
+  'todo-costas': { direccionFija: 'nombrar', cascada: 'la elige el alumno' },
   unidades: { direccionFija: 'localizar', cascada: 'la elige el motor' },
 }
 
