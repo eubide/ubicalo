@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { geoPath } from 'd3-geo'
 import { geoConicConformalSpain } from 'd3-composite-projections'
+import areaDe from '@turf/area'
+import booleanPointInPolygon from '@turf/boolean-point-in-polygon'
+import { featureCollection } from '@turf/helpers'
+import intersect from '@turf/intersect'
+import type { Feature, FeatureCollection, Geometry, MultiPolygon, Point, Position } from 'geojson'
+import paises from '../datos/contexto-geografico.json'
 import { catalogo, catalogoDelMapa, contextoDe, contornos, siluetaDeEspana, type Alcance } from './catalogo'
 import { esIdDeAltura } from './relieve'
 
@@ -782,11 +788,12 @@ describe('Catálogo de cabos y golfos', () => {
     expect(elementoDe('golfo-de-cadiz').pistaDeArea).toHaveLength(4)
   })
 
-  it('los Cabos son puntos y los Golfos líneas, sobre un mapa con los ríos en tenue y sin relieve', () => {
+  it('los Cabos son puntos y los Golfos manchas, sobre un mapa con los ríos en tenue y sin relieve', () => {
     const formas = contornos('cabos-y-golfos')
 
     expect(formas.filter(({ geometry }) => geometry.type === 'Point')).toHaveLength(13)
-    expect(formas.filter(({ geometry }) => geometry.type === 'LineString')).toHaveLength(7)
+    expect(formas.filter(({ geometry }) => geometry.type === 'MultiPolygon')).toHaveLength(7)
+    expect(formas.filter(({ geometry }) => geometry.type === 'LineString')).toHaveLength(0)
     expect(catalogoDelMapa('cabos-y-golfos')).toHaveLength(20)
     expect(contextoDe('cabos-y-golfos')?.tenues).toEqual([])
     expect(contextoDe('cabos-y-golfos')?.rios).toHaveLength(41)
@@ -884,13 +891,113 @@ describe('Catálogo de Todo en Costas', () => {
     expect(conLaCatalana.map(({ id }) => id).sort()).toEqual(['cabo-de-creus', 'golfo-de-rosas', 'golfo-de-san-jorge'])
   })
 
-  it('los Tramos y los Elementos de la costa se tocan como manchas, puntos y líneas', () => {
+  it('los Tramos, los Golfos y el Estrecho se tocan como manchas, y los Cabos como puntos', () => {
     const formas = contornos('todo-costas')
 
     expect(formas).toHaveLength(25)
-    expect(formas.filter(({ geometry }) => geometry.type === 'MultiPolygon')).toHaveLength(5)
+    expect(formas.filter(({ geometry }) => geometry.type === 'MultiPolygon')).toHaveLength(12)
     expect(formas.filter(({ geometry }) => geometry.type === 'Point')).toHaveLength(13)
-    expect(formas.filter(({ geometry }) => geometry.type === 'LineString')).toHaveLength(7)
+    expect(formas.filter(({ geometry }) => geometry.type === 'LineString')).toHaveLength(0)
+  })
+})
+
+describe('Las manchas de mar de los Golfos', () => {
+  const formas = contornos('cabos-y-golfos')
+  const manchas = formas.filter(({ geometry }) => geometry.type === 'MultiPolygon')
+  const cabos = formas.filter(({ geometry }) => geometry.type === 'Point')
+  const manchaDe = (id: string) => manchas.find((mancha) => String(mancha.id) === id)!
+  const partesDe = (mancha: Feature<Geometry>) => (mancha.geometry as MultiPolygon).coordinates
+  const enKm2 = (anillos: Position[][]) => areaDe({ type: 'Polygon', coordinates: anillos }) / 1e6
+
+  it('los seis Golfos y el Estrecho son manchas, y en Costas ya no queda ninguna línea', () => {
+    expect(manchas.map(({ id }) => String(id)).sort()).toEqual([
+      'estrecho-de-gibraltar',
+      'golfo-de-almeria',
+      'golfo-de-cadiz',
+      'golfo-de-rosas',
+      'golfo-de-san-jorge',
+      'golfo-de-valencia',
+      'golfo-de-vizcaya',
+    ])
+    expect(formas.filter(({ geometry }) => geometry.type === 'LineString')).toEqual([])
+  })
+
+  // El Estrecho no sale de un buffer: es el agua entre la costa de Cádiz y la africana de enfrente,
+  // así que su tamaño lo fija la anchura del paso y no el fondo de los Golfos.
+  it('el Estrecho empieza en Punta Camarinal, que es lo que le da tamaño de mancha', () => {
+    const estrecho = partesDe(manchaDe('estrecho-de-gibraltar')).reduce((total, parte) => total + enKm2(parte), 0)
+
+    expect(Math.round(estrecho)).toBeGreaterThan(800)
+    expect(booleanPointInPolygon(cabos.find(({ id }) => id === 'punta-de-tarifa')!.geometry as Point, manchaDe('estrecho-de-gibraltar') as never)).toBe(true)
+  })
+
+  it('ninguna mancha pisa tierra, ni española ni de los cuatro países vecinos', () => {
+    const tierra = [siluetaDeEspana(), ...(paises as FeatureCollection).features]
+
+    for (const mancha of manchas) {
+      for (const suelo of tierra) {
+        const dentro = intersect(featureCollection([mancha as never, suelo as never]))
+        const solape = dentro ? areaDe(dentro) / 1e6 : 0
+
+        expect(`${mancha.id} sobre ${suelo.properties?.name ?? 'España'}: ${solape.toFixed(1)} km²`).toBe(
+          `${mancha.id} sobre ${suelo.properties?.name ?? 'España'}: 0.0 km²`,
+        )
+      }
+    }
+  })
+
+  // Los que comparten límite se tocan por el borde, que es lo que toca: el Golfo de Cádiz y el
+  // Estrecho se dan la mano en la Punta de Tarifa. Lo que no puede haber es mar contado dos veces.
+  it('ningún par de manchas se reparte el mismo mar', () => {
+    for (const [i, una] of manchas.entries()) {
+      for (const otra of manchas.slice(i + 1)) {
+        const comun = intersect(featureCollection([una as never, otra as never]))
+        const km2 = comun ? areaDe(comun) / 1e6 : 0
+
+        expect(`${una.id} con ${otra.id}: ${km2 < 1 ? 'sin solape' : km2.toFixed(1) + ' km²'}`).toBe(
+          `${una.id} con ${otra.id}: sin solape`,
+        )
+      }
+    }
+  })
+
+  it('ninguna parte de una mancha es una miga de menos de 20 km²', () => {
+    const migas = manchas.flatMap((mancha) =>
+      partesDe(mancha)
+        .map((parte) => ({ id: String(mancha.id), km2: enKm2(parte) }))
+        .filter(({ km2 }) => km2 < 20),
+    )
+
+    expect(migas).toEqual([])
+  })
+
+  it('un Cabo solo cae dentro de un Golfo si es uno de los que ese Golfo baña', () => {
+    const intrusos = manchas.flatMap((mancha) => {
+      const bana = (mancha.properties as { cabos?: string[] }).cabos ?? []
+
+      return cabos
+        .filter((cabo) => booleanPointInPolygon(cabo.geometry as Point, mancha as never))
+        .map((cabo) => String(cabo.id))
+        .filter((cabo) => !bana.includes(cabo))
+        .map((cabo) => `${cabo} dentro de ${mancha.id}`)
+    })
+
+    expect(intrusos).toEqual([])
+  })
+
+  it('el Cabo de la Nao queda fuera del Golfo de Valencia, que no cierra', () => {
+    const laNao = cabos.find(({ id }) => id === 'cabo-de-la-nao')!
+
+    expect(booleanPointInPolygon(laNao.geometry as Point, manchaDe('golfo-de-valencia') as never)).toBe(false)
+  })
+
+  it('ninguna mancha se queda en nada al cortar sus extremos', () => {
+    const areas = Object.fromEntries(
+      manchas.map((mancha) => [String(mancha.id), Math.round(partesDe(mancha).reduce((total, parte) => total + enKm2(parte), 0))]),
+    )
+
+    expect(Object.values(areas).every((km2) => km2 > 500)).toBe(true)
+    expect(areas['golfo-de-vizcaya']).toBeGreaterThan(areas['golfo-de-valencia'])
   })
 })
 

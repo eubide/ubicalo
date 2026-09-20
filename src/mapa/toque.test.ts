@@ -68,19 +68,11 @@ const proyeccionDeCostas = geoConicConformalSpain().fitExtent(
 )
 
 const formasDeCosta = contornos('cabos-y-golfos')
-const trazosDeCosta = trazosDe(
-  formasDeCosta.filter((forma): forma is Feature<LineString> => forma.geometry.type === 'LineString'),
-  proyeccionDeCostas,
-)
 const cabos = puntosDe(
   formasDeCosta.filter((forma): forma is Feature<Point> => forma.geometry.type === 'Point'),
   proyeccionDeCostas,
 )
 const cabo = (id: string) => cabos.find((punto) => punto.id === id)!.puntos[0]
-const medioDeCosta = (id: string) => {
-  const { puntos } = trazosDeCosta.find((trazo) => trazo.id === id)!
-  return puntos[Math.floor(puntos.length / 2)]
-}
 
 describe('Qué río tocó el dedo', () => {
   it('un toque justo sobre la línea devuelve ese río', () => {
@@ -154,61 +146,22 @@ describe('Qué río tocó el dedo', () => {
   })
 })
 
-describe('Qué Golfo tocó el dedo', () => {
-  it('cada uno de los 6 Golfos y el Estrecho se acierta tocando su propio arco', () => {
-    const fallados = trazosDeCosta
-      .map(({ id }) => id)
-      .filter((id) => trazoMasCercano(medioDeCosta(id), trazosDeCosta, RADIO_DEL_DEDO) !== id)
-
-    expect(trazosDeCosta).toHaveLength(7)
-    expect(fallados).toEqual([])
-  })
-
-  it('un toque dentro del radio del dedo, pero no sobre el arco, sigue devolviendo el Golfo', () => {
-    const cerca = desplazado(medioDeCosta('golfo-de-cadiz'), 0, RADIO_DEL_DEDO - 2)
-
-    expect(trazoMasCercano(cerca, trazosDeCosta, RADIO_DEL_DEDO)).toBe('golfo-de-cadiz')
-  })
-
-  it('donde el Golfo de Valencia y el de San Jorge se juntan en el delta del Ebro, gana el más cercano', () => {
-    expect(trazoMasCercano(medioDeCosta('golfo-de-valencia'), trazosDeCosta, RADIO_DEL_DEDO)).toBe('golfo-de-valencia')
-    expect(trazoMasCercano(medioDeCosta('golfo-de-san-jorge'), trazosDeCosta, RADIO_DEL_DEDO)).toBe('golfo-de-san-jorge')
-  })
-
-  it('el Estrecho arranca en la Punta de Tarifa, donde acaba el Golfo de Cádiz, y no se lo lleva entero', () => {
-    const { puntos } = trazosDeCosta.find((trazo) => trazo.id === 'estrecho-de-gibraltar')!
-
-    expect(trazoMasCercano(puntos.at(-1)!, trazosDeCosta, RADIO_DEL_DEDO)).toBe('estrecho-de-gibraltar')
-  })
-})
-
-// El Cabo de Gata, la Punta de Tarifa, el Cabo de San Antonio y el de Creus son los extremos de los
-// arcos que cierran, así que el punto y la línea se pisan en el mapa.
-describe('Qué gana cuando el punto de un Cabo cae sobre el arco de su Golfo', () => {
+// En Costas ya no queda ninguna línea: los seis Golfos y el Estrecho son manchas y su toque lo
+// resuelve el SVG, no la cercanía. Lo único que sigue pasando por aquí son los trece Cabos.
+describe('Qué Elemento de Costas tocó el dedo', () => {
   const RADIO_DE_LA_MARCA = 4
 
   const quien = (punto: { x: number; y: number }) =>
-    tocableMasCercano(punto, cabos, trazosDeCosta, RADIO_DEL_DEDO, RADIO_DE_LA_MARCA)
+    tocableMasCercano(punto, cabos, [], RADIO_DEL_DEDO, RADIO_DE_LA_MARCA)
 
-  it('el Cabo responde a un toque sobre su marca, aunque el arco pase por encima', () => {
-    expect(quien(cabo('punta-de-tarifa'))).toBe('punta-de-tarifa')
-    expect(quien(cabo('cabo-de-gata'))).toBe('cabo-de-gata')
-    expect(quien(cabo('cabo-de-creus'))).toBe('cabo-de-creus')
-    expect(quien(cabo('cabo-de-san-antonio'))).toBe('cabo-de-san-antonio')
+  it('en Costas no queda ningún trazo que tocar por cercanía', () => {
+    expect(formasDeCosta.filter(({ geometry }) => geometry.type === 'LineString')).toEqual([])
   })
 
-  it('el Estrecho responde en su arco, aunque nazca dentro del pulsador de la Punta de Tarifa', () => {
-    expect(quien(medioDeCosta('estrecho-de-gibraltar'))).toBe('estrecho-de-gibraltar')
-    expect(quien(medioDeCosta('golfo-de-rosas'))).toBe('golfo-de-rosas')
-    expect(quien(medioDeCosta('golfo-de-almeria'))).toBe('golfo-de-almeria')
-  })
+  it('cada uno de los 13 Cabos responde a su propia marca', () => {
+    const fallados = cabos.map(({ id }) => [id, cabo(id)] as const).filter(([id, punto]) => quien(punto) !== id)
 
-  it('cada uno de los 20 Elementos responde a su propia marca', () => {
-    const fallados = [
-      ...cabos.map(({ id }) => [id, cabo(id)] as const),
-      ...trazosDeCosta.map(({ id }) => [id, medioDeCosta(id)] as const),
-    ].filter(([id, punto]) => quien(punto) !== id)
-
+    expect(cabos).toHaveLength(13)
     expect(fallados.map(([id]) => id)).toEqual([])
   })
 

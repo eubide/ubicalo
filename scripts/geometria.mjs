@@ -41,6 +41,18 @@ export function orientado(anillo) {
   return geoArea(poligono) > 2 * Math.PI ? [...anillo].reverse() : anillo
 }
 
+// Un agujero va al revés que su exterior: si una isla cae entera dentro de una mancha, orientar
+// todos los anillos igual la pintaría como mar en vez de dejarla hueca.
+export function orientada(geometria) {
+  const anillos = ([exterior, ...huecos]) => [
+    orientado(exterior),
+    ...huecos.map((hueco) => [...orientado(hueco)].reverse()),
+  ]
+  return geometria.type === 'Polygon'
+    ? { type: 'Polygon', coordinates: anillos(geometria.coordinates) }
+    : { type: 'MultiPolygon', coordinates: geometria.coordinates.map(anillos) }
+}
+
 function simplificarAnillo(anillo, tolerancia) {
   const abierto = anillo.slice(0, -1)
   const mitad = Math.floor(abierto.length / 2)
