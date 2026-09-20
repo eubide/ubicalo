@@ -400,6 +400,8 @@
   )
 
   const rotulados = $derived(rotulos.map((rotulo) => rotulo.id))
+  // Ceuta y Melilla se ven en su recuadro, así que lo que lleven escrito se rotula allí y no en su sitio real.
+  const enElRecuadro = $derived(ceutaYMelilla.map(({ contorno }) => String(contorno.id)))
 
   // Varios rótulos sobre el mismo elemento (Pertenencia) se apilan hacia abajo.
   const rotulosConPosicion = $derived(
@@ -523,7 +525,7 @@
       {/each}
       {#each nombres as nombre (nombre.id)}
         {@const contorno = contornos.find((candidato) => String(candidato.id) === nombre.id)}
-        {#if contorno}
+        {#if contorno && !enElRecuadro.includes(nombre.id)}
           {@const [x, y] = centroDelRotulo(contorno)}
           <text class="rotulo" {x} {y} text-anchor="middle" font-size={(tamañoRotulo * 0.85) / vista.escala}>
             {nombre.texto}
@@ -558,9 +560,9 @@
         {contexto}
         {estado}
         {correcto}
-        {rotulados}
+        rotulados={[...rotulados, ...nombres.map((nombre) => nombre.id)]}
         {tamañoRotulo}
-        {nombreDe}
+        nombreDe={(id) => nombres.find((nombre) => nombre.id === id)?.texto ?? nombreDe(id)}
         alElegir={pulsarElemento}
         x={ancho - anchoRecuadro}
         y={alto - altoRecuadro}

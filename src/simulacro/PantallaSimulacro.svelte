@@ -1,11 +1,12 @@
 <script lang="ts">
   import type { FeatureCollection } from 'geojson'
   import { onMount, untrack } from 'svelte'
-  import { catalogo, catalogoDelMapa, contextoDe, contornos, etiquetaDeClase, type Elemento } from '../catalogo/catalogo'
+  import { catalogo, catalogoDelMapa, contextoDe, contornos, etiquetaDeClase, type Alcance, type Elemento } from '../catalogo/catalogo'
   import { formaDe, idDeAltura } from '../catalogo/relieve'
   import Mapa from '../mapa/Mapa.svelte'
   import { formatearTiempo } from '../pantallas/tiempo'
   import { llevaTilde } from '../pantallas/tilde'
+  import { etiquetaDeAlcance } from '../prueba/prueba'
   import {
     blancosDe,
     corregir,
@@ -15,6 +16,7 @@
     ponerAlDia,
     sobreDiez,
     tiempoRestante,
+    verMapa,
     type ElementoCorregido,
     type Simulacro,
   } from './simulacro'
@@ -32,9 +34,11 @@
   let { inicial, contexto, hayTanda, alGuardar, alEntregar, alEmpezarTanda, alSalir }: Props = $props()
 
   const alEmpezar = untrack(() => inicial)
-  const elementos = catalogo(alEmpezar.alcance)
-  const formas = catalogoDelMapa(alEmpezar.alcance)
+  const examen = alEmpezar.alcances.map((alcance) => ({ alcance, elementos: catalogo(alcance) }))
+  const total = examen.reduce((suma, { elementos }) => suma + elementos.length, 0)
   const primeraVez = alEmpezar.limite === null
+  // Comunidades y Provincias no tienen Clase que enseñar sobre el campo de texto.
+  const LO_QUE_SE_ESCRIBE: Partial<Record<Alcance, string>> = { comunidades: 'Comunidad autónoma', provincias: 'Provincia' }
   const ESPERA_CONFIRMAR_SALIDA = 3_000
   const QUEDA_POCO = 2 * 60 * 1000
 
@@ -47,9 +51,15 @@
   let confirmandoSalida = $state(false)
   let campoDeTexto = $state<HTMLInputElement | null>(null)
 
-  const corregidos = $derived(corregir(simulacro, elementos))
-  const nota = $derived(corregidos && notaDe(corregidos))
-  const blancos = $derived(blancosDe(simulacro, elementos))
+  const enVista = $derived(simulacro.enVista)
+  const elementos = $derived(examen.find(({ alcance }) => alcance === enVista)!.elementos)
+  const formas = $derived(catalogoDelMapa(enVista))
+  const escritas = $derived(simulacro.respuestas[enVista] ?? {})
+  const todosLosCorregidos = $derived(corregir(simulacro, examen))
+  const corregidos = $derived(todosLosCorregidos?.filter(({ alcance }) => alcance === enVista) ?? null)
+  const nota = $derived(todosLosCorregidos && notaDe(todosLosCorregidos))
+  const blancosPorMapa = $derived(blancosDe(simulacro, examen))
+  const enBlanco = $derived(blancosPorMapa.reduce((suma, { blancos }) => suma + blancos.length, 0))
   const restante = $derived(tiempoRestante(simulacro, ahora))
   const alturaDeLaElegida = $derived(elegida !== null && elementos.some((elemento) => elemento.id === idDeAltura(elegida!)))
 
@@ -63,7 +73,7 @@
         id,
         texto: corregidos
           ? rotuloDe(id, (deQuien) => elementos.find((elemento) => elemento.id === deQuien)?.nombreMostrado)
-          : rotuloDe(id, (deQuien) => simulacro.respuestas[deQuien]),
+          : rotuloDe(id, (deQuien) => escritas[deQuien]),
       }))
       .filter(({ texto }) => texto !== ''),
   )
@@ -87,7 +97,7 @@
 
   // Un Simulacro guardado ya entregado es una entrega que se cortó antes de anotarse.
   onMount(() => {
-    const yaCorregido = corregir(alEmpezar, elementos)
+    const yaCorregido = corregir(alEmpezar, examen)
     if (yaCorregido) alEntregar(yaCorregido)
   })
 
@@ -103,9 +113,12 @@
 
   function actualizar(siguiente: Simulacro) {
     if (siguiente === simulacro) return
+    const yaEntregado = simulacro.entregadoEn !== null
     simulacro = siguiente
+    // Entregado ya no se guarda: cambiar de mapa para ver el corregido no lo devuelve a «en curso».
+    if (yaEntregado) return
     alGuardar(siguiente)
-    const corregido = corregir(siguiente, elementos)
+    const corregido = corregir(siguiente, examen)
     if (!corregido) return
     elegida = null
     avisandoDeBlancos = false
@@ -115,16 +128,34 @@
   function elegir(id: string) {
     if (corregidos) return
     elegida = id
-    texto = simulacro.respuestas[id] ?? ''
-    metros = simulacro.respuestas[idDeAltura(id)] ?? ''
+    texto = escritas[id] ?? ''
+    metros = escritas[idDeAltura(id)] ?? ''
     avisandoDeBlancos = false
   }
 
   // Se guarda según se teclea: tocar otra forma, entregar o quedarse sin tiempo no pierde lo que había en el campo.
   function escribirLoElegido() {
     if (elegida === null) return
-    const conNombre = escribir(simulacro, elegida, texto, Date.now())
-    actualizar(alturaDeLaElegida ? escribir(conNombre, idDeAltura(elegida), metros, Date.now()) : conNombre)
+    const conNombre = escribir(simulacro, enVista, elegida, texto, Date.now())
+    actualizar(alturaDeLaElegida ? escribir(conNombre, enVista, idDeAltura(elegida), metros, Date.now()) : conNombre)
+  }
+
+  function cambiarDeMapa(alcance: Alcance) {
+    elegida = null
+    actualizar(verMapa(simulacro, alcance))
+  }
+
+  function escritosEn(alcance: Alcance): string {
+    const deEseMapa = examen.find((catalogoDeExamen) => catalogoDeExamen.alcance === alcance)!.elementos.length
+    const enBlanco = blancosPorMapa.find((porMapa) => porMapa.alcance === alcance)!.blancos.length
+    return `${deEseMapa - enBlanco} / ${deEseMapa}`
+  }
+
+  function avisoDeBlancos(): string {
+    const cuantos = enBlanco === 1 ? 'Te queda 1 en blanco' : `Te quedan ${enBlanco} en blanco`
+    if (examen.length === 1) return `${cuantos}.`
+    const porMapa = blancosPorMapa.map(({ alcance, blancos }) => `${blancos.length} en ${etiquetaDeAlcance[alcance]}`)
+    return `${cuantos}: ${porMapa.join(' y ')}.`
   }
 
   function cerrarElCampo(evento: SubmitEvent) {
@@ -134,7 +165,7 @@
   }
 
   function pulsarEntregar() {
-    if (blancos.length > 0 && !avisandoDeBlancos) {
+    if (enBlanco > 0 && !avisandoDeBlancos) {
       elegida = null
       avisandoDeBlancos = true
       return
@@ -151,8 +182,9 @@
   }
 
   function claseDe(id: string): string {
-    const clase = formas.find((forma) => forma.id === id)?.clase
-    return (clase && etiquetaDeClase[clase]) ?? 'Escribir aquí'
+    const forma = formas.find((candidata) => candidata.id === id)
+    if (forma?.ciudadAutonoma) return 'Ciudad autónoma'
+    return (forma?.clase && etiquetaDeClase[forma.clase]) ?? LO_QUE_SE_ESCRIBE[enVista] ?? 'Escribir aquí'
   }
 
   function motivoDe(corregido: Extract<ElementoCorregido, { resultado: 'fallo' }>): string {
@@ -188,10 +220,7 @@
     <p class="titulo">{primeraVez ? '¿Qué te sabes ya?' : 'Simulacro'}</p>
     {#if avisandoDeBlancos}
       <div class="blancos" role="alert">
-        <p>
-          {blancos.length === 1 ? 'Te queda 1 en blanco' : `Te quedan ${blancos.length} en blanco`}. En tu examen un fallo no
-          resta: escribe algo.
-        </p>
+        <p>{avisoDeBlancos()} En tu examen un fallo no resta: escribe algo.</p>
         <button type="button" class="principal" onclick={() => (avisandoDeBlancos = false)}>Seguir escribiendo</button>
         <button type="button" onclick={pulsarEntregar}>Entregar de todos modos</button>
       </div>
@@ -225,32 +254,46 @@
     {/if}
     <div class="estado">
       {#if restante !== null}<span class="reloj" class:apurado={restante < QUEDA_POCO}>{formatearTiempo(restante)}</span>{/if}
-      <span>{elementos.length - blancos.length} / {elementos.length}</span>
+      <span>{total - enBlanco} / {total}</span>
       <button type="button" class="entregar" onclick={pulsarEntregar}>Entregar</button>
       <button type="button" class="salir" class:confirmando={confirmandoSalida} onclick={pulsarSalir}>
         {confirmandoSalida ? '¿Seguro? Se pierde lo escrito' : 'Salir'}
       </button>
     </div>
   {/if}
+  {#if examen.length > 1}
+    <div class="mapas" role="group" aria-label="Mapa que se ve">
+      {#each examen as { alcance } (alcance)}
+        <button type="button" aria-pressed={alcance === enVista} onclick={() => cambiarDeMapa(alcance)}>
+          {etiquetaDeAlcance[alcance]}
+          {#if !corregidos}<span class="escritos">{escritosEn(alcance)}</span>{/if}
+        </button>
+      {/each}
+    </div>
+  {/if}
 </header>
 
-<Mapa
-  contornos={contornos(alEmpezar.alcance)}
-  contextoDeRelieve={contextoDe(alEmpezar.alcance)}
-  {contexto}
-  frontera={corregidos ? [] : formas.map((forma) => forma.id)}
-  tentativa={elegida}
-  {acertados}
-  {fallados}
-  preguntado={corregidos ? null : (elegida ?? 'ninguna')}
-  {nombres}
-  alElegir={elegir}
-  nombreDe={claseDe}
-/>
+<!-- Se monta de nuevo al cambiar de mapa: una forma tocada y sin confirmar no puede pasar de Aragón a Albacete,
+     que comparten id. -->
+{#key enVista}
+  <Mapa
+    contornos={contornos(enVista)}
+    contextoDeRelieve={contextoDe(enVista)}
+    {contexto}
+    frontera={corregidos ? [] : formas.map((forma) => forma.id)}
+    tentativa={elegida}
+    {acertados}
+    {fallados}
+    preguntado={corregidos ? null : (elegida ?? 'ninguna')}
+    {nombres}
+    alElegir={elegir}
+    nombreDe={claseDe}
+  />
+{/key}
 
 {#if corregidos}
   {@const fallos = corregidos.filter((corregido) => corregido.resultado === 'fallo')}
-  {@const enBlanco = corregidos.filter((corregido) => corregido.resultado === 'blanco')}
+  {@const sinEscribir = corregidos.filter((corregido) => corregido.resultado === 'blanco')}
   {#if fallos.length > 0}
     <section class="listado">
       <h2>Lo que escribiste y no era</h2>
@@ -265,11 +308,11 @@
       </ul>
     </section>
   {/if}
-  {#if enBlanco.length > 0}
+  {#if sinEscribir.length > 0}
     <section class="listado">
       <h2>Lo que dejaste en blanco</h2>
       <ul class="blancosEntregados">
-        {#each enBlanco as corregido (corregido.elemento.id)}
+        {#each sinEscribir as corregido (corregido.elemento.id)}
           <li>{nombreOficial(corregido.elemento)}</li>
         {/each}
       </ul>
@@ -324,6 +367,30 @@
     flex-wrap: wrap;
     align-items: center;
     gap: 0.5rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .mapas {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+  }
+
+  .mapas button {
+    flex: 1;
+  }
+
+  .mapas button[aria-pressed='true'] {
+    border-color: #1d4ed8;
+    color: #1d4ed8;
+    font-weight: 600;
+  }
+
+  .escritos {
+    display: block;
+    font-size: 0.8125rem;
+    font-weight: 400;
+    color: #6b7280;
     font-variant-numeric: tabular-nums;
   }
 

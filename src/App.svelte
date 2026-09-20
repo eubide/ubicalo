@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Feature, FeatureCollection, Geometry } from 'geojson'
-  import { catalogo, catalogoDelMapa, contextoDe, contornos, etiquetaDeClase, type Alcance, type ContextoGeografico, type Elemento } from './catalogo/catalogo'
+  import { catalogo, catalogoDelMapa, contextoDe, contornos, etiquetaDeClase, type ContextoGeografico, type Elemento } from './catalogo/catalogo'
   import { esIdDeAltura, formaDe, idDeAltura, nombreDePapel, PAPELES, picoDeAltura, textoDeAltura } from './catalogo/relieve'
   import { esDeHidrografia } from './catalogo/hidrografia'
   import contextoGeografico from './datos/contexto-geografico.json'
@@ -84,17 +84,11 @@
   let simulacroEnCurso = $state.raw<Simulacro | null>(simulacros.enCurso())
   let tandasSeguidas = $state(0)
 
-  // La pantalla del Simulacro lleva un solo mapa: una Familia con dos no lo ofrece.
-  function alcanceDeSimulacro(familia: Familia): Alcance | null {
-    const alcances = alcancesDeExamen(familia)
-    return alcances.length === 1 ? alcances[0] : null
-  }
-
   function empezarSimulacro() {
-    const alcance = familiaElegida && alcanceDeSimulacro(familiaElegida)
-    if (!familiaElegida || !alcance) return
+    if (!familiaElegida) return
     const primeraVez = simulacros.notas(familiaElegida) === null
-    const simulacro = iniciarSimulacro(familiaElegida, alcance, Date.now(), primeraVez ? null : DURACION_DEL_SIMULACRO)
+    const limite = primeraVez ? null : DURACION_DEL_SIMULACRO
+    const simulacro = iniciarSimulacro(familiaElegida, alcancesDeExamen(familiaElegida), Date.now(), limite)
     simulacros.guardar(simulacro)
     partida = null
     tandaEnJuego = null
@@ -103,8 +97,8 @@
 
   function entregarSimulacro(corregidos: ElementoCorregido[]) {
     if (!simulacroEnCurso) return
-    const { familia, alcance, limite } = simulacroEnCurso
-    for (const { id, resultado } of anotacionesDelSimulacro(corregidos)) dominio.anotar(alcance, id, resultado)
+    const { familia, limite } = simulacroEnCurso
+    for (const { alcance, id, resultado } of anotacionesDelSimulacro(corregidos)) dominio.anotar(alcance, id, resultado)
     simulacros.cerrar(familia, notaDe(corregidos), limite !== null)
     tandasSeguidas = 0
     tandaPropuesta = proponerTanda()
@@ -121,8 +115,7 @@
     empezarTanda()
   }
 
-  function simulacroDe(familia: Familia): SimulacroEnPortada | null {
-    if (!alcanceDeSimulacro(familia)) return null
+  function simulacroDe(familia: Familia): SimulacroEnPortada {
     const notas = simulacros.notas(familia)
     return {
       primeraVez: notas === null,
