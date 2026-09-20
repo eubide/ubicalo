@@ -72,6 +72,12 @@ Qué quedó escrito:
 - **Arreglos** de los defectos y desviaciones encontrados; las dudas de producto se preguntaron antes de decidir.
 - **Integración:** `git merge main` en la rama del ticket, `task verificar`, PR con `Closes #N` y merge a `main`.
 
+En el Tramo 1 (2026-09-20) el ciclo por ticket fue: rama desde `main`, tests primero en la seam del ticket, `npm run check` y `npm test`, revisión en dos ejes, arreglos, commits atómicos, PR y merge. Lo que cambió respecto a los bloques anteriores:
+
+- **Prueba de humo en el navegador antes de la PR.** Chrome en `--headless=new` dirigido por CDP desde un script en el directorio temporal, que recorre la pantalla nueva y vuelca lo que ve. Cada ticket de interfaz destapó así algo que los tests no veían: un `<details>` cerrado que se comía el foco, un arco sin Rótulo que robaba el toque, un texto a medias que se perdía al cambiar de forma.
+- **Las dos revisiones a la vez, y esperarlas.** Ninguna PR se abre con una revisión a medias: en los seis tickets la de spec encontró algo que la de estándares no.
+- **Lo que la spec no previó se decide preguntando y se escribe en el ADR.** Los alumnos sintéticos del #84 tumbaron la regla de relleno de la spec, y el reparto se cambió antes de construir encima.
+
 Comandos del proyecto: `task` lista las tareas (`dev`, `dev:https`, `test`, `check`, `build`, `verificar`…). En el iPhone, usa `task dev:https`.
 
 ## Cambios tras probar con usuarios
@@ -128,5 +134,7 @@ Nunca compactes a mitad de una fase.
 - [ ] Probar las Señales en un móvil real: el punteado del borde a ancho de móvil, la funda de los cauces sobre una vertiente, la leyenda de Señales cuando conviven cinco estados, y los Rótulos de ríos acertados cuando se amontonan en una cuenca
 - [x] Bloque Portada: tres Familias en lugar de once Tipos, con Alcance y Dirección en su sitio → ADR-0008. Sin spec ni tickets: el ADR ya traía la lista de consecuencias
 - [ ] Probar la portada en un móvil real: las tres tarjetas a 375 px, los dos botones de dirección en una fila, y la silueta de España junto al nombre
-- [ ] Bloque Costas: cabos y golfos. Salió de `/mattpocock-skills:grill-me` sobre una Familia sin listado oficial → ADR-0010 → spec #69. Pendiente `to-tickets` e `implement`
+- [x] Bloque Costas: cabos y golfos. Salió de `/mattpocock-skills:grill-me` sobre una Familia sin listado oficial → ADR-0010 → spec #69 → tickets #71–#76 → PRs hasta #88
+- [x] Tramo 1, Simulacro y tandas: spec #80 → tickets #82–#87 → PRs #89–#94. Un ticket por rama desde `main`, revisión en dos ejes con dos subagentes por ticket y prueba de humo en el navegador antes de cada PR
+- [ ] Probar el Tramo 1 en un móvil real: escribir en el Simulacro a 375 px, el conmutador de Comunidades y Provincias, Ceuta y Melilla en su recuadro, y descartar los Rótulos de una presentación tocando puntos de ocho píxeles
 - [ ] Siguiente bloque: despliegue (dominio y Terraform)
