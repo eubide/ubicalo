@@ -228,6 +228,14 @@ _Evitar_: desafío, challenge
 
 ### Examen
 
+**Familia elegida**:
+La Familia de la que el alumno dice que se examina. La portada la pregunta una vez, la recuerda entre visitas y gira sobre ella; solo el alumno la cambia, y cambiarla no borra lo que el Dominio recuerda de la anterior. Un enlace del profesor puede traerla ya elegida para quien todavía no tiene ninguna.
+_Evitar_: familia activa, familia actual, asignatura
+
+**Práctica libre**:
+Las Pruebas, con sus Marcas y sus Retos, plegadas en la portada bajo la Familia elegida. Tolera la tilde y la errata, y en este tramo no escribe en el Dominio. Quien no quiere elegir Familia la abre con «Solo quiero mirar», y entonces ve las Pruebas de las cuatro.
+_Evitar_: modo libre, entrenamiento, catálogo
+
 **Juicio estricto**:
 Forma de juzgar el texto escrito como lo juzga el profesor: la tilde que falta y la errata son Fallo, y el Fallo lleva su tipo, que es tilde, errata u otro. Siguen valiendo los Alias, las formas cortas, las mayúsculas indistintas y las palabras que no distinguen. Solo lo usan la Tanda y el Simulacro; las Partidas de las Pruebas siguen tolerando la tilde y la errata.
 _Evitar_: modo examen, corrección dura, ortografía
@@ -257,6 +265,7 @@ _Evitar_: dominado, aprendido, acertado
 - Un **Afluente** desemboca en un **Río principal** o en otro **Afluente**, pero siempre se pregunta por el **Río principal** de su cuenca
 - Cada **Tramo de costa** recoge varios **Cabos** y **Golfos**, y la Costa de la Luz recoge además el **Estrecho**
 - Un **Golfo** se dibuja entre dos puntos de la costa, y puede acabar en el **Tramo de costa** siguiente sin dejar de pertenecer al suyo
+- El alumno tiene como mucho una **Familia elegida**, y el **Dominio** la guarda junto a lo que recuerda de cada **Elemento**
 - Cada **Elemento** está en el **Dominio** sin ver, **Flojo** o **Sabido**
 - Un **Fallo** juzgado con **Juicio estricto** lleva su tipo: tilde, errata u otro
 
