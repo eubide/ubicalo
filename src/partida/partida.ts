@@ -11,9 +11,23 @@ export interface Respuesta {
   correcto: Elemento
 }
 
+export type TipoDeFallo = 'tilde' | 'errata' | 'otro'
+
+export interface FalloDeTexto {
+  tipo: TipoDeFallo
+  confundidoCon: string | null
+}
+
+export type Juicio = { acierto: true } | { acierto: false; fallo: FalloDeTexto }
+
 export interface Pista {
   opciones: Elemento[]
   escrito: string | null
+  fallo: FalloDeTexto | null
+}
+
+export interface Reglas {
+  juicioEstricto?: boolean
 }
 
 export interface Correccion {
@@ -45,6 +59,7 @@ export interface Partida {
   tocables: Elemento[]
   azar: Azar
   reloj: Reloj
+  juicioEstricto: boolean
   inicio: number
   fin: number | null
   pausadaDesde: number | null
@@ -172,6 +187,7 @@ export function iniciarPartida(
   azar: Azar,
   reloj: Reloj,
   tocables: Elemento[] = elementos,
+  { juicioEstricto = false }: Reglas = {},
 ): Partida {
   const ahora = reloj()
   return construir(
@@ -181,6 +197,7 @@ export function iniciarPartida(
       tocables,
       azar,
       reloj,
+      juicioEstricto,
       inicio: ahora,
       pausadaDesde: null,
       tiempoEnPausa: 0,
@@ -306,10 +323,30 @@ function reanudar(partida: Partida, ahora: number): Partida {
 // «Sierra Gata» y «sierragata» son la misma respuesta.
 const PALABRAS_QUE_NO_DISTINGUEN = ['el', 'la', 'los', 'las', 'de', 'del', 'y', 'e', 'al', 'l']
 
+type Forma = (texto: string) => string
+
+const TODAS_LAS_MARCAS = /\p{M}/gu
+
+// La virgulilla se queda: la eñe es una letra, y escribir «Coruna» no es olvidarse una tilde.
+const MARCAS_QUE_SON_TILDE = /[^\P{M}\u0303]/gu
+
 function normalizar(texto: string): string {
-  return texto
-    .normalize('NFD')
-    .replace(/\p{M}/gu, '')
+  return loQueDistingue(texto, TODAS_LAS_MARCAS)
+}
+
+function sinTildes(texto: string): string {
+  return loQueDistingue(texto, MARCAS_QUE_SON_TILDE)
+}
+
+function conTildes(texto: string): string {
+  return loQueDistingue(texto, null)
+}
+
+// Se recompone tras quitar las marcas para que la eñe cuente como una sola letra al medir la errata.
+function loQueDistingue(texto: string, marcasQueSeCaen: RegExp | null): string {
+  const descompuesto = texto.normalize('NFD')
+  return (marcasQueSeCaen ? descompuesto.replace(marcasQueSeCaen, '') : descompuesto)
+    .normalize('NFC')
     .toLowerCase()
     .split(/[\s'\u2019-]+/u)
     .filter((palabra) => palabra !== '' && !PALABRAS_QUE_NO_DISTINGUEN.includes(palabra))
@@ -331,8 +368,8 @@ function distanciaDeEdicion(a: string, b: string): number {
   return anterior[b.length]
 }
 
-function nombresAceptados({ nombre, alias }: Elemento): string[] {
-  return [nombre, ...alias].map(normalizar)
+function nombresAceptados({ nombre, alias }: Elemento, forma: Forma): string[] {
+  return [nombre, ...alias].map(forma)
 }
 
 function admiteErrata(respuesta: string, aceptado: string): boolean {
@@ -340,19 +377,37 @@ function admiteErrata(respuesta: string, aceptado: string): boolean {
   return letras >= LETRAS_MINIMAS_PARA_ERRATA && distanciaDeEdicion(respuesta, aceptado) === 1
 }
 
+function sinPuntuacionFinal(texto: string): string {
+  return texto.trim().replace(/[\s.,;:!?…]+$/u, '')
+}
+
+export function juzgarTexto(texto: string, preguntado: Elemento, elementos: Elemento[], estricto: boolean): Juicio {
+  // El doble espacio del teclado del móvil escribe «. »: sin juicio estricto lo absorbe la errata, con él sería un Fallo.
+  const escrito = estricto ? sinPuntuacionFinal(texto) : texto
+  const forma = estricto ? sinTildes : normalizar
+  const respuesta = forma(escrito)
+  const aceptados = nombresAceptados(preguntado, forma)
+  const confundido = elementos.find(
+    (elemento) => elemento.id !== preguntado.id && nombresAceptados(elemento, forma).includes(respuesta),
+  )
+  const coincide = aceptados.includes(respuesta)
+  const conErrata = !coincide && !confundido && aceptados.some((aceptado) => admiteErrata(respuesta, aceptado))
+  const fallo = (tipo: TipoDeFallo): Juicio => ({
+    acierto: false,
+    fallo: { tipo, confundidoCon: confundido?.id ?? null },
+  })
+  if (!estricto) return coincide || conErrata ? { acierto: true } : fallo('otro')
+  if (nombresAceptados(preguntado, conTildes).includes(conTildes(escrito))) return { acierto: true }
+  if (coincide) return fallo('tilde')
+  return fallo(conErrata ? 'errata' : 'otro')
+}
+
 export function responderConTexto(partida: Partida, texto: string): Partida {
   if (!esperandoRespuesta(partida)) return partida
-  const preguntado = partida.cola[0]
   if (texto.trim() === '') return pedirPista(partida)
-  const respuesta = normalizar(texto)
-  const aceptados = nombresAceptados(preguntado)
-  const esNombreDeOtro = partida.elementos
-    .filter((elemento) => elemento.id !== preguntado.id)
-    .some((elemento) => nombresAceptados(elemento).includes(respuesta))
-  const acierto =
-    aceptados.includes(respuesta) || (!esNombreDeOtro && aceptados.some((aceptado) => admiteErrata(respuesta, aceptado)))
-  if (acierto) return resolver(partida, true)
-  return abrirPista(anotarFallo(partida), texto.trim().replace(/[\s.,;:!?…]+$/u, ''))
+  const juicio = juzgarTexto(texto, partida.cola[0], partida.elementos, partida.juicioEstricto)
+  if (juicio.acierto) return resolver(partida, true)
+  return abrirPista(anotarFallo(partida), sinPuntuacionFinal(texto), juicio.fallo)
 }
 
 const PUNTOS_POR_FALLO = 25
@@ -385,12 +440,12 @@ function distractoresPorPreferencia(partida: Partida): Elemento[] {
   return [vecinosAunNoPreguntados, vecinosYaPreguntados, restoDelTipo].flatMap((grupo) => barajar(grupo, partida.azar))
 }
 
-function abrirPista(partida: Partida, escrito: string | null): Partida {
+function abrirPista(partida: Partida, escrito: string | null, fallo: FalloDeTexto | null = null): Partida {
   const preguntado = partida.cola[0]
   const distractores = distractoresPorPreferencia(partida).slice(0, DISTRACTORES_POR_PISTA)
   return {
     ...partida,
-    pista: { opciones: barajar([preguntado, ...distractores], partida.azar), escrito },
+    pista: { opciones: barajar([preguntado, ...distractores], partida.azar), escrito, fallo },
   }
 }
 

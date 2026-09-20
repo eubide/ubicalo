@@ -64,7 +64,7 @@ _Evitar_: altitud, cota
 
 **Todo**:
 Alcance que recorre de una vez la Familia entera sobre un único mapa mudo: Cordillera → Sierra → Pico → Altura en Relieve, Vertiente → Río → Afluente en Hidrografía, Tramo de costa → Cabo, Golfo o Estrecho en Costas. Empieza con el nivel de arriba visible sin nombre; acertar un Elemento Desbloquea el siguiente nivel de esa rama. El alumno elige el orden y puede tener varias ramas abiertas a la vez.
-_Evitar_: simulacro, examen, prueba final
+_Evitar_: examen, prueba final
 
 **Desbloqueado**:
 Estado de un Elemento de Todo o de Grandes unidades que ya se puede tocar y responder, porque los Elementos de los que depende están entre los Acertados. Antes de eso, ni se ve ni se pregunta. En Todo el alumno elige cuál responder; en Grandes unidades lo elige el motor.
@@ -226,6 +226,24 @@ _Evitar_: récord, high score, mejor resultado
 Invitación compartible a jugar una prueba con una marca a batir.
 _Evitar_: desafío, challenge
 
+### Examen
+
+**Juicio estricto**:
+Forma de juzgar el texto escrito como lo juzga el profesor: la tilde que falta y la errata son Fallo, y el Fallo lleva su tipo, que es tilde, errata u otro. Siguen valiendo los Alias, las formas cortas, las mayúsculas indistintas y las palabras que no distinguen. Solo lo usan la Tanda y el Simulacro; las Partidas de las Pruebas siguen tolerando la tilde y la errata.
+_Evitar_: modo examen, corrección dura, ortografía
+
+**Dominio**:
+Lo que la aplicación recuerda de cada Elemento de un día para otro: si está sin ver, Flojo o Sabido, el día en que se vio por última vez, cuántas veces se ha fallado y cómo fue su último Fallo. Guarda también la Familia de la que se examina el alumno, y vive solo en su navegador.
+_Evitar_: progreso, nivel, memoria, cajas
+
+**Flojo**:
+Estado de un Elemento cuya última respuesta fue un Fallo o un acierto con Pista, o que solo se ha presentado rotulado y todavía no se ha preguntado.
+_Evitar_: débil, pendiente, fallado
+
+**Sabido**:
+Estado de un Elemento cuya última respuesta fue un acierto sin ayuda con Juicio estricto. No es definitivo: un Fallo lo devuelve a Flojo, y lo que el alumno se sabe de verdad lo dice el Simulacro.
+_Evitar_: dominado, aprendido, acertado
+
 ## Relaciones
 
 - Una **Familia** agrupa varios **Alcances**, y un **Alcance** agrupa muchos **Elementos**; cada **Elemento** tiene un **Nombre oficial** y cero o más **Alias**
@@ -239,6 +257,8 @@ _Evitar_: desafío, challenge
 - Un **Afluente** desemboca en un **Río principal** o en otro **Afluente**, pero siempre se pregunta por el **Río principal** de su cuenca
 - Cada **Tramo de costa** recoge varios **Cabos** y **Golfos**, y la Costa de la Luz recoge además el **Estrecho**
 - Un **Golfo** se dibuja entre dos puntos de la costa, y puede acabar en el **Tramo de costa** siguiente sin dejar de pertenecer al suyo
+- Cada **Elemento** está en el **Dominio** sin ver, **Flojo** o **Sabido**
+- Un **Fallo** juzgado con **Juicio estricto** lleva su tipo: tilde, errata u otro
 
 ## Ambigüedades resueltas
 
