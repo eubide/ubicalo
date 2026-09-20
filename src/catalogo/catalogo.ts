@@ -25,15 +25,25 @@ import {
   type ClaseDeRio,
   type AlcanceDeHidrografia,
 } from './hidrografia'
+import {
+  catalogoDeCostas,
+  contextoDeCostas,
+  contornosDeCostas,
+  esDeCostas,
+  etiquetaDeClaseDeCosta,
+  type ClaseDeCosta,
+  type AlcanceDeCostas,
+} from './costas'
 
 type AlcancePolitico = 'comunidades' | 'provincias'
-export type Alcance = AlcancePolitico | AlcanceDeRelieve | AlcanceDeHidrografia
+export type Alcance = AlcancePolitico | AlcanceDeRelieve | AlcanceDeHidrografia | AlcanceDeCostas
 
-export type ClaseDelMapa = Clase | ClaseDeRio
+export type ClaseDelMapa = Clase | ClaseDeRio | ClaseDeCosta
 
 export const etiquetaDeClase: Record<ClaseDelMapa, string> = {
   ...etiquetaDeClaseDeRelieve,
   ...etiquetaDeClaseDeRio,
+  ...etiquetaDeClaseDeCosta,
 }
 
 export interface ContextoGeografico {
@@ -55,6 +65,7 @@ export interface Elemento {
   cordillera?: string
   altura?: number
   vertiente?: string
+  tramo?: string
   // Río en el que desemboca de verdad un Afluente, que puede ser otro Afluente.
   desembocaEn?: string
   // Río principal del final de esa cadena: lo que se pregunta en Pertenencia de la hidrografía.
@@ -185,6 +196,7 @@ export function catalogo(alcance: Alcance): Elemento[] {
 function catalogoSinFormasCortas(alcance: Alcance): Elemento[] {
   if (esDeRelieve(alcance)) return catalogoDeRelieve(alcance)
   if (esDeHidrografia(alcance)) return catalogoDeHidrografia(alcance)
+  if (esDeCostas(alcance)) return catalogoDeCostas(alcance)
   const { geometries } = topologias[alcance].geometrias
   const vecinosPorIndice = neighbors(geometries)
   const provincias = alcance === 'provincias' ? contornos('provincias') : []
@@ -206,6 +218,7 @@ const contornosPorAlcance: Partial<Record<AlcancePolitico, Feature<Geometry>[]>>
 export function contornos(alcance: Alcance): Feature<Geometry>[] {
   if (esDeRelieve(alcance)) return contornosDeRelieve(alcance)
   if (esDeHidrografia(alcance)) return contornosDeHidrografia(alcance)
+  if (esDeCostas(alcance)) return contornosDeCostas(alcance)
   const { topologia, geometrias } = topologias[alcance]
   return (contornosPorAlcance[alcance] ??= (feature(topologia, geometrias) as FeatureCollection).features)
 }
@@ -219,7 +232,9 @@ export function siluetaDeEspana(): Feature<Geometry> {
 }
 
 export function contextoDe(alcance: Alcance): ContextoGeografico | null {
-  if (!esDeRelieve(alcance) && !esDeHidrografia(alcance)) return null
   const espana = siluetaDeEspana()
-  return esDeRelieve(alcance) ? contextoDeRelieve(alcance, espana) : contextoDeHidrografia(espana)
+  if (esDeRelieve(alcance)) return contextoDeRelieve(alcance, espana)
+  if (esDeHidrografia(alcance)) return contextoDeHidrografia(espana)
+  if (esDeCostas(alcance)) return contextoDeCostas(espana)
+  return null
 }

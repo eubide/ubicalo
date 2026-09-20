@@ -29,7 +29,7 @@ function distanciaAlTrazo(punto: Punto, puntos: Punto[]): number {
 
 // Varios trazos comparten el toque en cada confluencia, así que gana el que pasa más cerca del punto
 // exacto. El empate exacto se rompe por id para que la respuesta no dependa del orden de pintado.
-export function trazoMasCercano(punto: Punto, trazos: Trazo[], radio: number): string | null {
+function masCercano(punto: Punto, trazos: Trazo[], radio: number): { id: string; separacion: number } | null {
   let elegido: { id: string; separacion: number } | null = null
   for (const { id, puntos } of trazos) {
     if (puntos.length === 0) continue
@@ -38,5 +38,26 @@ export function trazoMasCercano(punto: Punto, trazos: Trazo[], radio: number): s
     if (elegido === null || separacion < elegido.separacion) elegido = { id, separacion }
     else if (separacion === elegido.separacion && id < elegido.id) elegido = { id, separacion }
   }
-  return elegido?.id ?? null
+  return elegido
+}
+
+export function trazoMasCercano(punto: Punto, trazos: Trazo[], radio: number): string | null {
+  return masCercano(punto, trazos, radio)?.id ?? null
+}
+
+// Un Cabo cae justo sobre el arco del Golfo que cierra, y el Estrecho entero nace dentro de la Punta
+// de Tarifa: dar prioridad fija a uno de los dos deja intocable al otro. El punto se lleva lo que cae
+// dentro de su marca, que es lo que el alumno ve y apunta; más allá gana el que pase más cerca.
+export function tocableMasCercano(
+  punto: Punto,
+  puntosTocables: Trazo[],
+  trazos: Trazo[],
+  radio: number,
+  marca: number,
+): string | null {
+  const desdeElPunto = masCercano(punto, puntosTocables, radio)
+  const desdeElTrazo = masCercano(punto, trazos, radio)
+  if (desdeElPunto === null) return desdeElTrazo?.id ?? null
+  if (desdeElTrazo === null) return desdeElPunto.id
+  return desdeElTrazo.separacion < desdeElPunto.separacion - marca ? desdeElTrazo.id : desdeElPunto.id
 }

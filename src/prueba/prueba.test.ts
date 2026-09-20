@@ -32,6 +32,7 @@ describe('Alcance', () => {
       rios: 41,
       'pertenencia-rios': 24,
       'todo-rios': 44,
+      'cabos-y-golfos': 20,
     })
   })
 
@@ -44,7 +45,7 @@ describe('Alcance', () => {
   })
 
   it('los demás Alcances admiten las dos direcciones', () => {
-    for (const alcance of ['comunidades', 'provincias', 'picos', 'cordilleras-y-sierras', 'rios'] as Alcance[]) {
+    for (const alcance of ['comunidades', 'provincias', 'picos', 'cordilleras-y-sierras', 'rios', 'cabos-y-golfos'] as Alcance[]) {
       expect(direccionesDe(alcance)).toEqual(['localizar', 'nombrar'])
     }
   })
@@ -60,6 +61,11 @@ describe('Alcance', () => {
     expect(siguienteAlcance('picos')).toBe('cordilleras-y-sierras')
     expect(siguienteAlcance('unidades')).toBe('picos')
     expect(siguienteAlcance('todo-rios')).toBe('rios')
+  })
+
+  it('Cabos y golfos cae en la Familia Costas', () => {
+    expect(familiaDe('cabos-y-golfos')).toBe('costas')
+    expect(nombreDePrueba(pruebaDe('cabos-y-golfos', 'nombrar'))).toBe('Costas · Cabos y golfos · Nombrar')
   })
 
   it('el nombre de una Prueba dice familia, Alcance y dirección', () => {

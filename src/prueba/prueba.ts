@@ -1,6 +1,6 @@
 import { catalogo, type Alcance } from '../catalogo/catalogo'
 
-export type Familia = 'politico' | 'relieve' | 'hidrografia'
+export type Familia = 'politico' | 'relieve' | 'hidrografia' | 'costas'
 
 export type Direccion = 'localizar' | 'nombrar'
 
@@ -17,12 +17,14 @@ export const FAMILIAS: { familia: Familia; alcances: Alcance[] }[] = [
     alcances: ['picos', 'cordilleras-y-sierras', 'pertenencia-relieve', 'todo-relieve', 'unidades'],
   },
   { familia: 'hidrografia', alcances: ['rios', 'pertenencia-rios', 'todo-rios'] },
+  { familia: 'costas', alcances: ['cabos-y-golfos'] },
 ]
 
 export const etiquetaDeFamilia: Record<Familia, string> = {
   politico: 'Político',
   relieve: 'Relieve',
   hidrografia: 'Hidrografía',
+  costas: 'Costas',
 }
 
 export const etiquetaDeAlcance: Record<Alcance, string> = {
@@ -36,6 +38,7 @@ export const etiquetaDeAlcance: Record<Alcance, string> = {
   rios: 'Ríos',
   'pertenencia-rios': 'Pertenencia',
   'todo-rios': 'Todo',
+  'cabos-y-golfos': 'Cabos y golfos',
 }
 
 export const etiquetaDeDireccion: Record<Direccion, string> = {

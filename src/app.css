@@ -17,6 +17,7 @@
   --familia-politico: #7a5c9e;
   --familia-relieve: var(--exterior);
   --familia-hidrografia: #3c7fb1;
+  --familia-costas: #1f7a6d;
 
   /* Señales: un estado, un color, el mismo en todos los Alcances. El relleno dice qué es un Elemento y el
      borde si sigue en juego: punteado abierto, continuo cerrado. En una línea el borde es la funda. */
