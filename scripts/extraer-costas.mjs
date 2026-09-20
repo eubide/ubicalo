@@ -37,8 +37,8 @@ const CABOS = [
 
   { id: 'cabo-de-gata', nombre: 'Cabo de Gata', tramo: 'costa-levantina', enElNomenclator: 'Cabo de Gata' },
   { id: 'cabo-de-palos', nombre: 'Cabo de Palos', tramo: 'costa-levantina', enElNomenclator: 'Cabo de Palos' },
-  { id: 'cabo-de-san-antonio', nombre: 'Cabo de San Antonio', tramo: 'costa-levantina', enElNomenclator: 'Cap de Sant Antoni', desambiguacion: 'El Cabo de la Nao no es este: queda diez kilómetros al sur' },
-  { id: 'cabo-de-la-nao', nombre: 'Cabo de la Nao', tramo: 'costa-levantina', enElNomenclator: 'Cap de la Nau', desambiguacion: 'El Cabo de San Antonio no es este: queda diez kilómetros al norte' },
+  { id: 'cabo-de-san-antonio', nombre: 'Cabo de San Antonio', tramo: 'costa-levantina', enElNomenclator: 'Cap de Sant Antoni', desambiguacion: 'El Cabo de la Nao no es este: es el siguiente cabo hacia el sur' },
+  { id: 'cabo-de-la-nao', nombre: 'Cabo de la Nao', tramo: 'costa-levantina', enElNomenclator: 'Cap de la Nau', desambiguacion: 'El Cabo de San Antonio no es este: es el que cierra el Golfo de Valencia por el sur' },
 
   { id: 'cabo-de-creus', nombre: 'Cabo de Creus', tramo: 'costa-catalana', enElNomenclator: 'Cap de Creus', desambiguacion: 'El Golfo de Rosas no es este cabo: es el arco de costa que el cabo cierra por el norte' },
 ]

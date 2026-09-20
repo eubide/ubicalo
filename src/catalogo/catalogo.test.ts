@@ -801,6 +801,14 @@ describe('Catálogo de Pertenencia en Costas', () => {
   it('pregunta los 20 Elementos hacia su Tramo de costa, y ningún Tramo hacia los suyos', () => {
     expect(pertenencia).toHaveLength(20)
     expect(pertenencia.every(({ pregunta }) => pregunta === 'Toca su tramo de costa')).toBe(true)
+    expect(pertenencia.every(({ clase }) => clase !== 'tramo-de-costa')).toBe(true)
+  })
+
+  it('cada uno de los 20 se responde tocando el Tramo que dice el dato', () => {
+    const suTramo = new Map(catalogo('cabos-y-golfos').map(({ id, tramo }) => [id, tramo]))
+    const mal = pertenencia.filter(({ id, respuesta }) => respuesta !== suTramo.get(id))
+
+    expect(mal.map(({ id }) => id)).toEqual([])
     expect(elementoDe('cabo-de-gata').respuesta).toBe('costa-levantina')
     expect(elementoDe('golfo-de-vizcaya').respuesta).toBe('costa-cantabrica')
     expect(elementoDe('estrecho-de-gibraltar').respuesta).toBe('costa-de-la-luz')
@@ -906,10 +914,38 @@ describe('Lo que basta escribir en las costas', () => {
     expect(elementoDe('punta-de-estaca-de-bares').alias).toEqual(['Estaca de Bares'])
   })
 
-  it('los Cabos se escriben enteros, como las Sierras del relieve', () => {
-    expect(elementoDe('cabo-de-gata').alias).toEqual([])
-    expect(elementoDe('cabo-de-palos').alias).toEqual([])
-    expect(elementoDe('punta-de-tarifa').alias).toEqual([])
+  it('los demás Cabos se escriben enteros, como las Sierras del relieve', () => {
+    const sinAlias = costas.filter(({ alias }) => alias.length === 0).map(({ id }) => id)
+
+    expect(sinAlias.sort()).toEqual([
+      'cabo-de-ajo',
+      'cabo-de-creus',
+      'cabo-de-gata',
+      'cabo-de-la-nao',
+      'cabo-de-palos',
+      'cabo-de-penas',
+      'cabo-de-san-antonio',
+      'cabo-de-trafalgar',
+      'cabo-ortegal',
+      'punta-de-tarifa',
+    ])
+  })
+
+  it('ningún Elemento acepta un Alias que no esté declarado', () => {
+    const conAlias = Object.fromEntries(costas.filter(({ alias }) => alias.length > 0).map(({ id, alias }) => [id, alias]))
+
+    expect(conAlias).toEqual({
+      'cabo-machichaco': ['Matxitxako'],
+      'cabo-de-finisterre': ['Fisterra'],
+      'golfo-de-vizcaya': ['Vizcaya'],
+      'golfo-de-cadiz': ['Cádiz'],
+      'golfo-de-almeria': ['Almería'],
+      'golfo-de-valencia': ['Valencia'],
+      'golfo-de-san-jorge': ['Sant Jordi', 'San Jorge'],
+      'golfo-de-rosas': ['Roses', 'Rosas'],
+      'estrecho-de-gibraltar': ['Gibraltar'],
+      'punta-de-estaca-de-bares': ['Estaca de Bares'],
+    })
   })
 
   it('solo los tres pares que se pisan en el mapa llevan frase de desambiguación', () => {

@@ -23,8 +23,10 @@ export interface PropiedadesDeCosta {
 }
 
 const costas = (costasGeo as FeatureCollection).features
-const tramos = costas.filter((forma) => propiedadesDeCosta(forma).clase === 'tramo-de-costa')
-const cabosYGolfos = costas.filter((forma) => propiedadesDeCosta(forma).clase !== 'tramo-de-costa')
+const esTramo = (forma: Feature<Geometry>) => propiedadesDeCosta(forma).clase === 'tramo-de-costa'
+const tramos = costas.filter(esTramo)
+const cabosYGolfos = costas.filter((forma) => !esTramo(forma))
+const laCostaEntera = [...tramos, ...cabosYGolfos]
 const rios = (riosGeo as FeatureCollection).features
 
 export function propiedadesDeCosta(contorno: Feature<Geometry>): PropiedadesDeCosta {
@@ -33,31 +35,32 @@ export function propiedadesDeCosta(contorno: Feature<Geometry>): PropiedadesDeCo
 
 const CONTORNOS_DEL_MAPA: Record<AlcanceDeCostas, Feature<Geometry>[]> = {
   'cabos-y-golfos': cabosYGolfos,
-  'pertenencia-costas': [...tramos, ...cabosYGolfos],
-  'todo-costas': [...tramos, ...cabosYGolfos],
+  'pertenencia-costas': laCostaEntera,
+  'todo-costas': laCostaEntera,
 }
 
 export function esDeCostas(alcance: string): alcance is AlcanceDeCostas {
   return alcance in CONTORNOS_DEL_MAPA
 }
 
-function hermanosDe(id: string, tramo: string | undefined): string[] {
-  const hermanos = tramo === undefined ? tramos : cabosYGolfos.filter((otro) => propiedadesDeCosta(otro).tramo === tramo)
-  return hermanos.map((otro) => String(otro.id)).filter((otro) => otro !== id)
+function hermanosDe(id: string, { clase, tramo }: PropiedadesDeCosta): string[] {
+  const familia =
+    clase === 'tramo-de-costa' ? tramos : cabosYGolfos.filter((otro) => propiedadesDeCosta(otro).tramo === tramo)
+  return familia.map((otro) => String(otro.id)).filter((otro) => otro !== id)
 }
 
 function elementoDeCosta(contorno: Feature<Geometry>): Elemento {
   const id = String(contorno.id)
-  const { nombre, clase, tramo, alias, desambiguacion } = propiedadesDeCosta(contorno)
-  const hermanos = hermanosDe(id, tramo)
+  const propiedades = propiedadesDeCosta(contorno)
+  const { nombre, clase, tramo, alias, desambiguacion } = propiedades
+  const hermanos = hermanosDe(id, propiedades)
   return {
     id,
     nombre,
     nombreMostrado: nombre,
     alias: alias ?? [],
     vecinos: hermanos,
-    // El Tramo no se dibuja en este Alcance, así que iluminarlo es iluminar lo suyo que sí se ve.
-    ...(tramo && { pistaDeArea: [id, ...hermanos] }),
+    pistaDeArea: [id, ...hermanos],
     clase,
     ...(tramo && { tramo }),
     ...(desambiguacion && { desambiguacion }),
@@ -80,11 +83,13 @@ function catalogoDePertenenciaDeCostas(): Elemento[] {
   })
 }
 
-// Un Tramo no depende de nada y abre los suyos al acertarlo; el alumno elige por dónde sigue.
 function catalogoDeTodoDeCostas(): Elemento[] {
-  return CONTORNOS_DEL_MAPA['todo-costas']
+  return laCostaEntera
     .map(elementoDeCosta)
-    .map((elemento) => ({ ...elemento, desbloqueaCon: elemento.tramo ? [elemento.tramo] : [] }))
+    .map((elemento) => ({
+      ...elemento,
+      desbloqueaCon: elemento.clase === 'tramo-de-costa' ? [] : [elemento.tramo!],
+    }))
 }
 
 export function catalogoDeCostas(alcance: AlcanceDeCostas): Elemento[] {
