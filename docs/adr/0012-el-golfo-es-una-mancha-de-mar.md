@@ -8,6 +8,8 @@ El arco fallaba por tres sitios a la vez. El primero es que pide señalar tierra
 
 Pertenencia se va porque examina de contenido fabricado. El propio ADR-0010 dice que los cinco Tramos no tienen canon, que el currículo no los nombra, que ninguno de los cinco nombres viene literal del Atlas Didáctico y que dos Golfos acaban fuera del suyo. Preguntar a qué Tramo pertenece el Cabo de Gata es preguntar por un reparto que nos inventamos para dar estructura a una lista de veinte, y que el examen del alumno no menciona. La estructura la da ahora la Clase, que sí es real y sí se ve.
 
+Esta decisión se implementa por fases, en los tickets #97 a #101 del issue #96: primero los seis Golfos pasan a mancha, después el Estrecho, después el reparto en Cabos y Golfos, y al final se van Pertenencia y el Tramo de costa. Hasta que cierre el último, el glosario y este ADR describen el destino mientras la aplicación todavía sirve el reparto viejo.
+
 ## Opciones consideradas
 
 - **Cerrar el arco por la cuerda entre sus dos límites**, que es lo que dibuja un atlas escolar: se midió sobre la geometría que ya está en `costas.json` y los golfos españoles son demasiado abiertos para eso. Dividiendo el área resultante entre la cuerda, el fondo medio sale de 8 km en Vizcaya, 10 en Cádiz, 7 en Almería, 5 en Rosas y 1 en el Estrecho; solo Valencia llega a 38. Cinco de los siete quedarían en una uña de menos de 11 km pegada a la costa, que a escala nacional son siete píxeles: el mismo problema de ahora con otra forma.
