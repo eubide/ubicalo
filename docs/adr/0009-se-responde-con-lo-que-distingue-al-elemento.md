@@ -15,7 +15,7 @@ El recorte tiene un límite y es cuándo lo que queda deja de nombrar algo. «Pi
 
 ## Consecuencias
 
-- La regla general vive en `normalizar`, en `src/partida/partida.ts`, y se aplica al nombre esperado y a lo escrito. Quita `el`, `la`, `los`, `las`, `de`, `del`, `y`, `e`, `al`, `l`, los guiones y los apóstrofos.
+- La regla general vive en `loQueDistingue`, en `src/partida/partida.ts`, y se aplica al nombre esperado y a lo escrito. Quita `el`, `la`, `los`, `las`, `de`, `del`, `y`, `e`, `al`, `l`, los guiones y los apóstrofos.
 - `FORMAS_CORTAS` gana seis entradas: Vertiente Mediterránea, Cantábrica y Atlántica pierden el genérico; Depresión del Guadalquivir y Depresión del Ebro quedan en el río que las nombra; Turó de l'Home queda en Turó, que necesita entrada propia porque la regla general lo dejaría en «turohome».
 - Esa tabla deja de ser «formas castellanas de topónimos oficiales del IGN» y pasa a ser «lo que basta escribir». Vive en `src/catalogo/catalogo.ts` junto a los nombres políticos y merece nombre nuevo cuando se toque.
 - La regla general no crea ninguna colisión. Comprobados los cinco catálogos completos con todos sus alias, la única respuesta ambigua es «Moncayo», que vale para la Sierra del Moncayo y para el Pico, y que ya era ambigua antes de este ADR.
