@@ -26,7 +26,7 @@ export interface PropiedadesDeCosta {
 
 const costas = (costasGeo as FeatureCollection).features
 const cabos = costas.filter((forma) => propiedadesDeCosta(forma).clase === 'cabo')
-const golfos = costas.filter((forma) => propiedadesDeCosta(forma).clase !== 'cabo')
+const golfos = costas.filter((forma) => ['golfo', 'estrecho'].includes(propiedadesDeCosta(forma).clase))
 // Los Cabos van delante de los Golfos, y ese orden es el que la Tanda usa para traer los nuevos.
 const laCostaEntera = [...cabos, ...golfos]
 const rios = (riosGeo as FeatureCollection).features

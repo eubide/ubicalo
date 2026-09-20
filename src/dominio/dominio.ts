@@ -94,7 +94,9 @@ function alcanceEIdDe(clave: string): [Alcance, string] | null {
   if (corte <= 0) return null
   const alcance = clave.slice(0, corte)
   const id = clave.slice(corte + 1)
-  const repartido = ALCANCES_REPARTIDOS[alcance]?.find((candidato) => idsDe(candidato).has(id))
+  const repartido = Object.hasOwn(ALCANCES_REPARTIDOS, alcance)
+    ? ALCANCES_REPARTIDOS[alcance].find((candidato) => idsDe(candidato).has(id))
+    : undefined
   if (repartido) return [repartido, id]
   return esAlcance(alcance) && idsDe(alcance).has(id) ? [alcance, id] : null
 }
