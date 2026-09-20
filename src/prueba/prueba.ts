@@ -82,7 +82,7 @@ export function familiaDe(alcance: Alcance): Familia {
   return familia
 }
 
-function alcancesDe(familia: Familia): Alcance[] {
+export function alcancesDe(familia: Familia): Alcance[] {
   return FAMILIAS.find((candidata) => candidata.familia === familia)!.alcances
 }
 

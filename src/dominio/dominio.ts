@@ -19,6 +19,13 @@ export type Resultado =
   | { caso: 'presentacion' }
   | ({ caso: 'fallo' } & FalloDeTexto)
 
+export interface ResumenDeFamilia {
+  sabidos: number
+  flojos: number
+  sinVer: number
+  total: number
+}
+
 interface Registro {
   version: number
   familia: Familia | null
@@ -30,6 +37,14 @@ const VERSION = 1
 const ESTADOS: Estado[] = ['flojo', 'sabido']
 const TIPOS_DE_FALLO: TipoDeFallo[] = ['tilde', 'errata', 'otro']
 const DIA = /^\d{4}-\d{2}-\d{2}$/
+const PARAMETRO_DE_FAMILIA = 'familia'
+
+const ALCANCES_DE_EXAMEN: Record<Familia, Alcance[]> = {
+  politico: ['comunidades', 'provincias'],
+  relieve: ['todo-relieve'],
+  hidrografia: ['todo-rios'],
+  costas: ['todo-costas'],
+}
 
 // Comunidades y Provincias comparten los ids 01 a 19, así que el id solo no identifica al Elemento.
 function claveDe(alcance: Alcance, id: string): string {
@@ -104,6 +119,12 @@ function trasAnotar(anterior: Entrada | undefined, resultado: Resultado, visto: 
   return { estado: resultado.caso === 'acierto' ? 'sabido' : 'flojo', visto, fallos, tipoDeFallo, confundidoCon }
 }
 
+export function familiaDeEnlace(enlace: string): Familia | null {
+  if (!URL.canParse(enlace)) return null
+  const familia = new URL(enlace).searchParams.get(PARAMETRO_DE_FAMILIA)
+  return esFamilia(familia) ? familia : null
+}
+
 export function diaLocal(fecha: Date): string {
   const mes = String(fecha.getMonth() + 1).padStart(2, '0')
   const dia = String(fecha.getDate()).padStart(2, '0')
@@ -132,6 +153,21 @@ export function crearDominio(almacen: Almacen, hoy: () => string) {
 
     elegirFamilia(familia: Familia) {
       guardar({ ...leer(), familia })
+    },
+
+    proponerFamilia(familia: Familia) {
+      const registro = leer()
+      if (registro.familia === null) guardar({ ...registro, familia })
+    },
+
+    resumen(familia: Familia): ResumenDeFamilia {
+      const { elementos } = leer()
+      const estados = ALCANCES_DE_EXAMEN[familia].flatMap((alcance) =>
+        [...idsDe(alcance)].map((id) => elementos[claveDe(alcance, id)]?.estado),
+      )
+      const sabidos = estados.filter((estado) => estado === 'sabido').length
+      const flojos = estados.filter((estado) => estado === 'flojo').length
+      return { sabidos, flojos, sinVer: estados.length - sabidos - flojos, total: estados.length }
     },
 
     entradas(alcance: Alcance): Record<string, Entrada> {

@@ -1,10 +1,12 @@
 <script lang="ts">
   import { geoPath } from 'd3-geo'
   import { geoConicConformalSpain } from 'd3-composite-projections'
-  import { siluetaDeEspana } from '../catalogo/catalogo'
+  import { siluetaDeEspana, type Alcance } from '../catalogo/catalogo'
   import type { Marca, Reto } from '../competicion/competicion'
+  import type { ResumenDeFamilia } from '../dominio/dominio'
   import { formatearTiempo } from '../pantallas/tiempo'
   import {
+    alcancesDe,
     direccionesDe,
     etiquetaDeAlcance,
     etiquetaDeDireccion,
@@ -13,6 +15,7 @@
     nombreDePrueba,
     preguntasDe,
     pruebaDe,
+    type Familia,
     type Prueba,
   } from '../prueba/prueba'
 
@@ -23,9 +26,47 @@
     retoCaducado: boolean
     ultima: Prueba | null
     yaHaJugado: boolean
+    familiaElegida: Familia | null
+    resumenDe: (familia: Familia) => ResumenDeFamilia
+    soloMira: boolean
+    alElegirFamilia: (familia: Familia) => void
+    alMirar: (soloMira: boolean) => void
   }
 
-  let { alElegir, marcaDe, reto, retoCaducado, ultima, yaHaJugado }: Props = $props()
+  let {
+    alElegir,
+    marcaDe,
+    reto,
+    retoCaducado,
+    ultima,
+    yaHaJugado,
+    familiaElegida,
+    resumenDe,
+    soloMira,
+    alElegirFamilia,
+    alMirar,
+  }: Props = $props()
+
+  let cambiando = $state(false)
+  let practicaAbierta = $state(false)
+  const vista = $derived(soloMira ? 'mira' : familiaElegida && !cambiando ? 'elegida' : 'pregunta')
+
+  const loQueEntra: Record<Familia, string> = {
+    politico: 'comunidades y provincias',
+    relieve: 'montañas',
+    hidrografia: 'ríos',
+    costas: 'cabos y golfos',
+  }
+
+  function elegirFamilia(familia: Familia) {
+    cambiando = false
+    alElegirFamilia(familia)
+  }
+
+  function volverALaPregunta() {
+    cambiando = true
+    alMirar(false)
+  }
 
   // La segunda tarde empieza donde acabó la primera: el botón de lo último jugado recibe el foco, que
   // además lo trae a la vista.
@@ -58,7 +99,9 @@
     <h1>Ubícalo</h1>
   </header>
 
-  {#if !yaHaJugado}
+  {#if vista === 'pregunta'}
+    <p class="explicacion">Repasa la geografía de España sobre un mapa mudo.</p>
+  {:else if vista === 'mira' && !yaHaJugado}
     <p class="explicacion">
       Repasa la geografía de España sobre un mapa mudo. Elige una familia y una dirección: localizar lo que
       se te nombra, o nombrar lo que se ilumina.
@@ -77,38 +120,78 @@
     </div>
   {/if}
 
-  {#each FAMILIAS as { familia, alcances } (familia)}
-    <section class="familia {familia}">
-      <h2>{etiquetaDeFamilia[familia]}</h2>
-      <ul>
-        {#each alcances as alcance (alcance)}
-          {@const direcciones = direccionesDe(alcance)}
-          <li>
-            <p class="alcance">
-              <span class="preguntas">{preguntasDe(alcance)}<span class="soloParaLectores"> preguntas</span></span>
-              <span class="nombre">{etiquetaDeAlcance[alcance]}</span>
-              {#if alcance === ultima?.alcance}<span class="ultima">Última</span>{/if}
-            </p>
-            <div class="direcciones" class:sola={direcciones.length === 1}>
-              {#each direcciones as direccion (direccion)}
-                {@const prueba = pruebaDe(alcance, direccion)}
-                {@const marca = resumenDeMarca(marcaDe(prueba))}
-                <button
-                  type="button"
-                  use:siEsLaUltima={alcance === ultima?.alcance && direccion === ultima.direccion}
-                  onclick={() => alElegir(prueba)}
-                >
-                  {etiquetaDeDireccion[direccion]}
-                  {#if marca}<span class="marca">{marca}</span>{/if}
-                </button>
-              {/each}
-            </div>
-          </li>
-        {/each}
-      </ul>
+  {#if vista === 'mira'}
+    <p class="volver"><button type="button" class="enlace" onclick={volverALaPregunta}>¿De qué te examinas?</button></p>
+    {#each FAMILIAS as { familia, alcances } (familia)}
+      {@render tarjeta(familia, alcances)}
+    {/each}
+  {:else if vista === 'elegida' && familiaElegida}
+    {@const resumen = resumenDe(familiaElegida)}
+    <section class="elegida {familiaElegida}">
+      <p class="examen">
+        <span class="deQue">Te examinas de</span>
+        <strong>{etiquetaDeFamilia[familiaElegida]}</strong>
+        <button type="button" class="enlace" onclick={() => (cambiando = true)}>Cambiar</button>
+      </p>
+      <p class="cifra">Te sabes {resumen.sabidos} de {resumen.total}</p>
+      <div class="barra" role="img" aria-label="{resumen.sabidos} te sabes, {resumen.flojos} flojos y {resumen.sinVer} por ver">
+        <span class="sabido" style:flex-grow={resumen.sabidos}></span>
+        <span class="flojo" style:flex-grow={resumen.flojos}></span>
+        <span class="sinVer" style:flex-grow={resumen.sinVer}></span>
+      </div>
     </section>
-  {/each}
+    <details class="practica" bind:open={practicaAbierta}>
+      <summary>Práctica libre</summary>
+      {#if practicaAbierta}
+        {@render tarjeta(familiaElegida, alcancesDe(familiaElegida))}
+      {/if}
+    </details>
+    <p class="pie">Tu progreso se guarda solo en este navegador</p>
+  {:else}
+    <h2 class="pregunta">¿De qué te examinas?</h2>
+    <div class="familias">
+      {#each FAMILIAS as { familia } (familia)}
+        <button type="button" class="examinarse {familia}" onclick={() => elegirFamilia(familia)}>
+          <strong>{etiquetaDeFamilia[familia]}</strong>
+          <span>{loQueEntra[familia]}</span>
+        </button>
+      {/each}
+    </div>
+    <p class="mirar"><button type="button" class="enlace" onclick={() => alMirar(true)}>Solo quiero mirar</button></p>
+  {/if}
 </section>
+
+{#snippet tarjeta(familia: Familia, alcances: Alcance[])}
+  <section class="familia {familia}">
+    <h2>{etiquetaDeFamilia[familia]}</h2>
+    <ul>
+      {#each alcances as alcance (alcance)}
+        {@const direcciones = direccionesDe(alcance)}
+        <li>
+          <p class="alcance">
+            <span class="preguntas">{preguntasDe(alcance)}<span class="soloParaLectores"> preguntas</span></span>
+            <span class="nombre">{etiquetaDeAlcance[alcance]}</span>
+            {#if alcance === ultima?.alcance}<span class="ultima">Última</span>{/if}
+          </p>
+          <div class="direcciones" class:sola={direcciones.length === 1}>
+            {#each direcciones as direccion (direccion)}
+              {@const prueba = pruebaDe(alcance, direccion)}
+              {@const marca = resumenDeMarca(marcaDe(prueba))}
+              <button
+                type="button"
+                use:siEsLaUltima={alcance === ultima?.alcance && direccion === ultima.direccion}
+                onclick={() => alElegir(prueba)}
+              >
+                {etiquetaDeDireccion[direccion]}
+                {#if marca}<span class="marca">{marca}</span>{/if}
+              </button>
+            {/each}
+          </div>
+        </li>
+      {/each}
+    </ul>
+  </section>
+{/snippet}
 
 <style>
   .portada {
@@ -146,7 +229,8 @@
     line-height: 1.4;
   }
 
-  .familia {
+  .familia,
+  .elegida {
     --familia: #6b7280;
     margin-bottom: 1rem;
     padding: 0.75rem;
@@ -156,20 +240,120 @@
     background: #fff;
   }
 
-  .familia.politico {
+  .politico {
     --familia: var(--familia-politico);
   }
 
-  .familia.relieve {
+  .relieve {
     --familia: var(--familia-relieve);
   }
 
-  .familia.hidrografia {
+  .hidrografia {
     --familia: var(--familia-hidrografia);
   }
 
-  .familia.costas {
+  .costas {
     --familia: var(--familia-costas);
+  }
+
+  .pregunta {
+    font-size: 1.25rem;
+    color: inherit;
+    margin: 1.25rem 0 0.75rem;
+  }
+
+  .familias {
+    display: grid;
+    gap: 0.625rem;
+  }
+
+  .examinarse {
+    padding: 0.75rem 1rem;
+    border-color: var(--familia);
+    background: var(--familia);
+    color: #fff;
+  }
+
+  .examinarse strong,
+  .examinarse span {
+    display: block;
+  }
+
+  .examinarse strong {
+    font-size: 1.1875rem;
+  }
+
+  .enlace {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: #4b5563;
+    font-size: 0.875rem;
+    text-decoration: underline;
+  }
+
+  .mirar,
+  .volver {
+    margin: 1rem 0;
+    text-align: center;
+  }
+
+  .volver {
+    text-align: left;
+  }
+
+  .examen {
+    display: flex;
+    align-items: baseline;
+    gap: 0.375rem;
+    margin: 0 0 0.75rem;
+  }
+
+  .deQue {
+    color: #4b5563;
+  }
+
+  .examen strong {
+    font-size: 1.1875rem;
+    color: var(--familia);
+  }
+
+  .examen .enlace {
+    margin-left: auto;
+  }
+
+  .cifra {
+    margin: 0 0 0.375rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .barra {
+    display: flex;
+    height: 0.75rem;
+    overflow: hidden;
+    border-radius: 0.375rem;
+    background: #e5e7eb;
+  }
+
+  .sabido {
+    background: var(--familia);
+  }
+
+  .flojo {
+    background: var(--flojo);
+  }
+
+  .practica summary {
+    padding: 0.5rem 0;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .pie {
+    margin: 1.5rem 0 0;
+    font-size: 0.8125rem;
+    color: #6b7280;
+    text-align: center;
   }
 
   h2 {
