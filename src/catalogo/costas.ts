@@ -3,7 +3,7 @@ import costasGeo from '../datos/costas.json'
 import riosGeo from '../datos/rios.json'
 import type { ContextoGeografico, Elemento } from './catalogo'
 
-export type AlcanceDeCostas = 'cabos-y-golfos' | 'pertenencia-costas'
+export type AlcanceDeCostas = 'cabos-y-golfos' | 'pertenencia-costas' | 'todo-costas'
 
 export type ClaseDeCosta = 'tramo-de-costa' | 'cabo' | 'golfo' | 'estrecho'
 
@@ -34,6 +34,7 @@ export function propiedadesDeCosta(contorno: Feature<Geometry>): PropiedadesDeCo
 const CONTORNOS_DEL_MAPA: Record<AlcanceDeCostas, Feature<Geometry>[]> = {
   'cabos-y-golfos': cabosYGolfos,
   'pertenencia-costas': [...tramos, ...cabosYGolfos],
+  'todo-costas': [...tramos, ...cabosYGolfos],
 }
 
 export function esDeCostas(alcance: string): alcance is AlcanceDeCostas {
@@ -79,8 +80,16 @@ function catalogoDePertenenciaDeCostas(): Elemento[] {
   })
 }
 
+// Un Tramo no depende de nada y abre los suyos al acertarlo; el alumno elige por dónde sigue.
+function catalogoDeTodoDeCostas(): Elemento[] {
+  return CONTORNOS_DEL_MAPA['todo-costas']
+    .map(elementoDeCosta)
+    .map((elemento) => ({ ...elemento, desbloqueaCon: elemento.tramo ? [elemento.tramo] : [] }))
+}
+
 export function catalogoDeCostas(alcance: AlcanceDeCostas): Elemento[] {
   if (alcance === 'pertenencia-costas') return catalogoDePertenenciaDeCostas()
+  if (alcance === 'todo-costas') return catalogoDeTodoDeCostas()
   return CONTORNOS_DEL_MAPA[alcance].map(elementoDeCosta)
 }
 

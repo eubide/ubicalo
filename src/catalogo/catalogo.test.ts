@@ -837,6 +837,55 @@ describe('Catálogo de Pertenencia en Costas', () => {
   })
 })
 
+describe('Catálogo de Todo en Costas', () => {
+  const todo = catalogo('todo-costas')
+  const elementoDe = (id: string) => todo.find((candidato) => candidato.id === id)!
+
+  it('entrega las 25 piezas: los 5 Tramos y los 20 Elementos de la costa', () => {
+    const deClase = (clase: string) => todo.filter((pieza) => pieza.clase === clase)
+
+    expect(todo).toHaveLength(25)
+    expect(deClase('tramo-de-costa')).toHaveLength(5)
+    expect(deClase('cabo')).toHaveLength(13)
+    expect(deClase('golfo')).toHaveLength(6)
+    expect(deClase('estrecho')).toHaveLength(1)
+  })
+
+  it('solo los cinco Tramos arrancan desbloqueados', () => {
+    const sueltos = todo.filter(({ desbloqueaCon }) => desbloqueaCon!.length === 0).map(({ id }) => id)
+
+    expect(sueltos.sort()).toEqual([
+      'costa-cantabrica',
+      'costa-catalana',
+      'costa-de-la-luz',
+      'costa-gallega',
+      'costa-levantina',
+    ])
+  })
+
+  it('cada Cabo, Golfo y el Estrecho se desbloquean al acertar su Tramo, y solo con él', () => {
+    expect(elementoDe('cabo-de-gata').desbloqueaCon).toEqual(['costa-levantina'])
+    expect(elementoDe('golfo-de-vizcaya').desbloqueaCon).toEqual(['costa-cantabrica'])
+    expect(elementoDe('estrecho-de-gibraltar').desbloqueaCon).toEqual(['costa-de-la-luz'])
+    expect(todo.every(({ desbloqueaCon }) => desbloqueaCon!.length <= 1)).toBe(true)
+  })
+
+  it('acertar un Tramo no desbloquea los Elementos de los demás', () => {
+    const conLaCatalana = todo.filter(({ desbloqueaCon }) => desbloqueaCon!.includes('costa-catalana'))
+
+    expect(conLaCatalana.map(({ id }) => id).sort()).toEqual(['cabo-de-creus', 'golfo-de-rosas', 'golfo-de-san-jorge'])
+  })
+
+  it('los Tramos y los Elementos de la costa se tocan como manchas, puntos y líneas', () => {
+    const formas = contornos('todo-costas')
+
+    expect(formas).toHaveLength(25)
+    expect(formas.filter(({ geometry }) => geometry.type === 'MultiPolygon')).toHaveLength(5)
+    expect(formas.filter(({ geometry }) => geometry.type === 'Point')).toHaveLength(13)
+    expect(formas.filter(({ geometry }) => geometry.type === 'LineString')).toHaveLength(7)
+  })
+})
+
 describe('Lo que basta escribir en las costas', () => {
   const costas = catalogo('cabos-y-golfos')
   const elementoDe = (id: string) => costas.find((candidato) => candidato.id === id)!

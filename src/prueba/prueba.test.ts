@@ -34,6 +34,7 @@ describe('Alcance', () => {
       'todo-rios': 44,
       'cabos-y-golfos': 20,
       'pertenencia-costas': 20,
+      'todo-costas': 25,
     })
   })
 
@@ -44,6 +45,7 @@ describe('Alcance', () => {
     expect(direccionesDe('todo-relieve')).toEqual(['nombrar'])
     expect(direccionesDe('todo-rios')).toEqual(['nombrar'])
     expect(direccionesDe('pertenencia-costas')).toEqual(['localizar'])
+    expect(direccionesDe('todo-costas')).toEqual(['nombrar'])
   })
 
   it('los demás Alcances admiten las dos direcciones', () => {
@@ -63,6 +65,7 @@ describe('Alcance', () => {
     expect(siguienteAlcance('picos')).toBe('cordilleras-y-sierras')
     expect(siguienteAlcance('unidades')).toBe('picos')
     expect(siguienteAlcance('todo-rios')).toBe('rios')
+    expect(siguienteAlcance('todo-costas')).toBe('cabos-y-golfos')
   })
 
   it('Cabos y golfos cae en la Familia Costas', () => {
