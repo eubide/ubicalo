@@ -4,12 +4,11 @@ import costasGeo from '../datos/costas.json'
 import riosGeo from '../datos/rios.json'
 import type { ContextoGeografico, Elemento } from './catalogo'
 
-export type AlcanceDeCostas = 'cabos' | 'golfos' | 'pertenencia-costas' | 'todo-costas'
+export type AlcanceDeCostas = 'cabos' | 'golfos' | 'todo-costas'
 
-export type ClaseDeCosta = 'tramo-de-costa' | 'cabo' | 'golfo' | 'estrecho'
+export type ClaseDeCosta = 'cabo' | 'golfo' | 'estrecho'
 
 export const etiquetaDeClaseDeCosta: Record<ClaseDeCosta, string> = {
-  'tramo-de-costa': 'Tramo de costa',
   cabo: 'Cabo',
   golfo: 'Golfo',
   estrecho: 'Estrecho',
@@ -18,7 +17,6 @@ export const etiquetaDeClaseDeCosta: Record<ClaseDeCosta, string> = {
 export interface PropiedadesDeCosta {
   nombre: string
   clase: ClaseDeCosta
-  tramo?: string
   // Los Cabos que un Golfo baña, es decir, los que están sobre el arco de costa del que nace su
   // mancha. Distinguen al Cabo que el Golfo contiene con razón del que se tragaría por error.
   cabos?: string[]
@@ -27,12 +25,10 @@ export interface PropiedadesDeCosta {
 }
 
 const costas = (costasGeo as FeatureCollection).features
-const esTramo = (forma: Feature<Geometry>) => propiedadesDeCosta(forma).clase === 'tramo-de-costa'
-const tramos = costas.filter(esTramo)
 const cabos = costas.filter((forma) => propiedadesDeCosta(forma).clase === 'cabo')
-const golfos = costas.filter((forma) => ['golfo', 'estrecho'].includes(propiedadesDeCosta(forma).clase))
-const cabosYGolfos = [...cabos, ...golfos]
-const laCostaEntera = [...tramos, ...cabosYGolfos]
+const golfos = costas.filter((forma) => propiedadesDeCosta(forma).clase !== 'cabo')
+// Los Cabos van delante de los Golfos, y ese orden es el que la Tanda usa para traer los nuevos.
+const laCostaEntera = [...cabos, ...golfos]
 const rios = (riosGeo as FeatureCollection).features
 
 export function propiedadesDeCosta(contorno: Feature<Geometry>): PropiedadesDeCosta {
@@ -42,10 +38,6 @@ export function propiedadesDeCosta(contorno: Feature<Geometry>): PropiedadesDeCo
 const CONTORNOS_DEL_MAPA: Record<AlcanceDeCostas, Feature<Geometry>[]> = {
   cabos,
   golfos,
-  // En Pertenencia se toca el Tramo, y dibujar encima los Cabos y los Golfos le robaba el toque a
-  // casi la mitad de la Costa Cantábrica: el blanco fino gana al grueso y el alumno fallaba tocando
-  // donde debía. Aquí no hay nada más que tocar, así que no se dibuja nada más.
-  'pertenencia-costas': tramos,
   'todo-costas': laCostaEntera,
 }
 
@@ -55,10 +47,8 @@ export function esDeCostas(alcance: string): alcance is AlcanceDeCostas {
 
 const VECINOS_POR_CERCANIA = 3
 
-// Los Vecinos son los más cercanos de su propia Clase, como en el relieve. Por Tramo no salían: la
-// Costa Gallega no tiene ningún Golfo y la Cantábrica tiene uno, así que no daban tres Distractores.
+// Los Vecinos son los más cercanos de su propia Clase, como en el relieve.
 function vecinosDe(id: string, { clase }: PropiedadesDeCosta): string[] {
-  if (clase === 'tramo-de-costa') return tramos.map((otro) => String(otro.id)).filter((otro) => otro !== id)
   const familia = clase === 'cabo' ? cabos : golfos
   const suyo = familia.find((forma) => String(forma.id) === id)!
   const centro = geoCentroid(suyo)
@@ -73,7 +63,7 @@ function vecinosDe(id: string, { clase }: PropiedadesDeCosta): string[] {
 function elementoDeCosta(contorno: Feature<Geometry>): Elemento {
   const id = String(contorno.id)
   const propiedades = propiedadesDeCosta(contorno)
-  const { nombre, clase, tramo, alias, desambiguacion } = propiedades
+  const { nombre, clase, alias, desambiguacion } = propiedades
   const hermanos = vecinosDe(id, propiedades)
   return {
     id,
@@ -83,40 +73,15 @@ function elementoDeCosta(contorno: Feature<Geometry>): Elemento {
     vecinos: hermanos,
     pistaDeArea: [id, ...hermanos],
     clase,
-    ...(tramo && { tramo }),
     ...(desambiguacion && { desambiguacion }),
   }
 }
 
-// Cada Cabo, Golfo y el Estrecho se responden tocando su Tramo. No se pregunta en los dos sentidos
-// como en Relieve: un Tramo tiene hasta seis y ninguno lo representa.
-function catalogoDePertenenciaDeCostas(): Elemento[] {
-  const porId = new Map(tramos.map(elementoDeCosta).map((tramo) => [tramo.id, tramo]))
-  return cabosYGolfos.map(elementoDeCosta).map((elemento) => {
-    const tramo = porId.get(elemento.tramo!)!
-    return {
-      ...elemento,
-      vecinos: tramo.vecinos,
-      pistaDeArea: [tramo.id],
-      respuesta: tramo.id,
-      pregunta: 'Toca su tramo de costa',
-    }
-  })
-}
-
-function catalogoDeTodoDeCostas(): Elemento[] {
-  return laCostaEntera
-    .map(elementoDeCosta)
-    .map((elemento) => ({
-      ...elemento,
-      desbloqueaCon: elemento.clase === 'tramo-de-costa' ? [] : [elemento.tramo!],
-    }))
-}
-
+// Costas es la única Familia plana: lo único que le hacía de jerarquía era el Tramo de costa, que no
+// tenía canon y se fue con él. Los veinte se ven desde el principio.
 export function catalogoDeCostas(alcance: AlcanceDeCostas): Elemento[] {
-  if (alcance === 'pertenencia-costas') return catalogoDePertenenciaDeCostas()
-  if (alcance === 'todo-costas') return catalogoDeTodoDeCostas()
-  return CONTORNOS_DEL_MAPA[alcance].map(elementoDeCosta)
+  const elementos = CONTORNOS_DEL_MAPA[alcance].map(elementoDeCosta)
+  return alcance === 'todo-costas' ? elementos.map((elemento) => ({ ...elemento, desbloqueaCon: [] })) : elementos
 }
 
 export function tocablesDeCostas(alcance: AlcanceDeCostas): Elemento[] {
@@ -127,8 +92,9 @@ export function contornosDeCostas(alcance: AlcanceDeCostas): Feature<Geometry>[]
   return CONTORNOS_DEL_MAPA[alcance]
 }
 
-// Sin relieve de fondo, que taparía las manchas, y con los ríos en tenue: el delta del Ebro y la
-// desembocadura del Guadiana son límites de Tramo y de Golfo, así que orientan en vez de estorbar.
+// Sin relieve de fondo, que taparía las manchas, y sin el reparto de la tierra en zonas, que se probó
+// y competía con el agua. Los ríos sí, en tenue: el delta del Ebro y la desembocadura del Guadiana
+// son límites de Golfo, así que orientan en vez de estorbar.
 export function contextoDeCostas(contorno: Feature<Geometry>): ContextoGeografico {
   return { contorno, tenues: [], rios }
 }

@@ -161,7 +161,7 @@ describe('Resumen de una Familia', () => {
     expect(dominio.resumen('hidrografia')).toEqual({ sabidos: 0, flojos: 0, sinVer: 44, total: 44 })
     expect(dominio.resumen('politico')).toEqual({ sabidos: 0, flojos: 0, sinVer: 71, total: 71 })
     expect(dominio.resumen('relieve').total).toBe(44)
-    expect(dominio.resumen('costas').total).toBe(25)
+    expect(dominio.resumen('costas').total).toBe(20)
   })
 
   it('cuenta los Sabidos y los Flojos de esa Familia, y no los de otra', () => {
@@ -170,10 +170,10 @@ describe('Resumen de una Familia', () => {
     dominio.anotar('todo-rios', 'ebro', { caso: 'acierto' })
     dominio.anotar('todo-rios', 'duero', { caso: 'acierto' })
     dominio.anotar('todo-rios', 'turia', { caso: 'fallo', tipo: 'otro', confundidoCon: 'jucar' })
-    dominio.anotar('todo-costas', 'costa-gallega', { caso: 'acierto' })
+    dominio.anotar('todo-costas', 'cabo-de-gata', { caso: 'acierto' })
 
     expect(dominio.resumen('hidrografia')).toEqual({ sabidos: 2, flojos: 1, sinVer: 41, total: 44 })
-    expect(dominio.resumen('costas')).toEqual({ sabidos: 1, flojos: 0, sinVer: 24, total: 25 })
+    expect(dominio.resumen('costas')).toEqual({ sabidos: 1, flojos: 0, sinVer: 19, total: 20 })
   })
 
   it('en Político suma Comunidades y Provincias aunque compartan ids', () => {

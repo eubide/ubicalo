@@ -808,103 +808,42 @@ describe('Catálogo de Golfos', () => {
   })
 })
 
-describe('Catálogo de Pertenencia en Costas', () => {
-  const pertenencia = catalogo('pertenencia-costas')
-  const elementoDe = (id: string) => pertenencia.find((candidato) => candidato.id === id)!
-
-  it('pregunta los 20 Elementos hacia su Tramo de costa, y ningún Tramo hacia los suyos', () => {
-    expect(pertenencia).toHaveLength(20)
-    expect(pertenencia.every(({ pregunta }) => pregunta === 'Toca su tramo de costa')).toBe(true)
-    expect(pertenencia.every(({ clase }) => clase !== 'tramo-de-costa')).toBe(true)
-  })
-
-  it('cada uno de los 20 se responde tocando el Tramo que dice el dato', () => {
-    const suTramo = new Map([...catalogo('cabos'), ...catalogo('golfos')].map(({ id, tramo }) => [id, tramo]))
-    const mal = pertenencia.filter(({ id, respuesta }) => respuesta !== suTramo.get(id))
-
-    expect(mal.map(({ id }) => id)).toEqual([])
-    expect(elementoDe('cabo-de-gata').respuesta).toBe('costa-levantina')
-    expect(elementoDe('golfo-de-vizcaya').respuesta).toBe('costa-cantabrica')
-    expect(elementoDe('estrecho-de-gibraltar').respuesta).toBe('costa-de-la-luz')
-  })
-
-  it('los Vecinos son los del Tramo que se toca, así que los Distractores son otros Tramos', () => {
-    expect(elementoDe('cabo-de-creus').vecinos.sort()).toEqual([
-      'costa-cantabrica',
-      'costa-de-la-luz',
-      'costa-gallega',
-      'costa-levantina',
-    ])
-  })
-
-  it('la Pista de área ilumina el Tramo correcto', () => {
-    expect(elementoDe('cabo-de-palos').pistaDeArea).toEqual(['costa-levantina'])
-    expect(elementoDe('golfo-de-valencia').pistaDeArea).toEqual(['costa-levantina'])
-  })
-
-  it('el mapa de Pertenencia son solo los 5 Tramos: no hay nada más que tocar', () => {
-    const formas = contornos('pertenencia-costas')
-
-    expect(formas).toHaveLength(5)
-    expect(catalogoDelMapa('pertenencia-costas')).toHaveLength(5)
-    expect(formas.every(({ geometry }) => geometry.type === 'MultiPolygon')).toBe(true)
-  })
-
-  it('los Vecinos de un Tramo son los otros cuatro', () => {
-    const tramo = catalogoDelMapa('pertenencia-costas').find(({ id }) => id === 'costa-gallega')!
-
-    expect(tramo.clase).toBe('tramo-de-costa')
-    expect(tramo.vecinos).toHaveLength(4)
-    expect(tramo.vecinos).not.toContain('costa-gallega')
-  })
-})
-
 describe('Catálogo de Todo en Costas', () => {
   const todo = catalogo('todo-costas')
-  const elementoDe = (id: string) => todo.find((candidato) => candidato.id === id)!
 
-  it('entrega las 25 piezas: los 5 Tramos y los 20 Elementos de la costa', () => {
+  it('entrega los 20 Elementos de la costa y ningún Tramo', () => {
     const deClase = (clase: string) => todo.filter((pieza) => pieza.clase === clase)
 
-    expect(todo).toHaveLength(25)
-    expect(deClase('tramo-de-costa')).toHaveLength(5)
+    expect(todo).toHaveLength(20)
+    expect(deClase('tramo-de-costa')).toEqual([])
     expect(deClase('cabo')).toHaveLength(13)
     expect(deClase('golfo')).toHaveLength(6)
     expect(deClase('estrecho')).toHaveLength(1)
   })
 
-  it('solo los cinco Tramos arrancan desbloqueados', () => {
-    const sueltos = todo.filter(({ desbloqueaCon }) => desbloqueaCon!.length === 0).map(({ id }) => id)
-
-    expect(sueltos.sort()).toEqual([
-      'costa-cantabrica',
-      'costa-catalana',
-      'costa-de-la-luz',
-      'costa-gallega',
-      'costa-levantina',
-    ])
+  // Costas es la única Familia plana: lo único que le hacía de jerarquía era el Tramo.
+  it('los veinte se ven desde el principio, porque no hay ningún nivel que desbloquear', () => {
+    expect(todo.every(({ desbloqueaCon }) => desbloqueaCon?.length === 0)).toBe(true)
   })
 
-  it('cada Cabo, Golfo y el Estrecho se desbloquean al acertar su Tramo, y solo con él', () => {
-    expect(elementoDe('cabo-de-gata').desbloqueaCon).toEqual(['costa-levantina'])
-    expect(elementoDe('golfo-de-vizcaya').desbloqueaCon).toEqual(['costa-cantabrica'])
-    expect(elementoDe('estrecho-de-gibraltar').desbloqueaCon).toEqual(['costa-de-la-luz'])
-    expect(todo.every(({ desbloqueaCon }) => desbloqueaCon!.length <= 1)).toBe(true)
+  it('ningún Elemento de Costas declara ya a qué Tramo pertenece', () => {
+    expect([...catalogo('cabos'), ...catalogo('golfos'), ...todo].every(({ tramo }) => tramo === undefined)).toBe(true)
   })
 
-  it('acertar un Tramo no desbloquea los Elementos de los demás', () => {
-    const conLaCatalana = todo.filter(({ desbloqueaCon }) => desbloqueaCon!.includes('costa-catalana'))
+  it('los Cabos van antes que los Golfos, que es el orden en que la Tanda presenta los nuevos', () => {
+    const clases = todo.map(({ clase }) => (clase === 'cabo' ? 'cabo' : 'agua'))
 
-    expect(conLaCatalana.map(({ id }) => id).sort()).toEqual(['cabo-de-creus', 'golfo-de-rosas', 'golfo-de-san-jorge'])
+    expect(clases.indexOf('agua')).toBe(13)
+    expect(clases.lastIndexOf('cabo')).toBe(12)
   })
 
-  it('los Tramos, los Golfos y el Estrecho se tocan como manchas, y los Cabos como puntos', () => {
+  it('los veinte se tocan como manchas y puntos, sin una sola línea', () => {
     const formas = contornos('todo-costas')
 
-    expect(formas).toHaveLength(25)
-    expect(formas.filter(({ geometry }) => geometry.type === 'MultiPolygon')).toHaveLength(12)
+    expect(formas).toHaveLength(20)
+    expect(formas.filter(({ geometry }) => geometry.type === 'MultiPolygon')).toHaveLength(7)
     expect(formas.filter(({ geometry }) => geometry.type === 'Point')).toHaveLength(13)
-    expect(formas.filter(({ geometry }) => geometry.type === 'LineString')).toHaveLength(0)
+    expect(formas.filter(({ geometry }) => geometry.type === 'LineString')).toEqual([])
   })
 })
 

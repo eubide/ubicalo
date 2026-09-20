@@ -17,7 +17,7 @@ export const FAMILIAS: { familia: Familia; alcances: Alcance[] }[] = [
     alcances: ['picos', 'cordilleras-y-sierras', 'pertenencia-relieve', 'todo-relieve', 'unidades'],
   },
   { familia: 'hidrografia', alcances: ['rios', 'pertenencia-rios', 'todo-rios'] },
-  { familia: 'costas', alcances: ['cabos', 'golfos', 'pertenencia-costas', 'todo-costas'] },
+  { familia: 'costas', alcances: ['cabos', 'golfos', 'todo-costas'] },
 ]
 
 export const etiquetaDeFamilia: Record<Familia, string> = {
@@ -40,7 +40,6 @@ export const etiquetaDeAlcance: Record<Alcance, string> = {
   'todo-rios': 'Todo',
   cabos: 'Cabos',
   golfos: 'Golfos',
-  'pertenencia-costas': 'Pertenencia',
   'todo-costas': 'Todo',
 }
 
@@ -63,8 +62,7 @@ const RASGOS: Partial<Record<Alcance, Rasgos>> = {
   'pertenencia-rios': { direccionFija: 'localizar' },
   'todo-relieve': { direccionFija: 'nombrar', cascada: 'la elige el alumno' },
   'todo-rios': { direccionFija: 'nombrar', cascada: 'la elige el alumno' },
-  'pertenencia-costas': { direccionFija: 'localizar' },
-  'todo-costas': { direccionFija: 'nombrar', cascada: 'la elige el alumno' },
+  'todo-costas': { direccionFija: 'nombrar' },
   unidades: { direccionFija: 'localizar', cascada: 'la elige el motor' },
 }
 

@@ -251,14 +251,14 @@ describe('Orden de los nuevos entre Tandas', () => {
     }
   })
 
-  it('las Vertientes entran antes que cualquier río, los Tramos de costa antes que cualquier Cabo o Golfo y las Cordilleras antes que cualquier Sierra', () => {
+  it('las Vertientes entran antes que cualquier río, los Cabos antes que cualquier Golfo y las Cordilleras antes que cualquier Sierra', () => {
     const primeros = (familia: Familia, cuantos: number) =>
       ordenDeLlegada(EXAMENES[familia])
         .slice(0, cuantos)
         .map(({ elemento }) => elemento.clase)
 
     expect(new Set(primeros('hidrografia', 3))).toEqual(new Set(['vertiente']))
-    expect(new Set(primeros('costas', 5))).toEqual(new Set(['tramo-de-costa']))
+    expect(new Set(primeros('costas', 13))).toEqual(new Set(['cabo']))
     expect(new Set(primeros('relieve', 11))).toEqual(new Set(['cordillera']))
   })
 

@@ -138,7 +138,7 @@
   const CLASES_DE_RIO: ClaseDelMapa[] = ['rio-principal', 'rio-propio', 'afluente']
 
   // Una mancha del relieve toma su color del Papel; las de agua y las de costa, el de su Clase.
-  const MANCHAS_CON_COLOR_PROPIO: ClaseDelMapa[] = ['vertiente', 'tramo-de-costa', 'golfo', 'estrecho']
+  const MANCHAS_CON_COLOR_PROPIO: ClaseDelMapa[] = ['vertiente', 'golfo', 'estrecho']
 
   function claseDibujada(contorno: Feature<Geometry>): ClaseDelMapa | '' {
     const clase = claseDe(contorno)
@@ -593,9 +593,6 @@
       {#if CLASES_DE_RIO.some(hayClase)}
         <li><svg viewBox="0 0 20 14" aria-hidden="true"><path class="cauce" d="M1,11C6,11 5,4 10,4S15,10 19,3" /></svg> Río</li>
       {/if}
-      {#if hayClase('tramo-de-costa')}
-        <li><svg viewBox="0 0 20 14" aria-hidden="true"><path class="tramo-de-costa" d="M1,9C4,3 8,2 12,5S18,6 19,3V13H1Z" /></svg> Tramo de costa</li>
-      {/if}
       {#if hayClase('cabo')}
         <li><svg viewBox="0 0 20 14" aria-hidden="true"><circle class="cabo" cx="10" cy="7" r="4" /></svg> Cabo</li>
       {/if}
@@ -695,12 +692,6 @@
   .leyenda .vertiente {
     fill: #dbe7f0;
     stroke: #6b8ea6;
-  }
-
-  .elementos path.tramo-de-costa,
-  .leyenda .tramo-de-costa {
-    fill: #dcebe7;
-    stroke: #6f9e94;
   }
 
   /* El Golfo se dibuja sobre el mar y no sobre tierra, así que tiñe más que la Vertiente para
