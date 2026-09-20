@@ -8,7 +8,7 @@ El arco fallaba por tres sitios a la vez. El primero es que pide señalar tierra
 
 Pertenencia se va porque examina de contenido fabricado. El propio ADR-0010 dice que los cinco Tramos no tienen canon, que el currículo no los nombra, que ninguno de los cinco nombres viene literal del Atlas Didáctico y que dos Golfos acaban fuera del suyo. Preguntar a qué Tramo pertenece el Cabo de Gata es preguntar por un reparto que nos inventamos para dar estructura a una lista de veinte, y que el examen del alumno no menciona. La estructura la da ahora la Clase, que sí es real y sí se ve.
 
-Esta decisión se implementa por fases, en los tickets #97 a #101 del issue #96: primero los seis Golfos pasan a mancha, después el Estrecho, después el reparto en Cabos y Golfos, y al final se van Pertenencia y el Tramo de costa. Hasta que cierre el último, el glosario y este ADR describen el destino mientras la aplicación todavía sirve el reparto viejo.
+Esta decisión se implementó por fases, en los tickets #97 a #101 del issue #96: primero los seis Golfos pasaron a mancha, después el Estrecho, después el reparto en Cabos y Golfos, y al final se fueron Pertenencia y el Tramo de costa.
 
 ## Opciones consideradas
 
