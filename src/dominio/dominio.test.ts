@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { almacenEnMemoria, type Almacen } from '../competicion/competicion'
-import { crearDominio, diaLocal } from './dominio'
+import { crearDominio, diaLocal, familiaDeEnlace } from './dominio'
 
 const hoy = () => '2026-09-20'
 
@@ -125,6 +125,64 @@ describe('Familia elegida', () => {
 
     expect(dominio.familia()).toBe('costas')
     expect(dominio.entradas('todo-rios').ebro.estado).toBe('sabido')
+  })
+})
+
+describe('Enlace con Familia', () => {
+  it('una Familia propuesta queda elegida si el alumno no tenía ninguna, y si ya tenía una no la cambia', () => {
+    const dominio = crearDominio(almacenEnMemoria(), hoy)
+
+    dominio.proponerFamilia('hidrografia')
+    expect(dominio.familia()).toBe('hidrografia')
+
+    dominio.proponerFamilia('costas')
+    expect(dominio.familia()).toBe('hidrografia')
+  })
+
+  it('lee la Familia del parámetro familia del enlace', () => {
+    expect(familiaDeEnlace('http://localhost:5173/?familia=hidrografia')).toBe('hidrografia')
+    expect(familiaDeEnlace('http://localhost:5173/ubicalo/?idioma=es&familia=politico#mapa')).toBe('politico')
+  })
+
+  it.each([
+    ['sin el parámetro', 'http://localhost:5173/'],
+    ['con una Familia que no existe', 'http://localhost:5173/?familia=rios'],
+    ['con el parámetro vacío', 'http://localhost:5173/?familia='],
+    ['que no es una URL', 'familia de ríos'],
+  ])('un enlace %s no trae Familia', (_caso, enlace) => {
+    expect(familiaDeEnlace(enlace)).toBeNull()
+  })
+})
+
+describe('Resumen de una Familia', () => {
+  it('sin nada anotado está entera sin ver: los 44 de Hidrografía, y en Político las 19 Comunidades más las 52 Provincias', () => {
+    const dominio = crearDominio(almacenEnMemoria(), hoy)
+
+    expect(dominio.resumen('hidrografia')).toEqual({ sabidos: 0, flojos: 0, sinVer: 44, total: 44 })
+    expect(dominio.resumen('politico')).toEqual({ sabidos: 0, flojos: 0, sinVer: 71, total: 71 })
+    expect(dominio.resumen('relieve').total).toBe(44)
+    expect(dominio.resumen('costas').total).toBe(25)
+  })
+
+  it('cuenta los Sabidos y los Flojos de esa Familia, y no los de otra', () => {
+    const dominio = crearDominio(almacenEnMemoria(), hoy)
+
+    dominio.anotar('todo-rios', 'ebro', { caso: 'acierto' })
+    dominio.anotar('todo-rios', 'duero', { caso: 'acierto' })
+    dominio.anotar('todo-rios', 'turia', { caso: 'fallo', tipo: 'otro', confundidoCon: 'jucar' })
+    dominio.anotar('todo-costas', 'costa-gallega', { caso: 'acierto' })
+
+    expect(dominio.resumen('hidrografia')).toEqual({ sabidos: 2, flojos: 1, sinVer: 41, total: 44 })
+    expect(dominio.resumen('costas')).toEqual({ sabidos: 1, flojos: 0, sinVer: 24, total: 25 })
+  })
+
+  it('en Político suma Comunidades y Provincias aunque compartan ids', () => {
+    const dominio = crearDominio(almacenEnMemoria(), hoy)
+
+    dominio.anotar('comunidades', '02', { caso: 'acierto' })
+    dominio.anotar('provincias', '02', { caso: 'presentacion' })
+
+    expect(dominio.resumen('politico')).toEqual({ sabidos: 1, flojos: 1, sinVer: 69, total: 71 })
   })
 })
 
