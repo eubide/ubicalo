@@ -85,7 +85,6 @@
     ),
   )
   const trazado = $derived(geoPath(proyeccion).pointRadius(radioSierra))
-  const trazadoDeCabo = $derived(geoPath(proyeccion).pointRadius(radioCabo))
   const contornoCorrecto = $derived(contornos.find((contorno) => String(contorno.id) === correcto))
   const anchoRecuadro = 232
   const altoRecuadro = 150
@@ -195,6 +194,10 @@
 
   let lienzo = $state<SVGSVGElement | null>(null)
   let vista = $state<Vista>({ escala: 1, x: 0, y: 0 })
+
+  // La marca del Cabo no crece con el mapa: si creciera, ampliar no separaría nunca el Cabo de la Nao
+  // del de San Antonio, porque su distancia y su radio se multiplicarían por lo mismo.
+  const trazadoDeCabo = $derived(geoPath(proyeccion).pointRadius(radioCabo / vista.escala))
   let seleccionado = $state<string | null>(null)
   let bajoElPuntero = $state<string | null>(null)
 
@@ -234,7 +237,7 @@
     return (Object.keys(ETIQUETA_DE_SENAL) as Senal[]).filter((candidata) => presentes.has(candidata))
   })
 
-  function enCoordenadasDelMapa(evento: PointerEvent): Punto {
+  function enCoordenadasDelMapa(evento: MouseEvent): Punto {
     const caja = (evento.currentTarget as SVGSVGElement).getBoundingClientRect()
     const factor = ancho / caja.width
     return { x: (evento.clientX - caja.left) * factor, y: (evento.clientY - caja.top) * factor }
@@ -262,6 +265,23 @@
     dedos.set(evento.pointerId, enCoordenadasDelMapa(evento))
     if (dedos.size === 2) huboGesto = true
     retomarGesto()
+  }
+
+  // El pellizco solo existe con los dedos, y sin zoom el Cabo de la Nao y el de San Antonio, a cuatro
+  // píxeles, no se pueden separar con el ratón.
+  const PASO_DE_LA_RUEDA = 400
+
+  function alRodar(evento: WheelEvent) {
+    evento.preventDefault()
+    const punto = enCoordenadasDelMapa(evento)
+    const escala = acotar(vista.escala * Math.exp(-evento.deltaY / PASO_DE_LA_RUEDA), 1, escalaMaxima)
+    const origenX = (punto.x - vista.x) / vista.escala
+    const origenY = (punto.y - vista.y) / vista.escala
+    vista = {
+      escala,
+      x: acotar(punto.x - origenX * escala, ancho * (1 - escala), 0),
+      y: acotar(punto.y - origenY * escala, alto * (1 - escala), 0),
+    }
   }
 
   function retomarGesto() {
@@ -328,11 +348,12 @@
     return punto ? tocableMasCercano(punto, puntosTocables, trazos, radioDelDedo / vista.escala, radioCabo / vista.escala) : null
   }
 
-  // Con ratón no hay paso de confirmación, así que la puntería tiene que verse antes de pulsar.
+  // Con ratón no hay paso de confirmación, así que la puntería tiene que verse antes de pulsar. Y hay
+  // que verla también en los puntos: el Cabo de la Nao y el de San Antonio están a cuatro píxeles.
   function apuntar(evento: MouseEvent) {
     if (tipoDePuntero === 'touch' || preguntado === null) return
     if (diana.length > 0 && !dianaSeToca) return
-    bajoElPuntero = cauceBajoElPuntero(evento)
+    bajoElPuntero = tocableBajoElPuntero(evento)
   }
 
   function tocarCauce(evento: MouseEvent) {
@@ -423,6 +444,7 @@
     onpointermove={alMover}
     onpointerup={alSoltar}
     onpointercancel={alSoltar}
+    onwheel={alRodar}
     onmousemove={apuntar}
     onmouseleave={() => (bajoElPuntero = null)}
     onclick={tocarCauce}
