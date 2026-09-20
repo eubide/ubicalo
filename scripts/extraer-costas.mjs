@@ -1,7 +1,13 @@
 import { readFileSync, mkdirSync } from 'node:fs'
 import { createRequire } from 'node:module'
-import { merge } from 'topojson-client'
-import { distancia, elemento, escribir, largoDe, simplificar } from './geometria.mjs'
+import { feature, merge } from 'topojson-client'
+import areaDe from '@turf/area'
+import booleanPointInPolygon from '@turf/boolean-point-in-polygon'
+import buffer from '@turf/buffer'
+import difference from '@turf/difference'
+import { featureCollection } from '@turf/helpers'
+import intersect from '@turf/intersect'
+import { distancia, elemento, escribir, largoDe, orientada, simplificar } from './geometria.mjs'
 
 // Nomenclátor Geográfico Básico de España del IGN, CC BY 4.0 (ADR-0010).
 const WFS = 'https://www.ign.es/wfs-inspire/ngbe'
@@ -54,9 +60,10 @@ const LIMITES = {
   'punta-del-montgo': { nombre: 'la punta del Montgó', punto: [3.171, 42.1214] },
 }
 
-// Cada Golfo y el Estrecho son el trozo de costa entre sus dos límites, que es un Cabo del listado o
-// una entrada de LIMITES. El Golfo de Vizcaya acaba en Estaca de Bares y el de Valencia en el delta
-// del Ebro, los dos ya en el Tramo siguiente: la pertenencia es dato declarado, no geometría.
+// El trozo de costa entre los dos límites de cada uno, que es un Cabo del listado o una entrada de
+// LIMITES. De ahí nace la mancha de mar de un Golfo, y en el Estrecho es todavía lo que se dibuja.
+// El Golfo de Vizcaya acaba en Estaca de Bares y el de Valencia en el delta del Ebro, los dos ya en
+// el Tramo siguiente: la pertenencia es dato declarado, no geometría.
 const ARCOS = [
   { id: 'golfo-de-vizcaya', nombre: 'Golfo de Vizcaya', clase: 'golfo', tramo: 'costa-cantabrica', entre: ['bidasoa', 'punta-de-estaca-de-bares'] },
   { id: 'golfo-de-cadiz', nombre: 'Golfo de Cádiz', clase: 'golfo', tramo: 'costa-de-la-luz', entre: ['guadiana', 'punta-de-tarifa'] },
@@ -211,6 +218,24 @@ function limite(cual) {
   return LIMITES[cual]
 }
 
+// Un Cabo está sobre un arco cuando el vértice de la costa que le queda más cerca es uno de los del
+// arco. Distingue a los que el Golfo baña, como Machichaco dentro del de Vizcaya, del que solo le cae
+// cerca por detrás del límite, como el Cabo de la Nao respecto al de Valencia.
+function losCabosDe(linea) {
+  const suyos = new Set(linea.map((vertice) => vertice.join()))
+  return CABOS.filter(({ id }) => {
+    const cerca = anillo.reduce(
+      (mejor, vertice) => (distancia(puntos.get(id), vertice) < mejor.separacion
+        ? { separacion: distancia(puntos.get(id), vertice), vertice }
+        : mejor),
+      { separacion: Infinity, vertice: null },
+    )
+    // Un Cabo que cayera lejos de la silueta no estaría sobre ningún arco, que es la respuesta que
+    // toca: solo los cinco que cierran un arco tienen que estar cerca, y eso ya lo exige su corte.
+    return cerca.separacion <= SEPARACION_MAXIMA && suyos.has(cerca.vertice.join())
+  }).map(({ id }) => id)
+}
+
 const arcos = ARCOS.map(({ id, nombre, clase, tramo, alias, desambiguacion, entre: [uno, otro] }) => {
   const cortes = [limite(uno), limite(otro)].map((cual) => ({ ...cual, ...verticeMasCercano(anillo, cual) }))
   const linea = arcoEntre(anillo, cortes[0].indice, cortes[1].indice)
@@ -219,10 +244,120 @@ const arcos = ARCOS.map(({ id, nombre, clase, tramo, alias, desambiguacion, entr
   console.log(`${nombre}: ${linea.length} vértices entre ${entre[0]} y ${entre[1]}`)
   return elemento(
     id,
-    { nombre, clase, tramo, ...(alias && { alias }), ...(desambiguacion && { desambiguacion }) },
+    { nombre, clase, tramo, cabos: losCabosDe(linea), ...(alias && { alias }), ...(desambiguacion && { desambiguacion }) },
     { type: 'LineString', coordinates: linea },
   )
 })
 
+// El fondo lo decide el Golfo más pequeño, no el más grande: a 30 km Rosas y San Jorge se leen como
+// costa resaltada y a 60 el de Vizcaya se come el Golfo de León (ADR-0012).
+const FONDO = 40
+
+// Recortar contra la costa deja trozos de mar entre islotes y dentro de las rías; el mayor no llega
+// a un píxel a escala nacional.
+const MIGA = 20
+
+const enFeature = (geometry) => ({ type: 'Feature', properties: {}, geometry })
+
+// El Golfo se recorta contra los cuatro vecinos además de contra España: a 40 km la banda se mete
+// 1.435 km² en Portugal, 990 en Francia y 969 en Marruecos.
+function tierraDelMapa() {
+  const topologia = topologiaDe('autonomous_regions')
+  const espana = merge(
+    topologia,
+    topologia.objects.autonomous_regions.geometries.filter((geometria) => geometria.id !== GIBRALTAR_COMUNIDADES),
+  )
+  const mundo = JSON.parse(readFileSync(require.resolve('world-atlas/countries-10m.json'), 'utf8'))
+  const VECINOS = new Set(['620', '250', '020', '504'])
+  const paises = feature(mundo, mundo.objects.countries).features.filter((pais) => VECINOS.has(pais.id))
+  return [enFeature(espana), ...paises]
+}
+
+const tierra = tierraDelMapa()
+
+// El casquete redondo del buffer dobla la esquina del arco y se come lo que hay al otro lado del
+// límite: sin esto, el Golfo de Valencia se traga el Cabo de la Nao, que no lo cierra. El corte va
+// perpendicular a la cuerda del arco y no a la costa, porque en un cabo la costa gira y su
+// perpendicular entraría en el propio golfo.
+const LARGO_DEL_CORTE = 3
+
+function semiplanoTras(punto, [tx, ty]) {
+  const k = Math.cos((punto[1] * Math.PI) / 180)
+  const [nx, ny] = [-ty, tx]
+  const L = LARGO_DEL_CORTE
+  const mover = (a, b) => [punto[0] + (a * tx + b * nx) / k, punto[1] + a * ty + b * ny]
+  const esquinas = [mover(0, -L), mover(L, -L), mover(L, L), mover(0, L)]
+  return enFeature({ type: 'Polygon', coordinates: [[...esquinas, esquinas[0]]] })
+}
+
+function cortesDe(id, linea) {
+  const [inicio, fin] = [linea[0], linea.at(-1)]
+  const k = Math.cos((((inicio[1] + fin[1]) / 2) * Math.PI) / 180)
+  const [dx, dy] = [(fin[0] - inicio[0]) * k, fin[1] - inicio[1]]
+  const largo = Math.hypot(dx, dy)
+  if (largo === 0) throw new Error(`${id} empieza y acaba en el mismo punto, así que no tiene cuerda que cortar`)
+  const cuerda = [dx / largo, dy / largo]
+  return [semiplanoTras(inicio, [-cuerda[0], -cuerda[1]]), semiplanoTras(fin, cuerda)]
+}
+
+const quitar = (uno, otro) => difference(featureCollection([uno, otro]))
+
+function manchaDe(arco) {
+  let banda = buffer(arco, FONDO, { units: 'kilometers', steps: 12 })
+  for (const corte of cortesDe(arco.id, arco.geometry.coordinates)) {
+    banda = quitar(banda, corte)
+    if (!banda) throw new Error(`el corte de un extremo se come entera la banda de ${arco.id}`)
+  }
+  for (const suelo of tierra) {
+    banda = quitar(banda, suelo)
+    if (!banda) throw new Error(`${arco.id} se queda sin mar al recortar contra la tierra`)
+  }
+  return { ...banda, id: arco.id, properties: arco.properties }
+}
+
+// Dos Golfos que comparten límite se muerden aunque los dos estén cortados, porque sus cuerdas no
+// son paralelas y entre los dos cortes queda una cuña. El orden del listado decide de quién es.
+function sinSolapes(manchas) {
+  return manchas.reduce((limpias, mancha) => {
+    const resto = limpias.reduce((queda, anterior) => quitar(queda, anterior) ?? queda, mancha)
+    return [...limpias, { ...resto, id: mancha.id, properties: mancha.properties }]
+  }, [])
+}
+
+function sinMigas(mancha) {
+  const partes =
+    mancha.geometry.type === 'Polygon' ? [mancha.geometry.coordinates] : mancha.geometry.coordinates
+  const grandes = partes.filter((parte) => areaDe({ type: 'Polygon', coordinates: parte }) / 1e6 >= MIGA)
+  if (grandes.length === 0) throw new Error(`${mancha.id} se queda en migas de menos de ${MIGA} km²`)
+  return { ...mancha, geometry: orientada({ type: 'MultiPolygon', coordinates: grandes }) }
+}
+
+function comprobarManchas(manchas) {
+  for (const [i, una] of manchas.entries()) {
+    for (const otra of manchas.slice(i + 1)) {
+      const comun = intersect(featureCollection([una, otra]))
+      if (comun) throw new Error(`${una.id} y ${otra.id} se solapan en ${(areaDe(comun) / 1e6).toFixed(1)} km²`)
+    }
+    for (const cabo of cabos) {
+      if (una.properties.cabos.includes(cabo.id)) continue
+      if (booleanPointInPolygon(cabo.geometry, una)) {
+        throw new Error(`${cabo.id} cae dentro de ${una.id}, que no lo tiene como límite`)
+      }
+    }
+  }
+}
+
+// El Estrecho no es la orla de una costa sino el agua entre dos: por este buffer sale en la décima
+// parte que el Golfo más pequeño, así que se queda como arco hasta que tenga construcción propia.
+const golfos = arcos.filter(({ properties }) => properties.clase === 'golfo')
+const manchas = sinSolapes(golfos.map(manchaDe)).map(sinMigas)
+comprobarManchas(manchas)
+for (const mancha of manchas) {
+  console.log(`${mancha.properties.nombre}: ${(areaDe(mancha) / 1e6).toFixed(0)} km² de mar`)
+}
+
+const enManchas = new Map(manchas.map((mancha) => [mancha.id, mancha]))
+const costa = arcos.map((arco) => enManchas.get(arco.id) ?? arco)
+
 mkdirSync('src/datos', { recursive: true })
-escribir('costas', [...tramos, ...cabos, ...arcos])
+escribir('costas', [...tramos, ...cabos, ...costa])

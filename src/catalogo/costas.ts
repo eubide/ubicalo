@@ -18,6 +18,9 @@ export interface PropiedadesDeCosta {
   nombre: string
   clase: ClaseDeCosta
   tramo?: string
+  // Los Cabos que un Golfo baña, es decir, los que están sobre el arco de costa del que nace su
+  // mancha. Distinguen al Cabo que el Golfo contiene con razón del que se tragaría por error.
+  cabos?: string[]
   alias?: string[]
   desambiguacion?: string
 }
@@ -109,7 +112,7 @@ export function contornosDeCostas(alcance: AlcanceDeCostas): Feature<Geometry>[]
   return CONTORNOS_DEL_MAPA[alcance]
 }
 
-// Sin relieve de fondo, que taparía los arcos, y con los ríos en tenue: el delta del Ebro y la
+// Sin relieve de fondo, que taparía las manchas, y con los ríos en tenue: el delta del Ebro y la
 // desembocadura del Guadiana son límites de Tramo y de Golfo, así que orientan en vez de estorbar.
 export function contextoDeCostas(contorno: Feature<Geometry>): ContextoGeografico {
   return { contorno, tenues: [], rios }

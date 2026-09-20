@@ -154,37 +154,26 @@ describe('Qué río tocó el dedo', () => {
   })
 })
 
+// Los seis Golfos son manchas de mar y su toque lo resuelve el SVG, no la cercanía: en Costas el
+// único trazo que queda es el Estrecho, hasta que tenga su propia construcción.
 describe('Qué Golfo tocó el dedo', () => {
-  it('cada uno de los 6 Golfos y el Estrecho se acierta tocando su propio arco', () => {
-    const fallados = trazosDeCosta
-      .map(({ id }) => id)
-      .filter((id) => trazoMasCercano(medioDeCosta(id), trazosDeCosta, RADIO_DEL_DEDO) !== id)
-
-    expect(trazosDeCosta).toHaveLength(7)
-    expect(fallados).toEqual([])
+  it('el Estrecho es el único arco de Costas y se acierta tocándolo', () => {
+    expect(trazosDeCosta.map(({ id }) => id)).toEqual(['estrecho-de-gibraltar'])
+    expect(trazoMasCercano(medioDeCosta('estrecho-de-gibraltar'), trazosDeCosta, RADIO_DEL_DEDO)).toBe(
+      'estrecho-de-gibraltar',
+    )
   })
 
-  it('un toque dentro del radio del dedo, pero no sobre el arco, sigue devolviendo el Golfo', () => {
-    const cerca = desplazado(medioDeCosta('golfo-de-cadiz'), 0, RADIO_DEL_DEDO - 2)
+  it('un toque dentro del radio del dedo, pero no sobre el arco, sigue devolviendo el Estrecho', () => {
+    const cerca = desplazado(medioDeCosta('estrecho-de-gibraltar'), 0, RADIO_DEL_DEDO - 2)
 
-    expect(trazoMasCercano(cerca, trazosDeCosta, RADIO_DEL_DEDO)).toBe('golfo-de-cadiz')
-  })
-
-  it('donde el Golfo de Valencia y el de San Jorge se juntan en el delta del Ebro, gana el más cercano', () => {
-    expect(trazoMasCercano(medioDeCosta('golfo-de-valencia'), trazosDeCosta, RADIO_DEL_DEDO)).toBe('golfo-de-valencia')
-    expect(trazoMasCercano(medioDeCosta('golfo-de-san-jorge'), trazosDeCosta, RADIO_DEL_DEDO)).toBe('golfo-de-san-jorge')
-  })
-
-  it('el Estrecho arranca en la Punta de Tarifa, donde acaba el Golfo de Cádiz, y no se lo lleva entero', () => {
-    const { puntos } = trazosDeCosta.find((trazo) => trazo.id === 'estrecho-de-gibraltar')!
-
-    expect(trazoMasCercano(puntos.at(-1)!, trazosDeCosta, RADIO_DEL_DEDO)).toBe('estrecho-de-gibraltar')
+    expect(trazoMasCercano(cerca, trazosDeCosta, RADIO_DEL_DEDO)).toBe('estrecho-de-gibraltar')
   })
 })
 
-// El Cabo de Gata, la Punta de Tarifa, el Cabo de San Antonio y el de Creus son los extremos de los
-// arcos que cierran, así que el punto y la línea se pisan en el mapa.
-describe('Qué gana cuando el punto de un Cabo cae sobre el arco de su Golfo', () => {
+// La Punta de Tarifa es el extremo del arco del Estrecho, así que el punto y la línea se pisan. Los
+// demás Cabos ya no compiten con ningún arco, porque sus Golfos son manchas.
+describe('Qué gana cuando el punto de un Cabo cae sobre el arco del Estrecho', () => {
   const RADIO_DE_LA_MARCA = 4
 
   const quien = (punto: { x: number; y: number }) =>
@@ -199,16 +188,15 @@ describe('Qué gana cuando el punto de un Cabo cae sobre el arco de su Golfo', (
 
   it('el Estrecho responde en su arco, aunque nazca dentro del pulsador de la Punta de Tarifa', () => {
     expect(quien(medioDeCosta('estrecho-de-gibraltar'))).toBe('estrecho-de-gibraltar')
-    expect(quien(medioDeCosta('golfo-de-rosas'))).toBe('golfo-de-rosas')
-    expect(quien(medioDeCosta('golfo-de-almeria'))).toBe('golfo-de-almeria')
   })
 
-  it('cada uno de los 20 Elementos responde a su propia marca', () => {
+  it('cada uno de los 13 Cabos y el Estrecho responden a su propia marca', () => {
     const fallados = [
       ...cabos.map(({ id }) => [id, cabo(id)] as const),
       ...trazosDeCosta.map(({ id }) => [id, medioDeCosta(id)] as const),
     ].filter(([id, punto]) => quien(punto) !== id)
 
+    expect(cabos).toHaveLength(13)
     expect(fallados.map(([id]) => id)).toEqual([])
   })
 
