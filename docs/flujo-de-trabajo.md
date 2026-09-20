@@ -110,7 +110,7 @@ Nunca compactes a mitad de una fase.
 | ¿Cómo debe verse el mapa mudo minimalista? Hablar no lo resuelve | `/mattpocock-skills:prototype` |
 | Falta un dato externo (una licencia, qué ríos entran en ESO) | `/mattpocock-skills:research` |
 | Un bug difícil o algo lento en móvil | `/mattpocock-skills:diagnosing-bugs` |
-| Cabos y golfos (aplazados) | `/mattpocock-skills:grill-with-docs`; `/mattpocock-skills:wayfinder` si no cabe en una sesión |
+| Un bloque nuevo que no cabe en una sesión | `/mattpocock-skills:grill-with-docs`; `/mattpocock-skills:wayfinder` si sigue sin caber |
 | Un mensaje del agente no se entiende | `/mattpocock-skills:wait-what` |
 | No sabes qué skill toca | `/mattpocock-skills:ask-matt` |
 | Cada pocos días, para vigilar el diseño del código | `/mattpocock-skills:improve-codebase-architecture` |
@@ -137,4 +137,5 @@ Nunca compactes a mitad de una fase.
 - [x] Bloque Costas: cabos y golfos. Salió de `/mattpocock-skills:grill-me` sobre una Familia sin listado oficial → ADR-0010 → spec #69 → tickets #71–#76 → PRs hasta #88
 - [x] Tramo 1, Simulacro y tandas: spec #80 → tickets #82–#87 → PRs #89–#94. Un ticket por rama desde `main`, revisión en dos ejes con dos subagentes por ticket y prueba de humo en el navegador antes de cada PR
 - [ ] Probar el Tramo 1 en un móvil real: escribir en el Simulacro a 375 px, el conmutador de Comunidades y Provincias, Ceuta y Melilla en su recuadro, y descartar los Rótulos de una presentación tocando puntos de ocho píxeles
+- [x] Bloque Golfos como manchas de mar: el Golfo deja de ser el arco de costa que lo baña y Costas se queda sin jerarquía → ADR-0012 → spec #96 → tickets #97–#101, todos en `main`. Un prototipo desechable decidió el fondo de la banda y descartó dejar los Tramos de fondo
 - [ ] Siguiente bloque: despliegue (dominio y Terraform)
