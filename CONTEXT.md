@@ -95,7 +95,7 @@ Mar que se mete en la tierra; en el mapa es la mancha de agua que hay delante de
 _Evitar_: bahía, ensenada, entrante
 
 **Estrecho**:
-El de Gibraltar, único de su Clase: el paso entre el Atlántico y el Mediterráneo. En el mapa es el agua entre las dos orillas, la de Cádiz desde la Punta de Tarifa y la africana. Se juega con los Golfos sin ser uno.
+El de Gibraltar, único de su Clase: el paso entre el Atlántico y el Mediterráneo. En el mapa es el agua entre las dos orillas, la de Cádiz desde Punta Camarinal y la africana de enfrente. La Punta de Tarifa no lo abre: es su parte más angosta. Se juega con los Golfos sin ser uno.
 _Evitar_: paso, canal
 
 **Nombre oficial**:

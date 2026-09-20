@@ -39,7 +39,7 @@ const CABOS = [
   { id: 'cabo-de-finisterre', nombre: 'Cabo de Finisterre', tramo: 'costa-gallega', enElNomenclator: 'Cabo Fisterra', alias: ['Fisterra'] },
 
   { id: 'cabo-de-trafalgar', nombre: 'Cabo de Trafalgar', tramo: 'costa-de-la-luz', enElNomenclator: 'Cabo de Trafalgar' },
-  { id: 'punta-de-tarifa', nombre: 'Punta de Tarifa', tramo: 'costa-de-la-luz', enElNomenclator: 'Punta de Tarifa', desambiguacion: 'El Estrecho de Gibraltar no es esta punta: es el arco de costa que arranca en ella' },
+  { id: 'punta-de-tarifa', nombre: 'Punta de Tarifa', tramo: 'costa-de-la-luz', enElNomenclator: 'Punta de Tarifa', desambiguacion: 'El Estrecho de Gibraltar no es esta punta: es el mar que la baña, y la punta es su parte más angosta' },
 
   { id: 'cabo-de-gata', nombre: 'Cabo de Gata', tramo: 'costa-levantina', enElNomenclator: 'Cabo de Gata' },
   { id: 'cabo-de-palos', nombre: 'Cabo de Palos', tramo: 'costa-levantina', enElNomenclator: 'Cabo de Palos' },
@@ -54,6 +54,7 @@ const LIMITES = {
   bidasoa: { nombre: 'la desembocadura del Bidasoa', punto: [-1.7936, 43.3836] },
   guadiana: { nombre: 'la desembocadura del Guadiana', punto: [-7.4083, 37.1733] },
   'punta-carnero': { nombre: 'Punta Carnero', punto: [-5.4425, 36.0833] },
+  'punta-camarinal': { nombre: 'Punta Camarinal', punto: [-5.8106, 36.0847] },
   'punta-entinas': { nombre: 'Punta Entinas', punto: [-2.7276, 36.679] },
   'delta-del-ebro': { nombre: 'el delta del Ebro', punto: [0.8697, 40.7186] },
   'cabo-de-salou': { nombre: 'el cabo de Salou', punto: [1.1614, 41.0519] },
@@ -66,8 +67,12 @@ const LIMITES = {
 // el Tramo siguiente: la pertenencia es dato declarado, no geometría.
 const ARCOS = [
   { id: 'golfo-de-vizcaya', nombre: 'Golfo de Vizcaya', clase: 'golfo', tramo: 'costa-cantabrica', entre: ['bidasoa', 'punta-de-estaca-de-bares'] },
-  { id: 'golfo-de-cadiz', nombre: 'Golfo de Cádiz', clase: 'golfo', tramo: 'costa-de-la-luz', entre: ['guadiana', 'punta-de-tarifa'] },
-  { id: 'estrecho-de-gibraltar', nombre: 'Estrecho de Gibraltar', clase: 'estrecho', tramo: 'costa-de-la-luz', entre: ['punta-de-tarifa', 'punta-carnero'], desambiguacion: 'La Punta de Tarifa no es el estrecho: es el cabo donde el estrecho arranca' },
+  { id: 'golfo-de-cadiz', nombre: 'Golfo de Cádiz', clase: 'golfo', tramo: 'costa-de-la-luz', entre: ['guadiana', 'punta-camarinal'] },
+  // El Estrecho empieza en Punta Camarinal y no en Tarifa. Tarifa es lo más angosto del paso, no su
+  // borde: el límite occidental es la línea de Camarinal a la orilla africana de enfrente. Mientras
+  // el Estrecho fue una línea que arrancaba en Tarifa daba igual; como mancha, empezarlo ahí lo deja
+  // en 186 km² y once píxeles, que es menos que el Golfo más pequeño y poco más que un Cabo.
+  { id: 'estrecho-de-gibraltar', nombre: 'Estrecho de Gibraltar', clase: 'estrecho', tramo: 'costa-de-la-luz', entre: ['punta-camarinal', 'punta-carnero'], desambiguacion: 'La Punta de Tarifa no es el estrecho: es el cabo de su parte más angosta' },
   { id: 'golfo-de-almeria', nombre: 'Golfo de Almería', clase: 'golfo', tramo: 'costa-levantina', entre: ['punta-entinas', 'cabo-de-gata'] },
   { id: 'golfo-de-valencia', nombre: 'Golfo de Valencia', clase: 'golfo', tramo: 'costa-levantina', entre: ['cabo-de-san-antonio', 'delta-del-ebro'] },
   { id: 'golfo-de-san-jorge', nombre: 'Golfo de San Jorge', clase: 'golfo', tramo: 'costa-catalana', entre: ['delta-del-ebro', 'cabo-de-salou'], alias: ['Sant Jordi'] },
@@ -249,6 +254,40 @@ const arcos = ARCOS.map(({ id, nombre, clase, tramo, alias, desambiguacion, entr
   )
 })
 
+// El Estrecho no es la orla de una costa sino el agua entre dos, así que no sale del buffer: por él
+// daba la décima parte que el Golfo más pequeño. Se cierra con su arco de la costa de Cádiz y el
+// trozo de orilla africana que tiene enfrente, unidos por sus dos extremos.
+//
+// Los dos límites africanos van a mano, como los de LIMITES, y no llevan topónimo: el Nomenclátor
+// del IGN no cubre Marruecos y ninguna de las fuentes del proyecto nombra esa orilla.
+const ORILLA_AFRICANA = [
+  { nombre: 'la orilla africana frente a Punta Camarinal', punto: [-5.9095, 35.7967] },
+  { nombre: 'la orilla africana frente a Punta Carnero', punto: [-5.4055, 35.9267] },
+]
+
+function anilloDeMarruecos() {
+  const mundo = JSON.parse(readFileSync(require.resolve('world-atlas/countries-10m.json'), 'utf8'))
+  const marruecos = feature(mundo, mundo.objects.countries).features.find((pais) => pais.id === '504')
+  const [exterior] = marruecos.geometry.coordinates
+  return exterior.slice(0, -1)
+}
+
+function manchaDelEstrecho(arco) {
+  const orilla = anilloDeMarruecos()
+  const cortes = ORILLA_AFRICANA.map((cual) => ({ ...cual, ...verticeMasCercano(orilla, cual) }))
+  const enfrente = arcoEntre(orilla, cortes[0].indice, cortes[1].indice)
+  // Las dos orillas se recorren en sentidos opuestos, así que la africana se da la vuelta para que
+  // el anillo cierre sin cruzarse consigo mismo.
+  const anillo = [...arco.geometry.coordinates, ...[...enfrente].reverse()]
+  const cerrado = { type: 'Polygon', coordinates: [[...anillo, anillo[0]]] }
+  let agua = enFeature(cerrado)
+  for (const suelo of tierra) {
+    agua = quitar(agua, suelo) ?? agua
+  }
+  console.log(`${arco.properties.nombre}: entre ${cortes[0].nombre} y ${cortes[1].nombre}`)
+  return { ...agua, id: arco.id, properties: arco.properties }
+}
+
 // El fondo lo decide el Golfo más pequeño, no el más grande: a 30 km Rosas y San Jorge se leen como
 // costa resaltada y a 60 el de Vizcaya se come el Golfo de León (ADR-0012).
 const FONDO = 40
@@ -332,11 +371,16 @@ function sinMigas(mancha) {
   return { ...mancha, geometry: orientada({ type: 'MultiPolygon', coordinates: grandes }) }
 }
 
+// Dos manchas que comparten límite se tocan por el borde, y eso es lo correcto: el Golfo de Cádiz y
+// el Estrecho se dan la mano en la Punta de Tarifa. Lo que no puede haber es mar contado dos veces.
+const SOLAPE = 1
+
 function comprobarManchas(manchas) {
   for (const [i, una] of manchas.entries()) {
     for (const otra of manchas.slice(i + 1)) {
       const comun = intersect(featureCollection([una, otra]))
-      if (comun) throw new Error(`${una.id} y ${otra.id} se solapan en ${(areaDe(comun) / 1e6).toFixed(1)} km²`)
+      const km2 = comun ? areaDe(comun) / 1e6 : 0
+      if (km2 >= SOLAPE) throw new Error(`${una.id} y ${otra.id} se solapan en ${km2.toFixed(1)} km²`)
     }
     for (const cabo of cabos) {
       if (una.properties.cabos.includes(cabo.id)) continue
@@ -347,10 +391,9 @@ function comprobarManchas(manchas) {
   }
 }
 
-// El Estrecho no es la orla de una costa sino el agua entre dos: por este buffer sale en la décima
-// parte que el Golfo más pequeño, así que se queda como arco hasta que tenga construcción propia.
 const golfos = arcos.filter(({ properties }) => properties.clase === 'golfo')
-const manchas = sinSolapes(golfos.map(manchaDe)).map(sinMigas)
+const elEstrecho = arcos.find(({ properties }) => properties.clase === 'estrecho')
+const manchas = sinSolapes([...golfos.map(manchaDe), manchaDelEstrecho(elEstrecho)]).map(sinMigas)
 comprobarManchas(manchas)
 for (const mancha of manchas) {
   console.log(`${mancha.properties.nombre}: ${(areaDe(mancha) / 1e6).toFixed(0)} km² de mar`)

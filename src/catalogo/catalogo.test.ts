@@ -792,8 +792,8 @@ describe('Catálogo de cabos y golfos', () => {
     const formas = contornos('cabos-y-golfos')
 
     expect(formas.filter(({ geometry }) => geometry.type === 'Point')).toHaveLength(13)
-    expect(formas.filter(({ geometry }) => geometry.type === 'MultiPolygon')).toHaveLength(6)
-    expect(formas.filter(({ geometry }) => geometry.type === 'LineString')).toHaveLength(1)
+    expect(formas.filter(({ geometry }) => geometry.type === 'MultiPolygon')).toHaveLength(7)
+    expect(formas.filter(({ geometry }) => geometry.type === 'LineString')).toHaveLength(0)
     expect(catalogoDelMapa('cabos-y-golfos')).toHaveLength(20)
     expect(contextoDe('cabos-y-golfos')?.tenues).toEqual([])
     expect(contextoDe('cabos-y-golfos')?.rios).toHaveLength(41)
@@ -891,13 +891,13 @@ describe('Catálogo de Todo en Costas', () => {
     expect(conLaCatalana.map(({ id }) => id).sort()).toEqual(['cabo-de-creus', 'golfo-de-rosas', 'golfo-de-san-jorge'])
   })
 
-  it('los Tramos y los Golfos se tocan como manchas, los Cabos como puntos y el Estrecho como línea', () => {
+  it('los Tramos, los Golfos y el Estrecho se tocan como manchas, y los Cabos como puntos', () => {
     const formas = contornos('todo-costas')
 
     expect(formas).toHaveLength(25)
-    expect(formas.filter(({ geometry }) => geometry.type === 'MultiPolygon')).toHaveLength(11)
+    expect(formas.filter(({ geometry }) => geometry.type === 'MultiPolygon')).toHaveLength(12)
     expect(formas.filter(({ geometry }) => geometry.type === 'Point')).toHaveLength(13)
-    expect(formas.filter(({ geometry }) => geometry.type === 'LineString')).toHaveLength(1)
+    expect(formas.filter(({ geometry }) => geometry.type === 'LineString')).toHaveLength(0)
   })
 })
 
@@ -909,8 +909,9 @@ describe('Las manchas de mar de los Golfos', () => {
   const partesDe = (mancha: Feature<Geometry>) => (mancha.geometry as MultiPolygon).coordinates
   const enKm2 = (anillos: Position[][]) => areaDe({ type: 'Polygon', coordinates: anillos }) / 1e6
 
-  it('los seis Golfos son manchas y el Estrecho sigue siendo un arco', () => {
+  it('los seis Golfos y el Estrecho son manchas, y en Costas ya no queda ninguna línea', () => {
     expect(manchas.map(({ id }) => String(id)).sort()).toEqual([
+      'estrecho-de-gibraltar',
       'golfo-de-almeria',
       'golfo-de-cadiz',
       'golfo-de-rosas',
@@ -918,9 +919,16 @@ describe('Las manchas de mar de los Golfos', () => {
       'golfo-de-valencia',
       'golfo-de-vizcaya',
     ])
-    expect(formas.filter(({ geometry }) => geometry.type === 'LineString').map(({ id }) => String(id))).toEqual([
-      'estrecho-de-gibraltar',
-    ])
+    expect(formas.filter(({ geometry }) => geometry.type === 'LineString')).toEqual([])
+  })
+
+  // El Estrecho no sale de un buffer: es el agua entre la costa de Cádiz y la africana de enfrente,
+  // así que su tamaño lo fija la anchura del paso y no el fondo de los Golfos.
+  it('el Estrecho empieza en Punta Camarinal, que es lo que le da tamaño de mancha', () => {
+    const estrecho = partesDe(manchaDe('estrecho-de-gibraltar')).reduce((total, parte) => total + enKm2(parte), 0)
+
+    expect(Math.round(estrecho)).toBeGreaterThan(800)
+    expect(booleanPointInPolygon(cabos.find(({ id }) => id === 'punta-de-tarifa')!.geometry as Point, manchaDe('estrecho-de-gibraltar') as never)).toBe(true)
   })
 
   it('ninguna mancha pisa tierra, ni española ni de los cuatro países vecinos', () => {
@@ -938,13 +946,16 @@ describe('Las manchas de mar de los Golfos', () => {
     }
   })
 
-  it('ningún par de Golfos se solapa, ni los que comparten límite', () => {
+  // Los que comparten límite se tocan por el borde, que es lo que toca: el Golfo de Cádiz y el
+  // Estrecho se dan la mano en la Punta de Tarifa. Lo que no puede haber es mar contado dos veces.
+  it('ningún par de manchas se reparte el mismo mar', () => {
     for (const [i, una] of manchas.entries()) {
       for (const otra of manchas.slice(i + 1)) {
         const comun = intersect(featureCollection([una as never, otra as never]))
+        const km2 = comun ? areaDe(comun) / 1e6 : 0
 
-        expect(`${una.id} con ${otra.id}: ${comun ? (areaDe(comun) / 1e6).toFixed(1) : '0.0'} km²`).toBe(
-          `${una.id} con ${otra.id}: 0.0 km²`,
+        expect(`${una.id} con ${otra.id}: ${km2 < 1 ? 'sin solape' : km2.toFixed(1) + ' km²'}`).toBe(
+          `${una.id} con ${otra.id}: sin solape`,
         )
       }
     }
@@ -980,12 +991,12 @@ describe('Las manchas de mar de los Golfos', () => {
     expect(booleanPointInPolygon(laNao.geometry as Point, manchaDe('golfo-de-valencia') as never)).toBe(false)
   })
 
-  it('ningún Golfo se queda en nada al cortar sus dos extremos', () => {
+  it('ninguna mancha se queda en nada al cortar sus extremos', () => {
     const areas = Object.fromEntries(
       manchas.map((mancha) => [String(mancha.id), Math.round(partesDe(mancha).reduce((total, parte) => total + enKm2(parte), 0))]),
     )
 
-    expect(Object.values(areas).every((km2) => km2 > 1000)).toBe(true)
+    expect(Object.values(areas).every((km2) => km2 > 500)).toBe(true)
     expect(areas['golfo-de-vizcaya']).toBeGreaterThan(areas['golfo-de-valencia'])
   })
 })
