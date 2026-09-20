@@ -19,6 +19,9 @@
   --familia-hidrografia: #3c7fb1;
   --familia-costas: #1f7a6d;
 
+  /* Lo Flojo en la barra de la portada; lo Sabido toma el color de su Familia. */
+  --flojo: #e0b23c;
+
   /* Señales: un estado, un color, el mismo en todos los Alcances. El relleno dice qué es un Elemento y el
      borde si sigue en juego: punteado abierto, continuo cerrado. En una línea el borde es la funda. */
   --senal-frontera: #dce9fa;

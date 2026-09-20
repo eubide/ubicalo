@@ -18,6 +18,7 @@
     type ResultadoDeRegistro,
     type Reto,
   } from './competicion/competicion'
+  import { crearDominio, diaLocal, familiaDeEnlace } from './dominio/dominio'
   import {
     abandonar,
     cerrarCorreccion,
@@ -35,7 +36,7 @@
     tiempoJugado,
     type Partida,
   } from './partida/partida'
-  import { enCascada, seEligeLaPregunta, type Prueba } from './prueba/prueba'
+  import { enCascada, seEligeLaPregunta, type Familia, type Prueba } from './prueba/prueba'
   import SeleccionPrueba from './seleccion/SeleccionPrueba.svelte'
 
   const contexto = contextoGeografico as FeatureCollection
@@ -48,7 +49,13 @@
     }
   }
 
-  const competicion = crearCompeticion(almacenDelNavegador())
+  const almacen = almacenDelNavegador()
+  const competicion = crearCompeticion(almacen)
+  const dominio = crearDominio(almacen, () => diaLocal(new Date()))
+  const propuesta = familiaDeEnlace(location.href)
+  if (propuesta) dominio.proponerFamilia(propuesta)
+  let familiaElegida = $state(dominio.familia())
+  let soloMira = $state(false)
   // Lo ya jugado responde a la vez si es la primera visita y por dónde se quedó la anterior.
   let jugadas = $state.raw(competicion.historial())
 
@@ -275,6 +282,11 @@
     partida = iniciarPartida(elegida, elementos, Math.random, Date.now, elementosDelMapa)
   }
 
+  function elegirFamilia(familia: Familia) {
+    dominio.elegirFamilia(familia)
+    familiaElegida = familia
+  }
+
   function esElRetoRecibido(elegida: Prueba): boolean {
     if (!retoRecibido) return false
     return retoRecibido.prueba.alcance === elegida.alcance && retoRecibido.prueba.direccion === elegida.direccion
@@ -376,6 +388,11 @@
       {retoCaducado}
       ultima={jugadas[0]?.prueba ?? null}
       yaHaJugado={jugadas.length > 0}
+      {familiaElegida}
+      resumenDe={(familia) => dominio.resumen(familia)}
+      {soloMira}
+      alElegirFamilia={elegirFamilia}
+      alMirar={(mira) => (soloMira = mira)}
     />
   {:else}
     <header>
