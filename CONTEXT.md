@@ -7,15 +7,15 @@ Web pública para que alumnos de ESO repasen la geografía de España señalando
 ### Contenido
 
 **Elemento**:
-Lugar concreto del mapa que se pregunta: una provincia, una comunidad autónoma, una cordillera, una sierra, un pico, una vertiente o un río.
+Lugar concreto del mapa que se pregunta: una provincia, una comunidad autónoma, una cordillera, una sierra, un pico, una vertiente, un río, un tramo de costa, un cabo, un golfo o el estrecho.
 _Evitar_: accidente, lugar, zona, área
 
 **Familia**:
-Cada uno de los tres bloques en los que el alumno estudia y en los que se reparte la portada: Político, Relieve e Hidrografía; más adelante, cabos y golfos.
+Cada uno de los cuatro bloques en los que el alumno estudia y en los que se reparte la portada: Político, Relieve, Hidrografía y Costas.
 _Evitar_: grupo, categoría, bloque
 
 **Alcance**:
-Qué Elementos entran en una Prueba dentro de su Familia, con el número de preguntas que trae: Comunidades (19) y Provincias (52); Picos (15), Cordilleras y sierras (29), Pertenencia (40), Todo (44) y Grandes unidades (14); Ríos (41), Pertenencia (24) y Todo (44).
+Qué Elementos entran en una Prueba dentro de su Familia, con el número de preguntas que trae: Comunidades (19) y Provincias (52); Picos (15), Cordilleras y sierras (29), Pertenencia (40), Todo (44) y Grandes unidades (14); Ríos (41), Pertenencia (24) y Todo (44); Cabos y golfos (20), Pertenencia (20) y Todo (25).
 _Evitar_: tipo, categoría, capa
 
 **Cordillera**:
@@ -51,11 +51,11 @@ Cumbre concreta que pertenece a una Cordillera; en el mapa es un triángulo (Ane
 _Evitar_: cima, cumbre, montaña
 
 **Clase**:
-Lo que es un elemento dentro de su familia: cordillera o macizo, sierra, pico, Meseta o Depresión en el relieve; vertiente, río principal, río propio o afluente en la hidrografía. Se ve en el icono, en la leyenda y en el enunciado de la pregunta.
+Lo que es un elemento dentro de su familia: cordillera o macizo, sierra, pico, Meseta o Depresión en el relieve; vertiente, río principal, río propio o afluente en la hidrografía; tramo de costa, cabo, golfo o estrecho en las costas. Se ve en el icono, en la leyenda y en el enunciado de la pregunta.
 _Evitar_: tipo, categoría, nivel
 
 **Pertenencia**:
-Alcance que pregunta en los dos sentidos, barajados: se muestra una Sierra o un Pico y se toca su Cordillera, o se muestra y destaca una Cordillera y se toca su Pico; en Hidrografía, de qué Río principal es cada Afluente. Se juega siempre en Localizar.
+Alcance que pregunta en los dos sentidos, barajados: se muestra una Sierra o un Pico y se toca su Cordillera, o se muestra y destaca una Cordillera y se toca su Pico; en Hidrografía, de qué Río principal es cada Afluente; en Costas, de qué Tramo de costa es cada Cabo, Golfo o Estrecho. Se juega siempre en Localizar.
 _Evitar_: jerarquía, árbol, clasificación
 
 **Altura**:
@@ -63,7 +63,7 @@ Los metros de un Pico. Solo se preguntan los de Moncayo, Aneto, Teide y Mulhacé
 _Evitar_: altitud, cota
 
 **Todo**:
-Alcance que recorre de una vez la Familia entera sobre un único mapa mudo: Cordillera → Sierra → Pico → Altura en Relieve, Vertiente → Río → Afluente en Hidrografía. Empieza con el nivel de arriba visible sin nombre; acertar un Elemento Desbloquea el siguiente nivel de esa rama. El alumno elige el orden y puede tener varias ramas abiertas a la vez.
+Alcance que recorre de una vez la Familia entera sobre un único mapa mudo: Cordillera → Sierra → Pico → Altura en Relieve, Vertiente → Río → Afluente en Hidrografía, Tramo de costa → Cabo, Golfo o Estrecho en Costas. Empieza con el nivel de arriba visible sin nombre; acertar un Elemento Desbloquea el siguiente nivel de esa rama. El alumno elige el orden y puede tener varias ramas abiertas a la vez.
 _Evitar_: simulacro, examen, prueba final
 
 **Desbloqueado**:
@@ -71,7 +71,7 @@ Estado de un Elemento de Todo o de Grandes unidades que ya se puede tocar y resp
 _Evitar_: revelado, visible, disponible
 
 **Vertiente**:
-Mar al que van a parar los ríos de una zona: Cantábrica, Atlántica y Mediterránea; en el mapa se pulsa como una mancha de área.
+Mar al que van a parar los ríos de una zona: Cantábrica, Atlántica y Mediterránea; en el mapa se pulsa como una mancha de área. Reparte la tierra por cuencas y solo existe en Hidrografía: lo que reparte la costa es el Tramo de costa, que no coincide con ella.
 _Evitar_: cuenca, demarcación, ladera
 
 **Río principal**:
@@ -86,6 +86,22 @@ _Evitar_: tributario, subafluente, brazo
 Río que llega al mar por sí solo sin ser Río principal, porque no se le pregunta ningún Afluente: Ter, Llobregat, Turia, Júcar, Segura, Nalón, Nervión, Bidasoa, Tambre, Odiel y Tinto.
 _Evitar_: río menor, río costero, río suelto
 
+**Tramo de costa**:
+Cada uno de los cinco trozos en los que se reparte la costa: Cantábrica, Gallega, de la Luz, Levantina y Catalana. En el mapa es la mancha de sus provincias litorales, y es el nivel de arriba de Costas.
+_Evitar_: litoral, sector, vertiente
+
+**Cabo**:
+Tierra que se mete en el mar; en el mapa es un punto. Las dos puntas del listado, Estaca de Bares y Tarifa, conservan su nombre pero se juegan como cabos.
+_Evitar_: punta, saliente, promontorio
+
+**Golfo**:
+Mar que se mete en la tierra; en el mapa es el arco de costa que lo baña, entre los dos puntos que lo cierran.
+_Evitar_: bahía, ensenada, entrante
+
+**Estrecho**:
+El de Gibraltar, único de su Clase: el paso entre el Atlántico y el Mediterráneo. En el mapa es el arco de costa que va de la Punta de Tarifa hacia levante.
+_Evitar_: paso, canal
+
 **Nombre oficial**:
 Nombre canónico de un elemento: en provincias y comunidades el que usa el mapa (Girona, Bizkaia); en cordilleras y picos el que usan los libros de texto (Cordillera Cantábrica, Torre Cerredo).
 _Evitar_: nombre real, nombre original
@@ -95,11 +111,11 @@ Otra forma aceptada del nombre de un elemento, normalmente la castellana (Gerona
 _Evitar_: sinónimo, traducción
 
 **Vecino**:
-Elemento del mismo Alcance con el que otro se confunde, y de donde salen los Distractores: en lo político, el que comparte frontera; en el relieve, uno de los tres más cercanos; en los ríos, un hermano de cuenca, es decir, otro Afluente del mismo Río principal o, para el nivel de arriba, otro río de la misma Vertiente. En Pertenencia, los Vecinos son los del Elemento que hay que tocar.
+Elemento del mismo Alcance con el que otro se confunde, y de donde salen los Distractores: en lo político, el que comparte frontera; en el relieve, uno de los tres más cercanos; en los ríos, un hermano de cuenca, es decir, otro Afluente del mismo Río principal o, para el nivel de arriba, otro río de la misma Vertiente; en las costas, un hermano de tramo. En Pertenencia, los Vecinos son los del Elemento que hay que tocar.
 _Evitar_: limítrofe, colindante, cercano
 
 **Contexto geográfico**:
-Lo que se ve en el mapa de un Alcance y en ese Alcance nunca se pregunta; depende del Alcance, no es una lista fija. Los países que rodean España son contexto siempre. En el relieve lo son los ríos y, cuando no se tocan, las cordilleras en tono tenue. En los ríos no hay relieve de fondo: con 41 líneas sobre el mapa, las manchas de cordillera taparían lo que hay que tocar.
+Lo que se ve en el mapa de un Alcance y en ese Alcance nunca se pregunta; depende del Alcance, no es una lista fija. Los países que rodean España son contexto siempre. En el relieve lo son los ríos y, cuando no se tocan, las cordilleras en tono tenue. En los ríos no hay relieve de fondo: con 41 líneas sobre el mapa, las manchas de cordillera taparían lo que hay que tocar. En las costas tampoco hay relieve, y sí los ríos en tenue: las desembocaduras del Ebro y del Guadiana son límites de Tramo y de Golfo.
 _Evitar_: fondo, países vecinos
 
 ### Juego
@@ -221,6 +237,8 @@ _Evitar_: desafío, challenge
 - Una **Pista** contiene el **Elemento** correcto y tres **Distractores**, preferentemente **Vecinos**
 - Cada **Vertiente** recoge varios **Ríos principales** y **Ríos propios**; cada **Río principal** recoge varios **Afluentes**
 - Un **Afluente** desemboca en un **Río principal** o en otro **Afluente**, pero siempre se pregunta por el **Río principal** de su cuenca
+- Cada **Tramo de costa** recoge varios **Cabos** y **Golfos**, y la Costa de la Luz recoge además el **Estrecho**
+- Un **Golfo** se dibuja entre dos puntos de la costa, y puede acabar en el **Tramo de costa** siguiente sin dejar de pertenecer al suyo
 
 ## Ambigüedades resueltas
 
@@ -232,4 +250,7 @@ _Evitar_: desafío, challenge
 - La **Dirección** se rotula **Localizar** y **Nombrar**, no "Señalar": comparte raíz con **Señales**, que es el código de color y borde del mapa.
 - El listado de ríos de los apuntes está ordenado geográficamente, no por pertenencia: coloca el Huerva y el Jiloca lejos del Ebro, y el Turia, el Júcar y el Segura entre los **Afluentes** del Ebro sin serlo. La cuenca de cada río sale de la hidrografía real, no del orden de la lista: el Cinca desemboca en el Segre, el Jiloca en el Jalón y el Záncara en el Cigüela, y los tres se preguntan por su **Río principal**.
 - El río que el alumno se saltó al copiar la lista se rellena con el Tiétar por su posición; queda marcado en el dato como añadido nuestro hasta que el profesor confirme cuál era.
-- "Vertiente" es el nivel de arriba de los ríos, no un Alcance suelto: con tres **Elementos** no da para una **Partida**, así que solo se juega dentro de **Todo**.
+- "Vertiente" es el nivel de arriba de los ríos, no un Alcance suelto: con tres **Elementos** no da para una **Partida**, así que solo se juega dentro de **Todo**. Lo mismo vale para el **Tramo de costa**, que son cinco.
+- El listado de cabos y golfos llama "vertientes" a sus tres grupos, pero reparten la costa de otra manera que las tres **Vertientes** de Hidrografía. La palabra se queda en Hidrografía y el nivel de arriba de Costas es el **Tramo de costa**.
+- Las **Puntas** de Estaca de Bares y Tarifa no son una Clase: conservan su **Nombre oficial** y se juegan como **Cabos**, porque el examen no las distingue y el Nomenclátor del IGN tampoco.
+- El **Estrecho** de Gibraltar sí es una Clase, aunque tenga un solo **Elemento**: el Nomenclátor lo agrupa con los golfos, y llamarlo golfo sería enseñar algo falso.

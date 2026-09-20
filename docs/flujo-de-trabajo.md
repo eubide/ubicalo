@@ -128,4 +128,5 @@ Nunca compactes a mitad de una fase.
 - [ ] Probar las Señales en un móvil real: el punteado del borde a ancho de móvil, la funda de los cauces sobre una vertiente, la leyenda de Señales cuando conviven cinco estados, y los Rótulos de ríos acertados cuando se amontonan en una cuenca
 - [x] Bloque Portada: tres Familias en lugar de once Tipos, con Alcance y Dirección en su sitio → ADR-0008. Sin spec ni tickets: el ADR ya traía la lista de consecuencias
 - [ ] Probar la portada en un móvil real: las tres tarjetas a 375 px, los dos botones de dirección en una fila, y la silueta de España junto al nombre
-- [ ] Siguiente bloque: despliegue (dominio y Terraform), o cabos y golfos con `/mattpocock-skills:grill-with-docs`
+- [ ] Bloque Costas: cabos y golfos. Salió de `/mattpocock-skills:grill-me` sobre una Familia sin listado oficial → ADR-0010 → spec #69. Pendiente `to-tickets` e `implement`
+- [ ] Siguiente bloque: despliegue (dominio y Terraform)

@@ -1,6 +1,6 @@
 import { readFileSync, mkdirSync } from 'node:fs'
 import { geoContains } from 'd3-geo'
-import { descargar, douglasPeucker, elemento, escribir, simplificar } from './geometria.mjs'
+import { descargar, distancia, douglasPeucker, elemento, escribir, largoDe, simplificar } from './geometria.mjs'
 
 // Hidrografía del IGN por el WFS INSPIRE de IDEE, CC BY 4.0 (ADR-0004).
 const WFS = 'https://servicios.idee.es/wfs-inspire/hidrografia'
@@ -136,16 +136,6 @@ const PRECISION_DEL_NODO = 7
 
 function nodoDe([lon, lat]) {
   return `${lon.toFixed(PRECISION_DEL_NODO)},${lat.toFixed(PRECISION_DEL_NODO)}`
-}
-
-function largoDe(linea) {
-  let total = 0
-  for (let i = 1; i < linea.length; i++) total += distancia(linea[i], linea[i - 1])
-  return total
-}
-
-function distancia([unLon, unLat], [otroLon, otroLat]) {
-  return Math.hypot(unLon - otroLon, unLat - otroLat)
 }
 
 function grafoDe(tramos) {

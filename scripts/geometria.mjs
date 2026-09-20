@@ -1,6 +1,16 @@
 import { writeFileSync } from 'node:fs'
 import { geoArea } from 'd3-geo'
 
+export function distancia([unLon, unLat], [otroLon, otroLat]) {
+  return Math.hypot(unLon - otroLon, unLat - otroLat)
+}
+
+export function largoDe(linea) {
+  let total = 0
+  for (let i = 1; i < linea.length; i++) total += distancia(linea[i], linea[i - 1])
+  return total
+}
+
 function distanciaARecta(punto, a, b) {
   const dx = b[0] - a[0]
   const dy = b[1] - a[1]

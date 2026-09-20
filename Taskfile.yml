@@ -81,6 +81,11 @@ tasks:
     cmds:
       - npm run datos:hidrografia
 
+  datos:costas:
+    desc: Regenera los cabos y golfos desde el IGN, y los tramos de costa
+    cmds:
+      - npm run datos:costas
+
   limpiar:
     desc: Borra la compilación y la caché de Vite
     cmds:
