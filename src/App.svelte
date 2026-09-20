@@ -46,7 +46,6 @@
   import PantallaSimulacro from './simulacro/PantallaSimulacro.svelte'
   import {
     anotacionesDelSimulacro,
-    crearSimulacros,
     DURACION_DEL_SIMULACRO,
     esLoPrincipal,
     iniciarSimulacro,
@@ -56,6 +55,7 @@
     type Simulacro,
     type SimulacroEnPortada,
   } from './simulacro/simulacro'
+  import { crearSimulacros } from './simulacro/simulacros-guardados'
 
   const contexto = contextoGeografico as FeatureCollection
 
