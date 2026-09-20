@@ -1,8 +1,9 @@
 import { geoConicConformalSpain } from 'd3-composite-projections'
-import type { Feature, FeatureCollection, LineString } from 'geojson'
+import type { Feature, FeatureCollection, LineString, Point } from 'geojson'
 import { describe, expect, it } from 'vitest'
 import riosGeo from '../datos/rios.json'
-import { trazoMasCercano, type Trazo } from './toque'
+import { contornos, siluetaDeEspana } from '../catalogo/catalogo'
+import { tocableMasCercano, trazoMasCercano, type Trazo } from './toque'
 
 // La misma proyección y el mismo encuadre que usa el mapa, para tocar donde tocaría el dedo.
 const ANCHO = 960
@@ -19,17 +20,26 @@ const proyeccion = geoConicConformalSpain().fitExtent(
   riosGeo as FeatureCollection,
 )
 
-function trazoDe(rio: Feature<LineString>): Trazo {
-  return {
-    id: String(rio.id),
-    puntos: rio.geometry.coordinates.map((coordenadas) => {
-      const [x, y] = proyeccion(coordenadas as [number, number])!
+type Proyectar = (coordenadas: [number, number]) => [number, number] | null
+
+function trazosDe(lineas: Feature<LineString>[], proyectar: Proyectar): Trazo[] {
+  return lineas.map((linea) => ({
+    id: String(linea.id),
+    puntos: linea.geometry.coordinates.map((coordenadas) => {
+      const [x, y] = proyectar(coordenadas as [number, number])!
       return { x, y }
     }),
-  }
+  }))
 }
 
-const trazos = rios.map(trazoDe)
+function puntosDe(formas: Feature<Point>[], proyectar: Proyectar): Trazo[] {
+  return formas.map((forma) => {
+    const [x, y] = proyectar(forma.geometry.coordinates as [number, number])!
+    return { id: String(forma.id), puntos: [{ x, y }] }
+  })
+}
+
+const trazos = trazosDe(rios, proyeccion)
 const trazoPorId = (id: string) => trazos.find((trazo) => trazo.id === id)!
 
 function enElMapa(lon: number, lat: number) {
@@ -47,6 +57,30 @@ function desplazado({ x, y }: { x: number; y: number }, dx: number, dy: number) 
 }
 
 const RADIO_DEL_DEDO = 14
+
+// El mapa de Costas encuadra la silueta de España, no los propios Elementos.
+const proyeccionDeCostas = geoConicConformalSpain().fitExtent(
+  [
+    [MARGEN, MARGEN],
+    [ANCHO - MARGEN, ALTO - MARGEN],
+  ],
+  siluetaDeEspana(),
+)
+
+const formasDeCosta = contornos('cabos-y-golfos')
+const trazosDeCosta = trazosDe(
+  formasDeCosta.filter((forma): forma is Feature<LineString> => forma.geometry.type === 'LineString'),
+  proyeccionDeCostas,
+)
+const cabos = puntosDe(
+  formasDeCosta.filter((forma): forma is Feature<Point> => forma.geometry.type === 'Point'),
+  proyeccionDeCostas,
+)
+const cabo = (id: string) => cabos.find((punto) => punto.id === id)!.puntos[0]
+const medioDeCosta = (id: string) => {
+  const { puntos } = trazosDeCosta.find((trazo) => trazo.id === id)!
+  return puntos[Math.floor(puntos.length / 2)]
+}
 
 describe('Qué río tocó el dedo', () => {
   it('un toque justo sobre la línea devuelve ese río', () => {
@@ -117,5 +151,75 @@ describe('Qué río tocó el dedo', () => {
 
     expect(trazoMasCercano({ x: 505, y: 300 }, [suelto], RADIO_DEL_DEDO)).toBe('suelto')
     expect(trazoMasCercano({ x: 600, y: 300 }, [suelto], RADIO_DEL_DEDO)).toBeNull()
+  })
+})
+
+describe('Qué Golfo tocó el dedo', () => {
+  it('cada uno de los 6 Golfos y el Estrecho se acierta tocando su propio arco', () => {
+    const fallados = trazosDeCosta
+      .map(({ id }) => id)
+      .filter((id) => trazoMasCercano(medioDeCosta(id), trazosDeCosta, RADIO_DEL_DEDO) !== id)
+
+    expect(trazosDeCosta).toHaveLength(7)
+    expect(fallados).toEqual([])
+  })
+
+  it('un toque dentro del radio del dedo, pero no sobre el arco, sigue devolviendo el Golfo', () => {
+    const cerca = desplazado(medioDeCosta('golfo-de-cadiz'), 0, RADIO_DEL_DEDO - 2)
+
+    expect(trazoMasCercano(cerca, trazosDeCosta, RADIO_DEL_DEDO)).toBe('golfo-de-cadiz')
+  })
+
+  it('donde el Golfo de Valencia y el de San Jorge se juntan en el delta del Ebro, gana el más cercano', () => {
+    expect(trazoMasCercano(medioDeCosta('golfo-de-valencia'), trazosDeCosta, RADIO_DEL_DEDO)).toBe('golfo-de-valencia')
+    expect(trazoMasCercano(medioDeCosta('golfo-de-san-jorge'), trazosDeCosta, RADIO_DEL_DEDO)).toBe('golfo-de-san-jorge')
+  })
+
+  it('el Estrecho arranca en la Punta de Tarifa, donde acaba el Golfo de Cádiz, y no se lo lleva entero', () => {
+    const { puntos } = trazosDeCosta.find((trazo) => trazo.id === 'estrecho-de-gibraltar')!
+
+    expect(trazoMasCercano(puntos.at(-1)!, trazosDeCosta, RADIO_DEL_DEDO)).toBe('estrecho-de-gibraltar')
+  })
+})
+
+// El Cabo de Gata, la Punta de Tarifa, el Cabo de San Antonio y el de Creus son los extremos de los
+// arcos que cierran, así que el punto y la línea se pisan en el mapa.
+describe('Qué gana cuando el punto de un Cabo cae sobre el arco de su Golfo', () => {
+  const RADIO_DE_LA_MARCA = 4
+
+  const quien = (punto: { x: number; y: number }) =>
+    tocableMasCercano(punto, cabos, trazosDeCosta, RADIO_DEL_DEDO, RADIO_DE_LA_MARCA)
+
+  it('el Cabo responde a un toque sobre su marca, aunque el arco pase por encima', () => {
+    expect(quien(cabo('punta-de-tarifa'))).toBe('punta-de-tarifa')
+    expect(quien(cabo('cabo-de-gata'))).toBe('cabo-de-gata')
+    expect(quien(cabo('cabo-de-creus'))).toBe('cabo-de-creus')
+    expect(quien(cabo('cabo-de-san-antonio'))).toBe('cabo-de-san-antonio')
+  })
+
+  it('el Estrecho responde en su arco, aunque nazca dentro del pulsador de la Punta de Tarifa', () => {
+    expect(quien(medioDeCosta('estrecho-de-gibraltar'))).toBe('estrecho-de-gibraltar')
+    expect(quien(medioDeCosta('golfo-de-rosas'))).toBe('golfo-de-rosas')
+    expect(quien(medioDeCosta('golfo-de-almeria'))).toBe('golfo-de-almeria')
+  })
+
+  it('cada uno de los 20 Elementos responde a su propia marca', () => {
+    const fallados = [
+      ...cabos.map(({ id }) => [id, cabo(id)] as const),
+      ...trazosDeCosta.map(({ id }) => [id, medioDeCosta(id)] as const),
+    ].filter(([id, punto]) => quien(punto) !== id)
+
+    expect(fallados.map(([id]) => id)).toEqual([])
+  })
+
+  it('el Cabo de la Nao y el de San Antonio, a cuatro píxeles, responden cada uno por el suyo', () => {
+    expect(quien(cabo('cabo-de-la-nao'))).toBe('cabo-de-la-nao')
+    expect(quien(cabo('cabo-de-san-antonio'))).toBe('cabo-de-san-antonio')
+    expect(quien(cabo('punta-de-estaca-de-bares'))).toBe('punta-de-estaca-de-bares')
+    expect(quien(cabo('cabo-ortegal'))).toBe('cabo-ortegal')
+  })
+
+  it('lejos de todo no responde nadie', () => {
+    expect(quien({ x: ANCHO - 1, y: ALTO - 1 })).toBeNull()
   })
 })

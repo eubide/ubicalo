@@ -732,6 +732,68 @@ describe('Catálogo de grandes unidades', () => {
   })
 })
 
+describe('Catálogo de cabos y golfos', () => {
+  const costas = catalogo('cabos-y-golfos')
+  const elementoDe = (id: string) => costas.find((candidato) => candidato.id === id)!
+  const deClase = (clase: string) => costas.filter((candidato) => candidato.clase === clase)
+
+  it('entrega los 20 Elementos de la costa: 13 cabos, 6 golfos y el estrecho', () => {
+    expect(costas).toHaveLength(20)
+    expect(deClase('cabo')).toHaveLength(13)
+    expect(deClase('golfo')).toHaveLength(6)
+    expect(deClase('estrecho').map(({ nombre }) => nombre)).toEqual(['Estrecho de Gibraltar'])
+  })
+
+  it('reparte los 20 Elementos en los cinco tramos de costa', () => {
+    const porTramo = (tramo: string) => costas.filter((candidato) => candidato.tramo === tramo).length
+
+    expect([porTramo('costa-cantabrica'), porTramo('costa-gallega'), porTramo('costa-de-la-luz')]).toEqual([4, 3, 4])
+    expect([porTramo('costa-levantina'), porTramo('costa-catalana')]).toEqual([6, 3])
+    expect(costas.every(({ tramo }) => tramo !== undefined)).toBe(true)
+  })
+
+  it('las dos Puntas del listado conservan su nombre y se juegan como Cabos', () => {
+    expect(elementoDe('punta-de-estaca-de-bares')).toMatchObject({
+      nombre: 'Punta de Estaca de Bares',
+      clase: 'cabo',
+      tramo: 'costa-gallega',
+    })
+    expect(elementoDe('punta-de-tarifa').clase).toBe('cabo')
+  })
+
+  it('un Golfo que muere en el Tramo siguiente sigue perteneciendo al suyo', () => {
+    expect(elementoDe('golfo-de-vizcaya').tramo).toBe('costa-cantabrica')
+    expect(elementoDe('golfo-de-valencia').tramo).toBe('costa-levantina')
+  })
+
+  it('los Vecinos de un Elemento son sus hermanos de Tramo', () => {
+    expect(elementoDe('cabo-de-ajo').vecinos.sort()).toEqual(['cabo-de-penas', 'cabo-machichaco', 'golfo-de-vizcaya'])
+    expect(elementoDe('cabo-de-creus').vecinos.sort()).toEqual(['golfo-de-rosas', 'golfo-de-san-jorge'])
+    expect(elementoDe('cabo-de-gata').vecinos).not.toContain('cabo-de-creus')
+    expect(costas.every(({ vecinos }) => vecinos.length > 0)).toBe(true)
+  })
+
+  it('la Pista de área ilumina el Tramo del Elemento preguntado', () => {
+    expect(elementoDe('cabo-de-creus').pistaDeArea!.sort()).toEqual([
+      'cabo-de-creus',
+      'golfo-de-rosas',
+      'golfo-de-san-jorge',
+    ])
+    expect(elementoDe('golfo-de-cadiz').pistaDeArea).toHaveLength(4)
+  })
+
+  it('los Cabos son puntos y los Golfos líneas, sobre un mapa con los ríos en tenue y sin relieve', () => {
+    const formas = contornos('cabos-y-golfos')
+
+    expect(formas.filter(({ geometry }) => geometry.type === 'Point')).toHaveLength(13)
+    expect(formas.filter(({ geometry }) => geometry.type === 'LineString')).toHaveLength(7)
+    expect(catalogoDelMapa('cabos-y-golfos')).toHaveLength(20)
+    expect(contextoDe('cabos-y-golfos')?.tenues).toEqual([])
+    expect(contextoDe('cabos-y-golfos')?.rios).toHaveLength(41)
+    expect(contextoDe('cabos-y-golfos')?.contorno.geometry.type).toBe('MultiPolygon')
+  })
+})
+
 describe('Lo que basta escribir en el relieve y la hidrografía', () => {
   function elementoDe(alcance: Alcance, id: string) {
     return catalogo(alcance).find((elemento) => elemento.id === id)!

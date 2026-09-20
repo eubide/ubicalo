@@ -168,6 +168,10 @@
     --familia: var(--familia-hidrografia);
   }
 
+  .familia.costas {
+    --familia: var(--familia-costas);
+  }
+
   h2 {
     font-size: 1rem;
     font-weight: 600;

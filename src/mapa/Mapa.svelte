@@ -5,7 +5,7 @@
   import type { ClaseDelMapa, ContextoGeografico } from '../catalogo/catalogo'
   import { nombreDePapel, PAPELES, propiedadesDe, type Papel } from '../catalogo/relieve'
   import { abierta, ETIQUETA_DE_SENAL, senalDe, type EstadoDelMapa, type Senal } from './senales'
-  import { trazoMasCercano, type Trazo } from './toque'
+  import { tocableMasCercano, trazoMasCercano, type Trazo } from './toque'
   import RecuadroCeutaMelilla, { esCeutaOMelilla } from './RecuadroCeutaMelilla.svelte'
 
   export interface Rotulo {
@@ -71,6 +71,9 @@
   const margen = 12
   const radioSierra = 7
   const radioPico = 6
+  // El Cabo de la Nao y el de San Antonio están a cuatro píxeles: con el círculo de una Sierra se ven
+  // como uno solo.
+  const radioCabo = 4
 
   const proyeccion = $derived(
     geoConicConformalSpain().fitExtent(
@@ -82,6 +85,7 @@
     ),
   )
   const trazado = $derived(geoPath(proyeccion).pointRadius(radioSierra))
+  const trazadoDeCabo = $derived(geoPath(proyeccion).pointRadius(radioCabo))
   const contornoCorrecto = $derived(contornos.find((contorno) => String(contorno.id) === correcto))
   const anchoRecuadro = 232
   const altoRecuadro = 150
@@ -132,7 +136,20 @@
     ),
   )
 
+  const CLASES_DE_RIO: ClaseDelMapa[] = ['rio-principal', 'rio-propio', 'afluente']
+
+  function hayClase(clase: ClaseDelMapa): boolean {
+    return contornos.some((contorno) => claseDe(contorno) === clase)
+  }
+
   const radioDelDedo = 14
+
+  const puntosTocables = $derived<Trazo[]>(
+    conPulsador.flatMap(({ contorno, centro }) => {
+      const punto = proyeccion(centro)
+      return punto ? [{ id: String(contorno.id), puntos: [{ x: punto[0], y: punto[1] }] }] : []
+    }),
+  )
 
   const trazos = $derived<Trazo[]>(
     cauces.map((cauce) => ({
@@ -147,6 +164,7 @@
   // Sierra: círculo; pico: triángulo, como en los mapas físicos. Las manchas ya se distinguen solas.
   function marcador(contorno: Feature<Geometry>): string | null {
     if (contorno.geometry.type !== 'Point') return trazado(contorno)
+    if (claseDe(contorno) === 'cabo') return trazadoDeCabo(contorno)
     if (claseDe(contorno) !== 'pico') return trazado(contorno)
     const punto = proyeccion(contorno.geometry.coordinates as [number, number])
     if (!punto) return null
@@ -279,17 +297,27 @@
     }
   }
 
-  // Una línea de dos píxeles no se puede pulsar, y en cada confluencia hay varias bajo el dedo: el
-  // toque lo resuelve el mapa entero, quedándose con el cauce que pasa más cerca del punto exacto.
-  function cauceBajoElPuntero(evento: MouseEvent): string | null {
-    if (trazos.length === 0 || !lienzo) return null
+  function puntoDelEvento(evento: MouseEvent): Punto | null {
+    if (!lienzo) return null
     const caja = lienzo.getBoundingClientRect()
     const factor = ancho / caja.width
-    const punto = {
+    return {
       x: ((evento.clientX - caja.left) * factor - vista.x) / vista.escala,
       y: ((evento.clientY - caja.top) * factor - vista.y) / vista.escala,
     }
-    return trazoMasCercano(punto, trazos, radioDelDedo / vista.escala)
+  }
+
+  // Una línea de dos píxeles no se puede pulsar, y en cada confluencia hay varias bajo el dedo: el
+  // toque lo resuelve el mapa entero, quedándose con el cauce que pasa más cerca del punto exacto.
+  function cauceBajoElPuntero(evento: MouseEvent): string | null {
+    if (trazos.length === 0) return null
+    const punto = puntoDelEvento(evento)
+    return punto ? trazoMasCercano(punto, trazos, radioDelDedo / vista.escala) : null
+  }
+
+  function tocableBajoElPuntero(evento: MouseEvent): string | null {
+    const punto = puntoDelEvento(evento)
+    return punto ? tocableMasCercano(punto, puntosTocables, trazos, radioDelDedo / vista.escala, radioCabo / vista.escala) : null
   }
 
   // Con ratón no hay paso de confirmación, así que la puntería tiene que verse antes de pulsar.
@@ -308,6 +336,14 @@
   // le llega a las dos. Gana el río, que es el blanco fino.
   function pulsarMancha(evento: MouseEvent, id: string) {
     if (cauceBajoElPuntero(evento) === null) pulsarElemento(id)
+  }
+
+  // Los pulsadores se pisan entre ellos y con los arcos: el Cabo de la Nao y el de San Antonio están
+  // a cuatro píxeles y el Estrecho entero cabe dentro del de la Punta de Tarifa. Cuál de los círculos
+  // recibe el clic depende del orden de pintado, así que no decide él.
+  function pulsarTocable(evento: MouseEvent, id: string) {
+    evento.stopPropagation()
+    pulsarElemento(tocableBajoElPuntero(evento) ?? id)
   }
 
   function centroDelRotulo(contorno: Feature<Geometry>): [number, number] {
@@ -420,7 +456,7 @@
               cx={punto[0]}
               cy={punto[1]}
               r={radioPulsador}
-              onclick={(evento) => pulsarMancha(evento, String(contorno.id))}
+              onclick={(evento) => pulsarTocable(evento, String(contorno.id))}
             />
           {/if}
         {/each}
@@ -499,11 +535,17 @@
       {#if clasesEnElMapa.includes('pico')}
         <li><svg viewBox="0 0 20 14" aria-hidden="true"><path class="pico" d="M10,1L16,12H4Z" /></svg> Pico</li>
       {/if}
-      {#if contornos.some((contorno) => claseDe(contorno) === 'vertiente')}
+      {#if hayClase('vertiente')}
         <li><svg viewBox="0 0 20 14" aria-hidden="true"><path class="vertiente" d="M1,9C4,3 8,2 12,5S18,6 19,3V13H1Z" /></svg> Vertiente</li>
       {/if}
-      {#if cauces.length > 0}
+      {#if CLASES_DE_RIO.some(hayClase)}
         <li><svg viewBox="0 0 20 14" aria-hidden="true"><path class="cauce" d="M1,11C6,11 5,4 10,4S15,10 19,3" /></svg> Río</li>
+      {/if}
+      {#if hayClase('cabo')}
+        <li><svg viewBox="0 0 20 14" aria-hidden="true"><circle class="cabo" cx="10" cy="7" r="4" /></svg> Cabo</li>
+      {/if}
+      {#if hayClase('golfo') || hayClase('estrecho')}
+        <li><svg viewBox="0 0 20 14" aria-hidden="true"><path class="cauce" d="M1,11C6,11 5,4 10,4S15,10 19,3" /></svg> Golfo o estrecho</li>
       {/if}
     </ul>
   {/if}
@@ -598,6 +640,13 @@
   .leyenda .vertiente {
     fill: #dbe7f0;
     stroke: #6b8ea6;
+  }
+
+  .elementos path.cabo,
+  .leyenda .cabo {
+    fill: #3c7fb1;
+    stroke: #1f4f70;
+    stroke-width: 0.8;
   }
 
   /* El toque lo resuelve el SVG entero, no cada trazo: aquí solo se dibuja. */
