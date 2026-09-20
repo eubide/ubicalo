@@ -336,3 +336,73 @@ describe('Día local', () => {
     expect(diaLocal(new Date(2026, 11, 31, 12))).toBe('2026-12-31')
   })
 })
+
+describe('Lo guardado de Costas sobrevive al reparto en Cabos y Golfos', () => {
+  const entrada = (estado: string) => ({ estado, visto: '2026-09-19', fallos: 0, tipoDeFallo: null, confundidoCon: null })
+
+  const conLoViejo = (elementos: Record<string, unknown>): Almacen => {
+    const almacen = almacenEnMemoria()
+    almacen.setItem('ubicalo:dominio', JSON.stringify({ version: 1, familia: 'costas', elementos }))
+    return almacen
+  }
+
+  it('lo que sabía de un Cabo se lee ahora bajo el Alcance Cabos', () => {
+    const dominio = crearDominio(
+      conLoViejo({ 'cabos-y-golfos/cabo-de-gata': entrada('sabido'), 'cabos-y-golfos/cabo-de-creus': entrada('flojo') }),
+      hoy,
+    )
+
+    expect(dominio.entradas('cabos')).toEqual({
+      'cabo-de-gata': entrada('sabido'),
+      'cabo-de-creus': entrada('flojo'),
+    })
+    expect(dominio.entradas('golfos')).toEqual({})
+  })
+
+  it('lo que sabía de un Golfo o del Estrecho se lee bajo el Alcance Golfos', () => {
+    const dominio = crearDominio(
+      conLoViejo({
+        'cabos-y-golfos/golfo-de-vizcaya': entrada('sabido'),
+        'cabos-y-golfos/estrecho-de-gibraltar': entrada('flojo'),
+      }),
+      hoy,
+    )
+
+    expect(dominio.entradas('golfos')).toEqual({
+      'golfo-de-vizcaya': entrada('sabido'),
+      'estrecho-de-gibraltar': entrada('flojo'),
+    })
+  })
+
+  it('lo guardado de Pertenencia y de los Tramos se descarta, porque ya no existen', () => {
+    const dominio = crearDominio(
+      conLoViejo({
+        'pertenencia-costas/cabo-de-gata': entrada('sabido'),
+        'todo-costas/costa-gallega': entrada('sabido'),
+        'todo-costas/cabo-ortegal': entrada('sabido'),
+      }),
+      hoy,
+    )
+
+    expect(dominio.entradas('todo-costas')).toEqual({ 'cabo-ortegal': entrada('sabido') })
+    expect(dominio.resumen('costas').sabidos).toBe(1)
+  })
+
+  it('un alumno sin nada guardado no nota el reparto', () => {
+    const dominio = crearDominio(almacenEnMemoria(), hoy)
+
+    expect(dominio.entradas('cabos')).toEqual({})
+    expect(dominio.resumen('costas')).toEqual({ sabidos: 0, flojos: 0, sinVer: 20, total: 20 })
+  })
+
+  it('traducir lo guardado no depende de cuántas veces se lea ni de volver a escribirlo', () => {
+    const almacen = conLoViejo({ 'cabos-y-golfos/cabo-de-gata': entrada('sabido') })
+    const dominio = crearDominio(almacen, hoy)
+
+    dominio.anotar('golfos', 'golfo-de-rosas', { caso: 'acierto' })
+    const despues = crearDominio(almacen, hoy)
+
+    expect(despues.entradas('cabos')).toEqual({ 'cabo-de-gata': entrada('sabido') })
+    expect(despues.entradas('golfos')['golfo-de-rosas'].estado).toBe('sabido')
+  })
+})

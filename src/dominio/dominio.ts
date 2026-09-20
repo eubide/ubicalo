@@ -82,11 +82,21 @@ function esEntrada(valor: unknown): valor is Entrada {
   )
 }
 
+// Cuando Costas se repartió en Cabos y Golfos, lo guardado quedó bajo un Alcance que ya no existe.
+// Los ids no cambiaron, solo su Alcance, así que cada entrada se lleva al que ahora la contiene. Lo
+// demás que ya no nombra nada, como Pertenencia o los Tramos, lo descarta el filtro de aquí abajo.
+const ALCANCES_REPARTIDOS: Record<string, Alcance[]> = {
+  'cabos-y-golfos': ['cabos', 'golfos'],
+}
+
 function alcanceEIdDe(clave: string): [Alcance, string] | null {
   const corte = clave.indexOf('/')
+  if (corte <= 0) return null
   const alcance = clave.slice(0, corte)
   const id = clave.slice(corte + 1)
-  return corte > 0 && esAlcance(alcance) && idsDe(alcance).has(id) ? [alcance, id] : null
+  const repartido = ALCANCES_REPARTIDOS[alcance]?.find((candidato) => idsDe(candidato).has(id))
+  if (repartido) return [repartido, id]
+  return esAlcance(alcance) && idsDe(alcance).has(id) ? [alcance, id] : null
 }
 
 function registroVacio(): Registro {
@@ -103,9 +113,13 @@ function registroValido(datos: unknown): Registro {
       Object.entries(elementos).flatMap(([clave, entrada]) => {
         const alcanceEId = alcanceEIdDe(clave)
         if (!alcanceEId || !esEntrada(entrada)) return []
+        const [alcance, id] = alcanceEId
         const { estado, visto, fallos, tipoDeFallo, confundidoCon } = entrada
-        const sigueEnElCatalogo = confundidoCon !== null && idsDe(alcanceEId[0]).has(confundidoCon)
-        return [[clave, { estado, visto, fallos, tipoDeFallo, confundidoCon: sigueEnElCatalogo ? confundidoCon : null }]]
+        const sigueEnElCatalogo = confundidoCon !== null && idsDe(alcance).has(confundidoCon)
+        // La clave se rehace con el Alcance que vale ahora: el que se leyó puede ser uno repartido.
+        return [
+          [claveDe(alcance, id), { estado, visto, fallos, tipoDeFallo, confundidoCon: sigueEnElCatalogo ? confundidoCon : null }],
+        ]
       }),
     ),
   }
