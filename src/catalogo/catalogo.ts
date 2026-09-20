@@ -31,6 +31,7 @@ import {
   contornosDeCostas,
   esDeCostas,
   etiquetaDeClaseDeCosta,
+  tocablesDeCostas,
   type ClaseDeCosta,
   type AlcanceDeCostas,
 } from './costas'
@@ -194,6 +195,7 @@ function comunidadQueContiene(provincia: Feature<Geometry>, comunidades: Feature
 export function catalogoDelMapa(alcance: Alcance): Elemento[] {
   if (esDeRelieve(alcance)) return tocablesDeRelieve(alcance).map(conFormaCorta)
   if (esDeHidrografia(alcance)) return tocablesDeHidrografia(alcance).map(conFormaCorta)
+  if (esDeCostas(alcance)) return tocablesDeCostas(alcance).map(conFormaCorta)
   return catalogo(alcance)
 }
 

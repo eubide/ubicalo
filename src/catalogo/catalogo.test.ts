@@ -794,6 +794,49 @@ describe('Catálogo de cabos y golfos', () => {
   })
 })
 
+describe('Catálogo de Pertenencia en Costas', () => {
+  const pertenencia = catalogo('pertenencia-costas')
+  const elementoDe = (id: string) => pertenencia.find((candidato) => candidato.id === id)!
+
+  it('pregunta los 20 Elementos hacia su Tramo de costa, y ningún Tramo hacia los suyos', () => {
+    expect(pertenencia).toHaveLength(20)
+    expect(pertenencia.every(({ pregunta }) => pregunta === 'Toca su tramo de costa')).toBe(true)
+    expect(elementoDe('cabo-de-gata').respuesta).toBe('costa-levantina')
+    expect(elementoDe('golfo-de-vizcaya').respuesta).toBe('costa-cantabrica')
+    expect(elementoDe('estrecho-de-gibraltar').respuesta).toBe('costa-de-la-luz')
+  })
+
+  it('los Vecinos son los del Tramo que se toca, así que los Distractores son otros Tramos', () => {
+    expect(elementoDe('cabo-de-creus').vecinos.sort()).toEqual([
+      'costa-cantabrica',
+      'costa-de-la-luz',
+      'costa-gallega',
+      'costa-levantina',
+    ])
+  })
+
+  it('la Pista de área ilumina el Tramo correcto', () => {
+    expect(elementoDe('cabo-de-palos').pistaDeArea).toEqual(['costa-levantina'])
+    expect(elementoDe('golfo-de-valencia').pistaDeArea).toEqual(['costa-levantina'])
+  })
+
+  it('el mapa de Pertenencia son los 5 Tramos y los 20 Elementos de la costa', () => {
+    const formas = contornos('pertenencia-costas')
+
+    expect(formas).toHaveLength(25)
+    expect(catalogoDelMapa('pertenencia-costas')).toHaveLength(25)
+    expect(formas.filter(({ geometry }) => geometry.type === 'MultiPolygon')).toHaveLength(5)
+  })
+
+  it('los Vecinos de un Tramo son los otros cuatro', () => {
+    const tramo = catalogoDelMapa('pertenencia-costas').find(({ id }) => id === 'costa-gallega')!
+
+    expect(tramo.clase).toBe('tramo-de-costa')
+    expect(tramo.vecinos).toHaveLength(4)
+    expect(tramo.vecinos).not.toContain('costa-gallega')
+  })
+})
+
 describe('Lo que basta escribir en las costas', () => {
   const costas = catalogo('cabos-y-golfos')
   const elementoDe = (id: string) => costas.find((candidato) => candidato.id === id)!

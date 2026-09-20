@@ -3,7 +3,7 @@ import costasGeo from '../datos/costas.json'
 import riosGeo from '../datos/rios.json'
 import type { ContextoGeografico, Elemento } from './catalogo'
 
-export type AlcanceDeCostas = 'cabos-y-golfos'
+export type AlcanceDeCostas = 'cabos-y-golfos' | 'pertenencia-costas'
 
 export type ClaseDeCosta = 'tramo-de-costa' | 'cabo' | 'golfo' | 'estrecho'
 
@@ -23,6 +23,7 @@ export interface PropiedadesDeCosta {
 }
 
 const costas = (costasGeo as FeatureCollection).features
+const tramos = costas.filter((forma) => propiedadesDeCosta(forma).clase === 'tramo-de-costa')
 const cabosYGolfos = costas.filter((forma) => propiedadesDeCosta(forma).clase !== 'tramo-de-costa')
 const rios = (riosGeo as FeatureCollection).features
 
@@ -32,6 +33,7 @@ export function propiedadesDeCosta(contorno: Feature<Geometry>): PropiedadesDeCo
 
 const CONTORNOS_DEL_MAPA: Record<AlcanceDeCostas, Feature<Geometry>[]> = {
   'cabos-y-golfos': cabosYGolfos,
+  'pertenencia-costas': [...tramos, ...cabosYGolfos],
 }
 
 export function esDeCostas(alcance: string): alcance is AlcanceDeCostas {
@@ -39,9 +41,8 @@ export function esDeCostas(alcance: string): alcance is AlcanceDeCostas {
 }
 
 function hermanosDe(id: string, tramo: string | undefined): string[] {
-  return cabosYGolfos
-    .filter((otro) => String(otro.id) !== id && propiedadesDeCosta(otro).tramo === tramo)
-    .map((otro) => String(otro.id))
+  const hermanos = tramo === undefined ? tramos : cabosYGolfos.filter((otro) => propiedadesDeCosta(otro).tramo === tramo)
+  return hermanos.map((otro) => String(otro.id)).filter((otro) => otro !== id)
 }
 
 function elementoDeCosta(contorno: Feature<Geometry>): Elemento {
@@ -55,14 +56,35 @@ function elementoDeCosta(contorno: Feature<Geometry>): Elemento {
     alias: alias ?? [],
     vecinos: hermanos,
     // El Tramo no se dibuja en este Alcance, así que iluminarlo es iluminar lo suyo que sí se ve.
-    pistaDeArea: [id, ...hermanos],
+    ...(tramo && { pistaDeArea: [id, ...hermanos] }),
     clase,
     ...(tramo && { tramo }),
     ...(desambiguacion && { desambiguacion }),
   }
 }
 
+// Cada Cabo, Golfo y el Estrecho se responden tocando su Tramo. No se pregunta en los dos sentidos
+// como en Relieve: un Tramo tiene hasta seis y ninguno lo representa.
+function catalogoDePertenenciaDeCostas(): Elemento[] {
+  const porId = new Map(tramos.map(elementoDeCosta).map((tramo) => [tramo.id, tramo]))
+  return cabosYGolfos.map(elementoDeCosta).map((elemento) => {
+    const tramo = porId.get(elemento.tramo!)!
+    return {
+      ...elemento,
+      vecinos: tramo.vecinos,
+      pistaDeArea: [tramo.id],
+      respuesta: tramo.id,
+      pregunta: 'Toca su tramo de costa',
+    }
+  })
+}
+
 export function catalogoDeCostas(alcance: AlcanceDeCostas): Elemento[] {
+  if (alcance === 'pertenencia-costas') return catalogoDePertenenciaDeCostas()
+  return CONTORNOS_DEL_MAPA[alcance].map(elementoDeCosta)
+}
+
+export function tocablesDeCostas(alcance: AlcanceDeCostas): Elemento[] {
   return CONTORNOS_DEL_MAPA[alcance].map(elementoDeCosta)
 }
 
