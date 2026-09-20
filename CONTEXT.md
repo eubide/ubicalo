@@ -244,6 +244,10 @@ _Evitar_: débil, pendiente, fallado
 Estado de un Elemento cuya última respuesta fue un acierto sin ayuda con Juicio estricto. No es definitivo: un Fallo lo devuelve a Flojo, y lo que el alumno se sabe de verdad lo dice el Simulacro.
 _Evitar_: dominado, aprendido, acertado
 
+**Tanda**:
+Unos cinco minutos de Nombrar sobre la Familia elegida, con hasta 12 Elementos de un solo mapa: primero los Flojos, después los Sabidos que no se han visto hoy y entre 3 y 6 nuevos mientras quede algo sin ver. Los nuevos llegan con el nivel de arriba entero y luego por ramas completas, y dentro de la Tanda se barajan. Solo se rellena con Sabidos de hoy cuando trae nuevos, así que al final puede ser corta. Se encadenan mientras quede algo Flojo o sin ver.
+_Evitar_: ronda, sesión, lote, repaso
+
 ## Relaciones
 
 - Una **Familia** agrupa varios **Alcances**, y un **Alcance** agrupa muchos **Elementos**; cada **Elemento** tiene un **Nombre oficial** y cero o más **Alias**
@@ -259,6 +263,7 @@ _Evitar_: dominado, aprendido, acertado
 - Un **Golfo** se dibuja entre dos puntos de la costa, y puede acabar en el **Tramo de costa** siguiente sin dejar de pertenecer al suyo
 - Cada **Elemento** está en el **Dominio** sin ver, **Flojo** o **Sabido**
 - Un **Fallo** juzgado con **Juicio estricto** lleva su tipo: tilde, errata u otro
+- Una **Tanda** sale del **Dominio**: repasa lo **Flojo** y lo **Sabido** otro día, y trae **Elementos** nuevos
 
 ## Ambigüedades resueltas
 
