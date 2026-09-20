@@ -794,6 +794,175 @@ describe('Catálogo de cabos y golfos', () => {
   })
 })
 
+describe('Catálogo de Pertenencia en Costas', () => {
+  const pertenencia = catalogo('pertenencia-costas')
+  const elementoDe = (id: string) => pertenencia.find((candidato) => candidato.id === id)!
+
+  it('pregunta los 20 Elementos hacia su Tramo de costa, y ningún Tramo hacia los suyos', () => {
+    expect(pertenencia).toHaveLength(20)
+    expect(pertenencia.every(({ pregunta }) => pregunta === 'Toca su tramo de costa')).toBe(true)
+    expect(pertenencia.every(({ clase }) => clase !== 'tramo-de-costa')).toBe(true)
+  })
+
+  it('cada uno de los 20 se responde tocando el Tramo que dice el dato', () => {
+    const suTramo = new Map(catalogo('cabos-y-golfos').map(({ id, tramo }) => [id, tramo]))
+    const mal = pertenencia.filter(({ id, respuesta }) => respuesta !== suTramo.get(id))
+
+    expect(mal.map(({ id }) => id)).toEqual([])
+    expect(elementoDe('cabo-de-gata').respuesta).toBe('costa-levantina')
+    expect(elementoDe('golfo-de-vizcaya').respuesta).toBe('costa-cantabrica')
+    expect(elementoDe('estrecho-de-gibraltar').respuesta).toBe('costa-de-la-luz')
+  })
+
+  it('los Vecinos son los del Tramo que se toca, así que los Distractores son otros Tramos', () => {
+    expect(elementoDe('cabo-de-creus').vecinos.sort()).toEqual([
+      'costa-cantabrica',
+      'costa-de-la-luz',
+      'costa-gallega',
+      'costa-levantina',
+    ])
+  })
+
+  it('la Pista de área ilumina el Tramo correcto', () => {
+    expect(elementoDe('cabo-de-palos').pistaDeArea).toEqual(['costa-levantina'])
+    expect(elementoDe('golfo-de-valencia').pistaDeArea).toEqual(['costa-levantina'])
+  })
+
+  it('el mapa de Pertenencia son los 5 Tramos y los 20 Elementos de la costa', () => {
+    const formas = contornos('pertenencia-costas')
+
+    expect(formas).toHaveLength(25)
+    expect(catalogoDelMapa('pertenencia-costas')).toHaveLength(25)
+    expect(formas.filter(({ geometry }) => geometry.type === 'MultiPolygon')).toHaveLength(5)
+  })
+
+  it('los Vecinos de un Tramo son los otros cuatro', () => {
+    const tramo = catalogoDelMapa('pertenencia-costas').find(({ id }) => id === 'costa-gallega')!
+
+    expect(tramo.clase).toBe('tramo-de-costa')
+    expect(tramo.vecinos).toHaveLength(4)
+    expect(tramo.vecinos).not.toContain('costa-gallega')
+  })
+})
+
+describe('Catálogo de Todo en Costas', () => {
+  const todo = catalogo('todo-costas')
+  const elementoDe = (id: string) => todo.find((candidato) => candidato.id === id)!
+
+  it('entrega las 25 piezas: los 5 Tramos y los 20 Elementos de la costa', () => {
+    const deClase = (clase: string) => todo.filter((pieza) => pieza.clase === clase)
+
+    expect(todo).toHaveLength(25)
+    expect(deClase('tramo-de-costa')).toHaveLength(5)
+    expect(deClase('cabo')).toHaveLength(13)
+    expect(deClase('golfo')).toHaveLength(6)
+    expect(deClase('estrecho')).toHaveLength(1)
+  })
+
+  it('solo los cinco Tramos arrancan desbloqueados', () => {
+    const sueltos = todo.filter(({ desbloqueaCon }) => desbloqueaCon!.length === 0).map(({ id }) => id)
+
+    expect(sueltos.sort()).toEqual([
+      'costa-cantabrica',
+      'costa-catalana',
+      'costa-de-la-luz',
+      'costa-gallega',
+      'costa-levantina',
+    ])
+  })
+
+  it('cada Cabo, Golfo y el Estrecho se desbloquean al acertar su Tramo, y solo con él', () => {
+    expect(elementoDe('cabo-de-gata').desbloqueaCon).toEqual(['costa-levantina'])
+    expect(elementoDe('golfo-de-vizcaya').desbloqueaCon).toEqual(['costa-cantabrica'])
+    expect(elementoDe('estrecho-de-gibraltar').desbloqueaCon).toEqual(['costa-de-la-luz'])
+    expect(todo.every(({ desbloqueaCon }) => desbloqueaCon!.length <= 1)).toBe(true)
+  })
+
+  it('acertar un Tramo no desbloquea los Elementos de los demás', () => {
+    const conLaCatalana = todo.filter(({ desbloqueaCon }) => desbloqueaCon!.includes('costa-catalana'))
+
+    expect(conLaCatalana.map(({ id }) => id).sort()).toEqual(['cabo-de-creus', 'golfo-de-rosas', 'golfo-de-san-jorge'])
+  })
+
+  it('los Tramos y los Elementos de la costa se tocan como manchas, puntos y líneas', () => {
+    const formas = contornos('todo-costas')
+
+    expect(formas).toHaveLength(25)
+    expect(formas.filter(({ geometry }) => geometry.type === 'MultiPolygon')).toHaveLength(5)
+    expect(formas.filter(({ geometry }) => geometry.type === 'Point')).toHaveLength(13)
+    expect(formas.filter(({ geometry }) => geometry.type === 'LineString')).toHaveLength(7)
+  })
+})
+
+describe('Lo que basta escribir en las costas', () => {
+  const costas = catalogo('cabos-y-golfos')
+  const elementoDe = (id: string) => costas.find((candidato) => candidato.id === id)!
+
+  it('acepta la grafía del Nomenclátor y la catalana como Alias', () => {
+    expect(elementoDe('cabo-machichaco').alias).toEqual(['Matxitxako'])
+    expect(elementoDe('cabo-de-finisterre').alias).toEqual(['Fisterra'])
+  })
+
+  it('a los Golfos, al Estrecho y a Estaca de Bares les sobra el sustantivo', () => {
+    expect(elementoDe('golfo-de-vizcaya').alias).toEqual(['Vizcaya'])
+    expect(elementoDe('golfo-de-cadiz').alias).toEqual(['Cádiz'])
+    expect(elementoDe('golfo-de-almeria').alias).toEqual(['Almería'])
+    expect(elementoDe('golfo-de-valencia').alias).toEqual(['Valencia'])
+    expect(elementoDe('golfo-de-san-jorge').alias).toEqual(['Sant Jordi', 'San Jorge'])
+    expect(elementoDe('golfo-de-rosas').alias).toEqual(['Roses', 'Rosas'])
+    expect(elementoDe('estrecho-de-gibraltar').alias).toEqual(['Gibraltar'])
+    expect(elementoDe('punta-de-estaca-de-bares').alias).toEqual(['Estaca de Bares'])
+  })
+
+  it('los demás Cabos se escriben enteros, como las Sierras del relieve', () => {
+    const sinAlias = costas.filter(({ alias }) => alias.length === 0).map(({ id }) => id)
+
+    expect(sinAlias.sort()).toEqual([
+      'cabo-de-ajo',
+      'cabo-de-creus',
+      'cabo-de-gata',
+      'cabo-de-la-nao',
+      'cabo-de-palos',
+      'cabo-de-penas',
+      'cabo-de-san-antonio',
+      'cabo-de-trafalgar',
+      'cabo-ortegal',
+      'punta-de-tarifa',
+    ])
+  })
+
+  it('ningún Elemento acepta un Alias que no esté declarado', () => {
+    const conAlias = Object.fromEntries(costas.filter(({ alias }) => alias.length > 0).map(({ id, alias }) => [id, alias]))
+
+    expect(conAlias).toEqual({
+      'cabo-machichaco': ['Matxitxako'],
+      'cabo-de-finisterre': ['Fisterra'],
+      'golfo-de-vizcaya': ['Vizcaya'],
+      'golfo-de-cadiz': ['Cádiz'],
+      'golfo-de-almeria': ['Almería'],
+      'golfo-de-valencia': ['Valencia'],
+      'golfo-de-san-jorge': ['Sant Jordi', 'San Jorge'],
+      'golfo-de-rosas': ['Roses', 'Rosas'],
+      'estrecho-de-gibraltar': ['Gibraltar'],
+      'punta-de-estaca-de-bares': ['Estaca de Bares'],
+    })
+  })
+
+  it('solo los tres pares que se pisan en el mapa llevan frase de desambiguación', () => {
+    const conFrase = costas.filter(({ desambiguacion }) => desambiguacion).map(({ id }) => id)
+
+    expect(conFrase.sort()).toEqual([
+      'cabo-de-creus',
+      'cabo-de-la-nao',
+      'cabo-de-san-antonio',
+      'estrecho-de-gibraltar',
+      'golfo-de-rosas',
+      'punta-de-tarifa',
+    ])
+    expect(elementoDe('cabo-de-la-nao').desambiguacion).toContain('Cabo de San Antonio')
+  })
+})
+
 describe('Lo que basta escribir en el relieve y la hidrografía', () => {
   function elementoDe(alcance: Alcance, id: string) {
     return catalogo(alcance).find((elemento) => elemento.id === id)!

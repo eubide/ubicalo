@@ -24,23 +24,23 @@ const TRAMOS = [
 // rotula ese mismo saliente, y las dos no siempre coinciden: el Nomenclátor trae los nombres en la
 // lengua del sitio, así que el Cabo de Creus es allí el Cap de Creus.
 const CABOS = [
-  { id: 'cabo-machichaco', nombre: 'Cabo Machichaco', tramo: 'costa-cantabrica', enElNomenclator: 'Cabo Matxitxako' },
+  { id: 'cabo-machichaco', nombre: 'Cabo Machichaco', tramo: 'costa-cantabrica', enElNomenclator: 'Cabo Matxitxako', alias: ['Matxitxako'] },
   { id: 'cabo-de-ajo', nombre: 'Cabo de Ajo', tramo: 'costa-cantabrica', enElNomenclator: 'Cabo de Ajo' },
   { id: 'cabo-de-penas', nombre: 'Cabo de Peñas', tramo: 'costa-cantabrica', enElNomenclator: 'Cabo de Peñas' },
 
   { id: 'punta-de-estaca-de-bares', nombre: 'Punta de Estaca de Bares', tramo: 'costa-gallega', enElNomenclator: 'Punta da Estaca de Bares' },
   { id: 'cabo-ortegal', nombre: 'Cabo Ortegal', tramo: 'costa-gallega', enElNomenclator: 'Cabo Ortegal' },
-  { id: 'cabo-de-finisterre', nombre: 'Cabo de Finisterre', tramo: 'costa-gallega', enElNomenclator: 'Cabo Fisterra' },
+  { id: 'cabo-de-finisterre', nombre: 'Cabo de Finisterre', tramo: 'costa-gallega', enElNomenclator: 'Cabo Fisterra', alias: ['Fisterra'] },
 
   { id: 'cabo-de-trafalgar', nombre: 'Cabo de Trafalgar', tramo: 'costa-de-la-luz', enElNomenclator: 'Cabo de Trafalgar' },
-  { id: 'punta-de-tarifa', nombre: 'Punta de Tarifa', tramo: 'costa-de-la-luz', enElNomenclator: 'Punta de Tarifa' },
+  { id: 'punta-de-tarifa', nombre: 'Punta de Tarifa', tramo: 'costa-de-la-luz', enElNomenclator: 'Punta de Tarifa', desambiguacion: 'El Estrecho de Gibraltar no es esta punta: es el arco de costa que arranca en ella' },
 
   { id: 'cabo-de-gata', nombre: 'Cabo de Gata', tramo: 'costa-levantina', enElNomenclator: 'Cabo de Gata' },
   { id: 'cabo-de-palos', nombre: 'Cabo de Palos', tramo: 'costa-levantina', enElNomenclator: 'Cabo de Palos' },
-  { id: 'cabo-de-san-antonio', nombre: 'Cabo de San Antonio', tramo: 'costa-levantina', enElNomenclator: 'Cap de Sant Antoni' },
-  { id: 'cabo-de-la-nao', nombre: 'Cabo de la Nao', tramo: 'costa-levantina', enElNomenclator: 'Cap de la Nau' },
+  { id: 'cabo-de-san-antonio', nombre: 'Cabo de San Antonio', tramo: 'costa-levantina', enElNomenclator: 'Cap de Sant Antoni', desambiguacion: 'El Cabo de la Nao no es este: es el siguiente cabo hacia el sur' },
+  { id: 'cabo-de-la-nao', nombre: 'Cabo de la Nao', tramo: 'costa-levantina', enElNomenclator: 'Cap de la Nau', desambiguacion: 'El Cabo de San Antonio no es este: es el que cierra el Golfo de Valencia por el sur' },
 
-  { id: 'cabo-de-creus', nombre: 'Cabo de Creus', tramo: 'costa-catalana', enElNomenclator: 'Cap de Creus' },
+  { id: 'cabo-de-creus', nombre: 'Cabo de Creus', tramo: 'costa-catalana', enElNomenclator: 'Cap de Creus', desambiguacion: 'El Golfo de Rosas no es este cabo: es el arco de costa que el cabo cierra por el norte' },
 ]
 
 // Límites de arco que no son ninguno de los 20 Elementos, así que van a mano (ADR-0010).
@@ -60,11 +60,11 @@ const LIMITES = {
 const ARCOS = [
   { id: 'golfo-de-vizcaya', nombre: 'Golfo de Vizcaya', clase: 'golfo', tramo: 'costa-cantabrica', entre: ['bidasoa', 'punta-de-estaca-de-bares'] },
   { id: 'golfo-de-cadiz', nombre: 'Golfo de Cádiz', clase: 'golfo', tramo: 'costa-de-la-luz', entre: ['guadiana', 'punta-de-tarifa'] },
-  { id: 'estrecho-de-gibraltar', nombre: 'Estrecho de Gibraltar', clase: 'estrecho', tramo: 'costa-de-la-luz', entre: ['punta-de-tarifa', 'punta-carnero'] },
+  { id: 'estrecho-de-gibraltar', nombre: 'Estrecho de Gibraltar', clase: 'estrecho', tramo: 'costa-de-la-luz', entre: ['punta-de-tarifa', 'punta-carnero'], desambiguacion: 'La Punta de Tarifa no es el estrecho: es el cabo donde el estrecho arranca' },
   { id: 'golfo-de-almeria', nombre: 'Golfo de Almería', clase: 'golfo', tramo: 'costa-levantina', entre: ['punta-entinas', 'cabo-de-gata'] },
   { id: 'golfo-de-valencia', nombre: 'Golfo de Valencia', clase: 'golfo', tramo: 'costa-levantina', entre: ['cabo-de-san-antonio', 'delta-del-ebro'] },
-  { id: 'golfo-de-san-jorge', nombre: 'Golfo de San Jorge', clase: 'golfo', tramo: 'costa-catalana', entre: ['delta-del-ebro', 'cabo-de-salou'] },
-  { id: 'golfo-de-rosas', nombre: 'Golfo de Rosas', clase: 'golfo', tramo: 'costa-catalana', entre: ['cabo-de-creus', 'punta-del-montgo'] },
+  { id: 'golfo-de-san-jorge', nombre: 'Golfo de San Jorge', clase: 'golfo', tramo: 'costa-catalana', entre: ['delta-del-ebro', 'cabo-de-salou'], alias: ['Sant Jordi'] },
+  { id: 'golfo-de-rosas', nombre: 'Golfo de Rosas', clase: 'golfo', tramo: 'costa-catalana', entre: ['cabo-de-creus', 'punta-del-montgo'], alias: ['Roses'], desambiguacion: 'El Cabo de Creus no es el golfo: es el cabo que lo cierra por el norte' },
 ]
 
 const require = createRequire(import.meta.url)
@@ -194,8 +194,12 @@ for (const cabo of CABOS) {
   console.log(`${cabo.nombre}: «${cabo.enElNomenclator}» en ${puntos.get(cabo.id).map((grado) => grado.toFixed(4)).join(', ')}`)
 }
 
-const cabos = CABOS.map(({ id, nombre, tramo }) =>
-  elemento(id, { nombre, clase: 'cabo', tramo }, { type: 'Point', coordinates: puntos.get(id) }),
+const cabos = CABOS.map(({ id, nombre, tramo, alias, desambiguacion }) =>
+  elemento(
+    id,
+    { nombre, clase: 'cabo', tramo, ...(alias && { alias }), ...(desambiguacion && { desambiguacion }) },
+    { type: 'Point', coordinates: puntos.get(id) },
+  ),
 )
 
 const anillo = anilloDeLaPeninsula()
@@ -207,13 +211,17 @@ function limite(cual) {
   return LIMITES[cual]
 }
 
-const arcos = ARCOS.map(({ id, nombre, clase, tramo, entre: [uno, otro] }) => {
+const arcos = ARCOS.map(({ id, nombre, clase, tramo, alias, desambiguacion, entre: [uno, otro] }) => {
   const cortes = [limite(uno), limite(otro)].map((cual) => ({ ...cual, ...verticeMasCercano(anillo, cual) }))
   const linea = arcoEntre(anillo, cortes[0].indice, cortes[1].indice)
   comprobarArco(id, linea)
   const entre = cortes.map(({ nombre: donde, separacion }) => `${donde} (a ${(separacion * 111).toFixed(1)} km)`)
   console.log(`${nombre}: ${linea.length} vértices entre ${entre[0]} y ${entre[1]}`)
-  return elemento(id, { nombre, clase, tramo }, { type: 'LineString', coordinates: linea })
+  return elemento(
+    id,
+    { nombre, clase, tramo, ...(alias && { alias }), ...(desambiguacion && { desambiguacion }) },
+    { type: 'LineString', coordinates: linea },
+  )
 })
 
 mkdirSync('src/datos', { recursive: true })

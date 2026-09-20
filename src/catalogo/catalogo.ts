@@ -31,6 +31,7 @@ import {
   contornosDeCostas,
   esDeCostas,
   etiquetaDeClaseDeCosta,
+  tocablesDeCostas,
   type ClaseDeCosta,
   type AlcanceDeCostas,
 } from './costas'
@@ -133,6 +134,14 @@ const BASTA_ESCRIBIR: Record<string, string> = {
   'Depresión del Guadalquivir': 'Guadalquivir',
   'Depresión del Ebro': 'Ebro',
   "Turó de l'Home": 'Turó',
+  'Golfo de Vizcaya': 'Vizcaya',
+  'Golfo de Cádiz': 'Cádiz',
+  'Golfo de Almería': 'Almería',
+  'Golfo de Valencia': 'Valencia',
+  'Golfo de San Jorge': 'San Jorge',
+  'Golfo de Rosas': 'Rosas',
+  'Estrecho de Gibraltar': 'Gibraltar',
+  'Punta de Estaca de Bares': 'Estaca de Bares',
 }
 
 function nombresOficialYCastellano(nombreEnAtlas: string): Nombres {
@@ -186,6 +195,7 @@ function comunidadQueContiene(provincia: Feature<Geometry>, comunidades: Feature
 export function catalogoDelMapa(alcance: Alcance): Elemento[] {
   if (esDeRelieve(alcance)) return tocablesDeRelieve(alcance).map(conFormaCorta)
   if (esDeHidrografia(alcance)) return tocablesDeHidrografia(alcance).map(conFormaCorta)
+  if (esDeCostas(alcance)) return tocablesDeCostas(alcance).map(conFormaCorta)
   return catalogo(alcance)
 }
 

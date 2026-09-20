@@ -33,6 +33,8 @@ describe('Alcance', () => {
       'pertenencia-rios': 24,
       'todo-rios': 44,
       'cabos-y-golfos': 20,
+      'pertenencia-costas': 20,
+      'todo-costas': 25,
     })
   })
 
@@ -42,6 +44,8 @@ describe('Alcance', () => {
     expect(direccionesDe('unidades')).toEqual(['localizar'])
     expect(direccionesDe('todo-relieve')).toEqual(['nombrar'])
     expect(direccionesDe('todo-rios')).toEqual(['nombrar'])
+    expect(direccionesDe('pertenencia-costas')).toEqual(['localizar'])
+    expect(direccionesDe('todo-costas')).toEqual(['nombrar'])
   })
 
   it('los demás Alcances admiten las dos direcciones', () => {
@@ -61,11 +65,21 @@ describe('Alcance', () => {
     expect(siguienteAlcance('picos')).toBe('cordilleras-y-sierras')
     expect(siguienteAlcance('unidades')).toBe('picos')
     expect(siguienteAlcance('todo-rios')).toBe('rios')
+    expect(siguienteAlcance('todo-costas')).toBe('cabos-y-golfos')
   })
 
   it('Cabos y golfos cae en la Familia Costas', () => {
     expect(familiaDe('cabos-y-golfos')).toBe('costas')
     expect(nombreDePrueba(pruebaDe('cabos-y-golfos', 'nombrar'))).toBe('Costas · Cabos y golfos · Nombrar')
+  })
+
+  it('la Pertenencia de Costas se juega en Localizar, se pida como se pida', () => {
+    expect(familiaDe('pertenencia-costas')).toBe('costas')
+    expect(pruebaDe('pertenencia-costas', 'nombrar')).toEqual({
+      familia: 'costas',
+      alcance: 'pertenencia-costas',
+      direccion: 'localizar',
+    })
   })
 
   it('el nombre de una Prueba dice familia, Alcance y dirección', () => {
