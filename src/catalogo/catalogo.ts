@@ -133,6 +133,14 @@ const BASTA_ESCRIBIR: Record<string, string> = {
   'Depresión del Guadalquivir': 'Guadalquivir',
   'Depresión del Ebro': 'Ebro',
   "Turó de l'Home": 'Turó',
+  'Golfo de Vizcaya': 'Vizcaya',
+  'Golfo de Cádiz': 'Cádiz',
+  'Golfo de Almería': 'Almería',
+  'Golfo de Valencia': 'Valencia',
+  'Golfo de San Jorge': 'San Jorge',
+  'Golfo de Rosas': 'Rosas',
+  'Estrecho de Gibraltar': 'Gibraltar',
+  'Punta de Estaca de Bares': 'Estaca de Bares',
 }
 
 function nombresOficialYCastellano(nombreEnAtlas: string): Nombres {

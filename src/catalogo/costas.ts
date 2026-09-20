@@ -18,6 +18,8 @@ export interface PropiedadesDeCosta {
   nombre: string
   clase: ClaseDeCosta
   tramo?: string
+  alias?: string[]
+  desambiguacion?: string
 }
 
 const costas = (costasGeo as FeatureCollection).features
@@ -44,18 +46,19 @@ function hermanosDe(id: string, tramo: string | undefined): string[] {
 
 function elementoDeCosta(contorno: Feature<Geometry>): Elemento {
   const id = String(contorno.id)
-  const { nombre, clase, tramo } = propiedadesDeCosta(contorno)
+  const { nombre, clase, tramo, alias, desambiguacion } = propiedadesDeCosta(contorno)
   const hermanos = hermanosDe(id, tramo)
   return {
     id,
     nombre,
     nombreMostrado: nombre,
-    alias: [],
+    alias: alias ?? [],
     vecinos: hermanos,
     // El Tramo no se dibuja en este Alcance, así que iluminarlo es iluminar lo suyo que sí se ve.
     pistaDeArea: [id, ...hermanos],
     clase,
     ...(tramo && { tramo }),
+    ...(desambiguacion && { desambiguacion }),
   }
 }
 

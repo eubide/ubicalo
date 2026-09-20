@@ -794,6 +794,47 @@ describe('Catálogo de cabos y golfos', () => {
   })
 })
 
+describe('Lo que basta escribir en las costas', () => {
+  const costas = catalogo('cabos-y-golfos')
+  const elementoDe = (id: string) => costas.find((candidato) => candidato.id === id)!
+
+  it('acepta la grafía del Nomenclátor y la catalana como Alias', () => {
+    expect(elementoDe('cabo-machichaco').alias).toEqual(['Matxitxako'])
+    expect(elementoDe('cabo-de-finisterre').alias).toEqual(['Fisterra'])
+  })
+
+  it('a los Golfos, al Estrecho y a Estaca de Bares les sobra el sustantivo', () => {
+    expect(elementoDe('golfo-de-vizcaya').alias).toEqual(['Vizcaya'])
+    expect(elementoDe('golfo-de-cadiz').alias).toEqual(['Cádiz'])
+    expect(elementoDe('golfo-de-almeria').alias).toEqual(['Almería'])
+    expect(elementoDe('golfo-de-valencia').alias).toEqual(['Valencia'])
+    expect(elementoDe('golfo-de-san-jorge').alias).toEqual(['Sant Jordi', 'San Jorge'])
+    expect(elementoDe('golfo-de-rosas').alias).toEqual(['Roses', 'Rosas'])
+    expect(elementoDe('estrecho-de-gibraltar').alias).toEqual(['Gibraltar'])
+    expect(elementoDe('punta-de-estaca-de-bares').alias).toEqual(['Estaca de Bares'])
+  })
+
+  it('los Cabos se escriben enteros, como las Sierras del relieve', () => {
+    expect(elementoDe('cabo-de-gata').alias).toEqual([])
+    expect(elementoDe('cabo-de-palos').alias).toEqual([])
+    expect(elementoDe('punta-de-tarifa').alias).toEqual([])
+  })
+
+  it('solo los tres pares que se pisan en el mapa llevan frase de desambiguación', () => {
+    const conFrase = costas.filter(({ desambiguacion }) => desambiguacion).map(({ id }) => id)
+
+    expect(conFrase.sort()).toEqual([
+      'cabo-de-creus',
+      'cabo-de-la-nao',
+      'cabo-de-san-antonio',
+      'estrecho-de-gibraltar',
+      'golfo-de-rosas',
+      'punta-de-tarifa',
+    ])
+    expect(elementoDe('cabo-de-la-nao').desambiguacion).toContain('Cabo de San Antonio')
+  })
+})
+
 describe('Lo que basta escribir en el relieve y la hidrografía', () => {
   function elementoDe(alcance: Alcance, id: string) {
     return catalogo(alcance).find((elemento) => elemento.id === id)!
