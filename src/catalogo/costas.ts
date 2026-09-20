@@ -1,9 +1,10 @@
+import { geoCentroid, geoDistance } from 'd3-geo'
 import type { Feature, FeatureCollection, Geometry } from 'geojson'
 import costasGeo from '../datos/costas.json'
 import riosGeo from '../datos/rios.json'
 import type { ContextoGeografico, Elemento } from './catalogo'
 
-export type AlcanceDeCostas = 'cabos-y-golfos' | 'pertenencia-costas' | 'todo-costas'
+export type AlcanceDeCostas = 'cabos' | 'golfos' | 'pertenencia-costas' | 'todo-costas'
 
 export type ClaseDeCosta = 'tramo-de-costa' | 'cabo' | 'golfo' | 'estrecho'
 
@@ -28,7 +29,9 @@ export interface PropiedadesDeCosta {
 const costas = (costasGeo as FeatureCollection).features
 const esTramo = (forma: Feature<Geometry>) => propiedadesDeCosta(forma).clase === 'tramo-de-costa'
 const tramos = costas.filter(esTramo)
-const cabosYGolfos = costas.filter((forma) => !esTramo(forma))
+const cabos = costas.filter((forma) => propiedadesDeCosta(forma).clase === 'cabo')
+const golfos = costas.filter((forma) => ['golfo', 'estrecho'].includes(propiedadesDeCosta(forma).clase))
+const cabosYGolfos = [...cabos, ...golfos]
 const laCostaEntera = [...tramos, ...cabosYGolfos]
 const rios = (riosGeo as FeatureCollection).features
 
@@ -37,7 +40,8 @@ export function propiedadesDeCosta(contorno: Feature<Geometry>): PropiedadesDeCo
 }
 
 const CONTORNOS_DEL_MAPA: Record<AlcanceDeCostas, Feature<Geometry>[]> = {
-  'cabos-y-golfos': cabosYGolfos,
+  cabos,
+  golfos,
   // En Pertenencia se toca el Tramo, y dibujar encima los Cabos y los Golfos le robaba el toque a
   // casi la mitad de la Costa Cantábrica: el blanco fino gana al grueso y el alumno fallaba tocando
   // donde debía. Aquí no hay nada más que tocar, así que no se dibuja nada más.
@@ -49,17 +53,28 @@ export function esDeCostas(alcance: string): alcance is AlcanceDeCostas {
   return alcance in CONTORNOS_DEL_MAPA
 }
 
-function hermanosDe(id: string, { clase, tramo }: PropiedadesDeCosta): string[] {
-  const familia =
-    clase === 'tramo-de-costa' ? tramos : cabosYGolfos.filter((otro) => propiedadesDeCosta(otro).tramo === tramo)
-  return familia.map((otro) => String(otro.id)).filter((otro) => otro !== id)
+const VECINOS_POR_CERCANIA = 3
+
+// Los Vecinos son los más cercanos de su propia Clase, como en el relieve. Por Tramo no salían: la
+// Costa Gallega no tiene ningún Golfo y la Cantábrica tiene uno, así que no daban tres Distractores.
+function vecinosDe(id: string, { clase }: PropiedadesDeCosta): string[] {
+  if (clase === 'tramo-de-costa') return tramos.map((otro) => String(otro.id)).filter((otro) => otro !== id)
+  const familia = clase === 'cabo' ? cabos : golfos
+  const suyo = familia.find((forma) => String(forma.id) === id)!
+  const centro = geoCentroid(suyo)
+  return familia
+    .filter((otro) => String(otro.id) !== id)
+    .map((otro) => ({ id: String(otro.id), lejos: geoDistance(centro, geoCentroid(otro)) }))
+    .sort((uno, otro) => uno.lejos - otro.lejos)
+    .slice(0, VECINOS_POR_CERCANIA)
+    .map(({ id: cercano }) => cercano)
 }
 
 function elementoDeCosta(contorno: Feature<Geometry>): Elemento {
   const id = String(contorno.id)
   const propiedades = propiedadesDeCosta(contorno)
   const { nombre, clase, tramo, alias, desambiguacion } = propiedades
-  const hermanos = hermanosDe(id, propiedades)
+  const hermanos = vecinosDe(id, propiedades)
   return {
     id,
     nombre,

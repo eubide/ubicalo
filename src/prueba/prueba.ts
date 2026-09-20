@@ -17,7 +17,7 @@ export const FAMILIAS: { familia: Familia; alcances: Alcance[] }[] = [
     alcances: ['picos', 'cordilleras-y-sierras', 'pertenencia-relieve', 'todo-relieve', 'unidades'],
   },
   { familia: 'hidrografia', alcances: ['rios', 'pertenencia-rios', 'todo-rios'] },
-  { familia: 'costas', alcances: ['cabos-y-golfos', 'pertenencia-costas', 'todo-costas'] },
+  { familia: 'costas', alcances: ['cabos', 'golfos', 'pertenencia-costas', 'todo-costas'] },
 ]
 
 export const etiquetaDeFamilia: Record<Familia, string> = {
@@ -38,7 +38,8 @@ export const etiquetaDeAlcance: Record<Alcance, string> = {
   rios: 'Ríos',
   'pertenencia-rios': 'Pertenencia',
   'todo-rios': 'Todo',
-  'cabos-y-golfos': 'Cabos y golfos',
+  cabos: 'Cabos',
+  golfos: 'Golfos',
   'pertenencia-costas': 'Pertenencia',
   'todo-costas': 'Todo',
 }

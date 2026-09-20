@@ -67,7 +67,7 @@ const proyeccionDeCostas = geoConicConformalSpain().fitExtent(
   siluetaDeEspana(),
 )
 
-const formasDeCosta = contornos('cabos-y-golfos')
+const formasDeCosta = [...contornos('cabos'), ...contornos('golfos')]
 const cabos = puntosDe(
   formasDeCosta.filter((forma): forma is Feature<Point> => forma.geometry.type === 'Point'),
   proyeccionDeCostas,

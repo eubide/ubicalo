@@ -738,66 +738,73 @@ describe('Catálogo de grandes unidades', () => {
   })
 })
 
-describe('Catálogo de cabos y golfos', () => {
-  const costas = catalogo('cabos-y-golfos')
-  const elementoDe = (id: string) => costas.find((candidato) => candidato.id === id)!
-  const deClase = (clase: string) => costas.filter((candidato) => candidato.clase === clase)
+describe('Catálogo de Cabos', () => {
+  const cabos = catalogo('cabos')
+  const elementoDe = (id: string) => cabos.find((candidato) => candidato.id === id)!
 
-  it('entrega los 20 Elementos de la costa: 13 cabos, 6 golfos y el estrecho', () => {
-    expect(costas).toHaveLength(20)
-    expect(deClase('cabo')).toHaveLength(13)
-    expect(deClase('golfo')).toHaveLength(6)
-    expect(deClase('estrecho').map(({ nombre }) => nombre)).toEqual(['Estrecho de Gibraltar'])
-  })
-
-  it('reparte los 20 Elementos en los cinco tramos de costa', () => {
-    const porTramo = (tramo: string) => costas.filter((candidato) => candidato.tramo === tramo).length
-
-    expect([porTramo('costa-cantabrica'), porTramo('costa-gallega'), porTramo('costa-de-la-luz')]).toEqual([4, 3, 4])
-    expect([porTramo('costa-levantina'), porTramo('costa-catalana')]).toEqual([6, 3])
-    expect(costas.every(({ tramo }) => tramo !== undefined)).toBe(true)
+  it('entrega los 13 Cabos y ninguna otra Clase', () => {
+    expect(cabos).toHaveLength(13)
+    expect(cabos.every(({ clase }) => clase === 'cabo')).toBe(true)
   })
 
   it('las dos Puntas del listado conservan su nombre y se juegan como Cabos', () => {
     expect(elementoDe('punta-de-estaca-de-bares')).toMatchObject({
       nombre: 'Punta de Estaca de Bares',
       clase: 'cabo',
-      tramo: 'costa-gallega',
     })
     expect(elementoDe('punta-de-tarifa').clase).toBe('cabo')
   })
 
-  it('un Golfo que muere en el Tramo siguiente sigue perteneciendo al suyo', () => {
-    expect(elementoDe('golfo-de-vizcaya').tramo).toBe('costa-cantabrica')
-    expect(elementoDe('golfo-de-valencia').tramo).toBe('costa-levantina')
+  it('el mapa de Cabos solo tiene puntos', () => {
+    const formas = contornos('cabos')
+
+    expect(formas).toHaveLength(13)
+    expect(formas.every(({ geometry }) => geometry.type === 'Point')).toBe(true)
+    expect(catalogoDelMapa('cabos')).toHaveLength(13)
   })
 
-  it('los Vecinos de un Elemento son sus hermanos de Tramo', () => {
-    expect(elementoDe('cabo-de-ajo').vecinos.sort()).toEqual(['cabo-de-penas', 'cabo-machichaco', 'golfo-de-vizcaya'])
-    expect(elementoDe('cabo-de-creus').vecinos.sort()).toEqual(['golfo-de-rosas', 'golfo-de-san-jorge'])
-    expect(elementoDe('cabo-de-gata').vecinos).not.toContain('cabo-de-creus')
-    expect(costas.every(({ vecinos }) => vecinos.length > 0)).toBe(true)
+  it('los Vecinos son los Cabos más cercanos por la costa, no los del mismo Tramo', () => {
+    expect(elementoDe('cabo-de-la-nao').vecinos).toContain('cabo-de-san-antonio')
+    expect(elementoDe('cabo-ortegal').vecinos).toContain('punta-de-estaca-de-bares')
+    // La Costa de la Luz solo tiene dos Cabos: por Tramo nunca habría dado tres Distractores.
+    expect(elementoDe('cabo-de-trafalgar').vecinos).toHaveLength(3)
+    expect(cabos.every(({ vecinos }) => vecinos.length === 3)).toBe(true)
   })
 
-  it('la Pista de área ilumina el Tramo del Elemento preguntado', () => {
-    expect(elementoDe('cabo-de-creus').pistaDeArea!.sort()).toEqual([
-      'cabo-de-creus',
-      'golfo-de-rosas',
-      'golfo-de-san-jorge',
+  it('la Pista de área ilumina el Cabo preguntado y sus Vecinos', () => {
+    const creus = elementoDe('cabo-de-creus')
+
+    expect(creus.pistaDeArea).toEqual([creus.id, ...creus.vecinos])
+  })
+})
+
+describe('Catálogo de Golfos', () => {
+  const golfos = catalogo('golfos')
+  const elementoDe = (id: string) => golfos.find((candidato) => candidato.id === id)!
+
+  it('entrega los 6 Golfos y el Estrecho', () => {
+    expect(golfos).toHaveLength(7)
+    expect(golfos.filter(({ clase }) => clase === 'golfo')).toHaveLength(6)
+    expect(golfos.filter(({ clase }) => clase === 'estrecho').map(({ nombre }) => nombre)).toEqual([
+      'Estrecho de Gibraltar',
     ])
-    expect(elementoDe('golfo-de-cadiz').pistaDeArea).toHaveLength(4)
   })
 
-  it('los Cabos son puntos y los Golfos manchas, sobre un mapa con los ríos en tenue y sin relieve', () => {
-    const formas = contornos('cabos-y-golfos')
+  it('el mapa de Golfos solo tiene manchas', () => {
+    const formas = contornos('golfos')
 
-    expect(formas.filter(({ geometry }) => geometry.type === 'Point')).toHaveLength(13)
-    expect(formas.filter(({ geometry }) => geometry.type === 'MultiPolygon')).toHaveLength(7)
-    expect(formas.filter(({ geometry }) => geometry.type === 'LineString')).toHaveLength(0)
-    expect(catalogoDelMapa('cabos-y-golfos')).toHaveLength(20)
-    expect(contextoDe('cabos-y-golfos')?.tenues).toEqual([])
-    expect(contextoDe('cabos-y-golfos')?.rios).toHaveLength(41)
-    expect(contextoDe('cabos-y-golfos')?.contorno.geometry.type).toBe('MultiPolygon')
+    expect(formas).toHaveLength(7)
+    expect(formas.every(({ geometry }) => geometry.type === 'MultiPolygon')).toBe(true)
+  })
+
+  it('los Vecinos son los Golfos más cercanos, que es lo único que da tres Distractores con siete', () => {
+    expect(elementoDe('golfo-de-san-jorge').vecinos).toContain('golfo-de-rosas')
+    expect(elementoDe('estrecho-de-gibraltar').vecinos).toContain('golfo-de-cadiz')
+    expect(golfos.every(({ vecinos }) => vecinos.length === 3)).toBe(true)
+  })
+
+  it('el Estrecho se juega con los Golfos sin dejar de ser su propia Clase', () => {
+    expect(elementoDe('estrecho-de-gibraltar').clase).toBe('estrecho')
   })
 })
 
@@ -812,7 +819,7 @@ describe('Catálogo de Pertenencia en Costas', () => {
   })
 
   it('cada uno de los 20 se responde tocando el Tramo que dice el dato', () => {
-    const suTramo = new Map(catalogo('cabos-y-golfos').map(({ id, tramo }) => [id, tramo]))
+    const suTramo = new Map([...catalogo('cabos'), ...catalogo('golfos')].map(({ id, tramo }) => [id, tramo]))
     const mal = pertenencia.filter(({ id, respuesta }) => respuesta !== suTramo.get(id))
 
     expect(mal.map(({ id }) => id)).toEqual([])
@@ -902,7 +909,7 @@ describe('Catálogo de Todo en Costas', () => {
 })
 
 describe('Las manchas de mar de los Golfos', () => {
-  const formas = contornos('cabos-y-golfos')
+  const formas = [...contornos('cabos'), ...contornos('golfos')]
   const manchas = formas.filter(({ geometry }) => geometry.type === 'MultiPolygon')
   const cabos = formas.filter(({ geometry }) => geometry.type === 'Point')
   const manchaDe = (id: string) => manchas.find((mancha) => String(mancha.id) === id)!
@@ -1002,7 +1009,7 @@ describe('Las manchas de mar de los Golfos', () => {
 })
 
 describe('Lo que basta escribir en las costas', () => {
-  const costas = catalogo('cabos-y-golfos')
+  const costas = [...catalogo('cabos'), ...catalogo('golfos')]
   const elementoDe = (id: string) => costas.find((candidato) => candidato.id === id)!
 
   it('acepta la grafía del Nomenclátor y la catalana como Alias', () => {
