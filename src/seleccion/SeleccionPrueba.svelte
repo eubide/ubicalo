@@ -34,6 +34,7 @@
     alEmpezarTanda: () => void
     simulacroDe: (familia: Familia) => SimulacroEnPortada
     alEmpezarSimulacro: () => void
+    alImprimir: () => void
     soloMira: boolean
     alElegirFamilia: (familia: Familia) => void
     alMirar: (soloMira: boolean) => void
@@ -52,6 +53,7 @@
     alEmpezarTanda,
     simulacroDe,
     alEmpezarSimulacro,
+    alImprimir,
     soloMira,
     alElegirFamilia,
     alMirar,
@@ -195,6 +197,10 @@
       {/if}
     </div>
     <p class="juicio">En la tanda y en el simulacro la tilde y la errata cuentan como fallo, igual que en tu examen.</p>
+    <p class="imprimir">
+      <button type="button" class="enlace" onclick={alImprimir}>Imprimir el mapa mudo</button>
+      <span>para rellenarlo a mano, como en el examen</span>
+    </p>
     <details class="practica" bind:open={practicaAbierta}>
       <summary>Práctica libre</summary>
       {#if practicaAbierta}
@@ -463,6 +469,16 @@
     margin: 0.75rem 0 0;
     font-size: 0.8125rem;
     line-height: 1.4;
+    color: #4b5563;
+  }
+
+  .imprimir {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.375rem;
+    margin: 0.75rem 0 0;
+    font-size: 0.8125rem;
     color: #4b5563;
   }
 

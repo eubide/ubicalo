@@ -4,6 +4,7 @@
   import { esIdDeAltura, formaDe, idDeAltura, nombreDePapel, PAPELES, picoDeAltura, textoDeAltura } from './catalogo/relieve'
   import { esDeHidrografia } from './catalogo/hidrografia'
   import contextoGeografico from './datos/contexto-geografico.json'
+  import Imprimible from './imprimible/Imprimible.svelte'
   import Mapa from './mapa/Mapa.svelte'
   import FinDePartida from './pantallas/FinDePartida.svelte'
   import FinDeTanda from './pantallas/FinDeTanda.svelte'
@@ -78,6 +79,7 @@
   if (propuesta) dominio.proponerFamilia(propuesta)
   let familiaElegida = $state(dominio.familia())
   let soloMira = $state(false)
+  let imprimiendo = $state(false)
   let tandaPropuesta = $state.raw(proponerTanda())
   let tandaEnJuego = $state.raw<Tanda | null>(null)
   const simulacros = crearSimulacros(almacen)
@@ -499,7 +501,9 @@
 </script>
 
 <main>
-  {#if simulacroEnCurso}
+  {#if imprimiendo && familiaElegida}
+    <Imprimible familia={familiaElegida} alVolver={() => (imprimiendo = false)} />
+  {:else if simulacroEnCurso}
     <PantallaSimulacro
       inicial={simulacroEnCurso}
       {contexto}
@@ -523,6 +527,7 @@
       alEmpezarTanda={empezarTanda}
       simulacroDe={simulacroDe}
       alEmpezarSimulacro={empezarSimulacro}
+      alImprimir={() => (imprimiendo = true)}
       {soloMira}
       alElegirFamilia={elegirFamilia}
       alMirar={(mira) => (soloMira = mira)}
