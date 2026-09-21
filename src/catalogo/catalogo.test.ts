@@ -7,7 +7,7 @@ import { featureCollection } from '@turf/helpers'
 import intersect from '@turf/intersect'
 import type { Feature, FeatureCollection, Geometry, MultiPolygon, Point, Position } from 'geojson'
 import paises from '../datos/contexto-geografico.json'
-import { catalogo, catalogoDelMapa, contextoDe, contornos, siluetaDeEspana, type Alcance } from './catalogo'
+import { catalogo, catalogoDelMapa, contextoDe, contornos, esCiudadAutonoma, siluetaDeEspana, type Alcance } from './catalogo'
 import { esDeRelieve, esIdDeAltura } from './relieve'
 import { esDeHidrografia } from './hidrografia'
 import { esDeCostas } from './costas'
@@ -1127,5 +1127,22 @@ describe('Un Alcance que no existe no cuela por heredado', () => {
     expect(esDeCostas('golfos')).toBe(true)
     expect(esDeRelieve('picos')).toBe(true)
     expect(esDeHidrografia('rios')).toBe(true)
+  })
+})
+
+describe('El recuadro de Ceuta y Melilla', () => {
+  it('se lleva las dos ciudades autónomas, las pregunte el mapa como comunidad o como provincia', () => {
+    for (const alcance of ['comunidades', 'provincias'] as const) {
+      const enRecuadro = contornos(alcance).filter(esCiudadAutonoma).map((contorno) => String(contorno.id))
+      const esperados = catalogo(alcance)
+        .filter(({ ciudadAutonoma }) => ciudadAutonoma)
+        .map(({ id }) => id)
+      expect(enRecuadro.sort()).toEqual(esperados.sort())
+      expect(enRecuadro).toHaveLength(2)
+    }
+  })
+
+  it('no se lleva el Estrecho de Gibraltar, que está a la misma altura', () => {
+    expect(contornos('todo-costas').filter(esCiudadAutonoma)).toEqual([])
   })
 })

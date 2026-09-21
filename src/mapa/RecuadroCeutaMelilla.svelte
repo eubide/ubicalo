@@ -6,13 +6,6 @@
     centro: [number, number]
   }
 
-  const latitudMaxima = 36
-  const longitudMinima = -10
-
-  // Se reconocen por su posición porque su id cambia según el tipo.
-  export function esCeutaOMelilla([longitud, latitud]: [number, number]): boolean {
-    return latitud < latitudMaxima && longitud > longitudMinima
-  }
 </script>
 
 <script lang="ts">
