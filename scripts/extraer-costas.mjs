@@ -16,9 +16,14 @@ const WFS = 'https://www.ign.es/wfs-inspire/ngbe'
 // deja fuera; los arcos se recortan de esa misma silueta, así que aquí se quita igual.
 const GIBRALTAR_COMUNIDADES = '20'
 
+// ISO 3166-1 numérico en world-atlas.
+const MARRUECOS = '504'
+const COSTAS_DE_FUERA = { francia: '250' }
+
 // El Nombre oficial es el del listado del alumno; `enElNomenclator` es la grafía con la que el IGN
 // rotula ese mismo saliente, y las dos no siempre coinciden: el Nomenclátor trae los nombres en la
-// lengua del sitio, así que el Cabo de Creus es allí el Cap de Creus.
+// lengua del sitio, así que el Cabo de Creus es allí el Cap de Creus. Los que quedan fuera de España
+// no están en el Nomenclátor y traen `punto` a mano.
 const CABOS = [
   { id: 'cabo-machichaco', nombre: 'Cabo Machichaco', enElNomenclator: 'Cabo Matxitxako', alias: ['Matxitxako'] },
   { id: 'cabo-de-ajo', nombre: 'Cabo de Ajo', enElNomenclator: 'Cabo de Ajo' },
@@ -26,47 +31,53 @@ const CABOS = [
 
   { id: 'punta-de-estaca-de-bares', nombre: 'Punta de Estaca de Bares', enElNomenclator: 'Punta da Estaca de Bares' },
   { id: 'cabo-ortegal', nombre: 'Cabo Ortegal', enElNomenclator: 'Cabo Ortegal' },
+  { id: 'cabo-tourinan', nombre: 'Cabo Touriñán', enElNomenclator: 'Cabo Touriñán' },
   { id: 'cabo-de-finisterre', nombre: 'Cabo de Finisterre', enElNomenclator: 'Cabo Fisterra', alias: ['Fisterra'] },
+
+  { id: 'cabo-da-roca', nombre: 'Cabo da Roca', punto: [-9.4989, 38.7804] },
+  { id: 'cabo-de-san-vicente', nombre: 'Cabo de San Vicente', punto: [-8.9965, 37.0226] },
 
   { id: 'cabo-de-trafalgar', nombre: 'Cabo de Trafalgar', enElNomenclator: 'Cabo de Trafalgar' },
   { id: 'punta-de-tarifa', nombre: 'Punta de Tarifa', enElNomenclator: 'Punta de Tarifa', desambiguacion: 'El Estrecho de Gibraltar no es esta punta: es el mar que la baña, y la punta es su parte más angosta' },
+  { id: 'punta-de-europa', nombre: 'Punta de Europa', punto: [-5.3456, 36.1097] },
 
   { id: 'cabo-de-gata', nombre: 'Cabo de Gata', enElNomenclator: 'Cabo de Gata' },
   { id: 'cabo-de-palos', nombre: 'Cabo de Palos', enElNomenclator: 'Cabo de Palos' },
-  { id: 'cabo-de-san-antonio', nombre: 'Cabo de San Antonio', enElNomenclator: 'Cap de Sant Antoni', desambiguacion: 'El Cabo de la Nao no es este: es el siguiente cabo hacia el sur' },
-  { id: 'cabo-de-la-nao', nombre: 'Cabo de la Nao', enElNomenclator: 'Cap de la Nau', desambiguacion: 'El Cabo de San Antonio no es este: es el que cierra el Golfo de Valencia por el sur' },
+  { id: 'cabo-de-la-nao', nombre: 'Cabo de la Nao', enElNomenclator: 'Cap de la Nau' },
+  { id: 'cabo-de-tortosa', nombre: 'Cabo de Tortosa', enElNomenclator: 'Cap de Tortosa' },
+
+  { id: 'cabo-de-begur', nombre: 'Cabo de Begur', enElNomenclator: 'Cap de Begur' },
 
   { id: 'cabo-de-creus', nombre: 'Cabo de Creus', enElNomenclator: 'Cap de Creus', desambiguacion: 'El Golfo de Rosas no es este cabo: es el arco de costa que el cabo cierra por el norte' },
 ]
 
-// Límites de arco que no son ninguno de los 20 Elementos, así que van a mano (ADR-0010).
+// Límites de arco que no son ningún Elemento, así que van a mano (ADR-0010).
 const LIMITES = {
-  bidasoa: { nombre: 'la desembocadura del Bidasoa', punto: [-1.7936, 43.3836] },
-  guadiana: { nombre: 'la desembocadura del Guadiana', punto: [-7.4083, 37.1733] },
   'punta-carnero': { nombre: 'Punta Carnero', punto: [-5.4425, 36.0833] },
   'punta-camarinal': { nombre: 'Punta Camarinal', punto: [-5.8106, 36.0847] },
   'punta-entinas': { nombre: 'Punta Entinas', punto: [-2.7276, 36.679] },
-  'delta-del-ebro': { nombre: 'el delta del Ebro', punto: [0.8697, 40.7186] },
   'cabo-de-salou': { nombre: 'el cabo de Salou', punto: [1.1614, 41.0519] },
   'punta-del-montgo': { nombre: 'la punta del Montgó', punto: [3.171, 42.1214] },
+  cerbere: { nombre: 'la frontera en Cerbère', punto: [3.1667, 42.4431] },
+  'cabo-sicie': { nombre: 'el cabo Sicié, junto a Tolón', punto: [5.8625, 43.0503] },
 }
 
 // El trozo de costa entre los dos límites de cada uno, que es un Cabo del listado o una entrada de
 // LIMITES. De ahí nace la mancha de mar de un Golfo, y en el Estrecho es todavía lo que se dibuja.
-// El Golfo de Vizcaya acaba en Estaca de Bares y el de Valencia en el delta del Ebro, los dos ya en
-// el Tramo siguiente: la pertenencia es dato declarado, no geometría.
+// El Golfo de León baña Francia, así que su arco sale de la costa francesa y no de la silueta; el
+// Cabo de Creus que lo abre queda en España, fuera de ese arco, y por eso se declara.
 const ARCOS = [
-  { id: 'golfo-de-vizcaya', nombre: 'Golfo de Vizcaya', clase: 'golfo', entre: ['bidasoa', 'punta-de-estaca-de-bares'] },
-  { id: 'golfo-de-cadiz', nombre: 'Golfo de Cádiz', clase: 'golfo', entre: ['guadiana', 'punta-camarinal'] },
   // El Estrecho empieza en Punta Camarinal y no en Tarifa. Tarifa es lo más angosto del paso, no su
   // borde: el límite occidental es la línea de Camarinal a la orilla africana de enfrente. Mientras
   // el Estrecho fue una línea que arrancaba en Tarifa daba igual; como mancha, empezarlo ahí lo deja
   // en 186 km² y once píxeles, que es menos que el Golfo más pequeño y poco más que un Cabo.
   { id: 'estrecho-de-gibraltar', nombre: 'Estrecho de Gibraltar', clase: 'estrecho', entre: ['punta-camarinal', 'punta-carnero'], desambiguacion: 'La Punta de Tarifa no es el estrecho: es el cabo de su parte más angosta' },
   { id: 'golfo-de-almeria', nombre: 'Golfo de Almería', clase: 'golfo', entre: ['punta-entinas', 'cabo-de-gata'] },
-  { id: 'golfo-de-valencia', nombre: 'Golfo de Valencia', clase: 'golfo', entre: ['cabo-de-san-antonio', 'delta-del-ebro'] },
-  { id: 'golfo-de-san-jorge', nombre: 'Golfo de San Jorge', clase: 'golfo', entre: ['delta-del-ebro', 'cabo-de-salou'], alias: ['Sant Jordi'] },
+  { id: 'golfo-de-mazarron', nombre: 'Golfo de Mazarrón', clase: 'golfo', entre: ['cabo-de-gata', 'cabo-de-palos'] },
+  { id: 'golfo-de-valencia', nombre: 'Golfo de Valencia', clase: 'golfo', entre: ['cabo-de-la-nao', 'cabo-de-tortosa'] },
+  { id: 'golfo-de-san-jorge', nombre: 'Golfo de San Jorge', clase: 'golfo', entre: ['cabo-de-tortosa', 'cabo-de-salou'], alias: ['Sant Jordi'] },
   { id: 'golfo-de-rosas', nombre: 'Golfo de Rosas', clase: 'golfo', entre: ['cabo-de-creus', 'punta-del-montgo'], alias: ['Roses'], desambiguacion: 'El Cabo de Creus no es el golfo: es el cabo que lo cierra por el norte' },
+  { id: 'golfo-de-leon', nombre: 'Golfo de León', clase: 'golfo', entre: ['cerbere', 'cabo-sicie'], costa: 'francia', cabos: ['cabo-de-creus'] },
 ]
 
 const require = createRequire(import.meta.url)
@@ -112,7 +123,8 @@ async function lugaresParecidosA(nombre) {
 // del listado se juegan como Cabos (ADR-0010).
 const SALIENTE = 'Saliente costero'
 
-async function puntoDelCabo({ nombre, enElNomenclator }) {
+async function puntoDelCabo({ nombre, enElNomenclator, punto }) {
+  if (punto) return punto
   const parecidos = await lugaresParecidosA(enElNomenclator)
   const suyos = parecidos.filter((lugar) => lugar.grafias.includes(enElNomenclator) && lugar.tipo === SALIENTE)
   if (suyos.length === 0) throw new Error(`El Nomenclátor ya no trae ningún ${SALIENTE.toLowerCase()} llamado «${enElNomenclator}», que es ${nombre}`)
@@ -178,7 +190,7 @@ function comprobarArco(id, linea) {
 const puntos = new Map()
 for (const cabo of CABOS) {
   puntos.set(cabo.id, await puntoDelCabo(cabo))
-  console.log(`${cabo.nombre}: «${cabo.enElNomenclator}» en ${puntos.get(cabo.id).map((grado) => grado.toFixed(4)).join(', ')}`)
+  console.log(`${cabo.nombre}: «${cabo.enElNomenclator ?? 'a mano'}» en ${puntos.get(cabo.id).map((grado) => grado.toFixed(4)).join(', ')}`)
 }
 
 const cabos = CABOS.map(({ id, nombre, alias, desambiguacion }) =>
@@ -199,8 +211,8 @@ function limite(cual) {
 }
 
 // Un Cabo está sobre un arco cuando el vértice de la costa que le queda más cerca es uno de los del
-// arco. Distingue a los que el Golfo baña, como Machichaco dentro del de Vizcaya, del que solo le cae
-// cerca por detrás del límite, como el Cabo de la Nao respecto al de Valencia.
+// arco. Distingue a los que el Golfo baña, como la Punta de Tarifa dentro del Estrecho, del que solo le
+// cae cerca por detrás del límite, como el Cabo de Begur respecto al de Rosas.
 function losCabosDe(linea) {
   const suyos = new Set(linea.map((vertice) => vertice.join()))
   return CABOS.filter(({ id }) => {
@@ -216,15 +228,16 @@ function losCabosDe(linea) {
   }).map(({ id }) => id)
 }
 
-const arcos = ARCOS.map(({ id, nombre, clase, alias, desambiguacion, entre: [uno, otro] }) => {
-  const cortes = [limite(uno), limite(otro)].map((cual) => ({ ...cual, ...verticeMasCercano(anillo, cual) }))
-  const linea = arcoEntre(anillo, cortes[0].indice, cortes[1].indice)
+const arcos = ARCOS.map(({ id, nombre, clase, alias, desambiguacion, costa, cabos: declarados = [], entre: [uno, otro] }) => {
+  const suCosta = costa ? anilloDelPais(COSTAS_DE_FUERA[costa]) : anillo
+  const cortes = [limite(uno), limite(otro)].map((cual) => ({ ...cual, ...verticeMasCercano(suCosta, cual) }))
+  const linea = arcoEntre(suCosta, cortes[0].indice, cortes[1].indice)
   comprobarArco(id, linea)
   const entre = cortes.map(({ nombre: donde, separacion }) => `${donde} (a ${(separacion * 111).toFixed(1)} km)`)
   console.log(`${nombre}: ${linea.length} vértices entre ${entre[0]} y ${entre[1]}`)
   return elemento(
     id,
-    { nombre, clase, cabos: losCabosDe(linea), ...(alias && { alias }), ...(desambiguacion && { desambiguacion }) },
+    { nombre, clase, cabos: [...declarados, ...losCabosDe(linea)], ...(alias && { alias }), ...(desambiguacion && { desambiguacion }) },
     { type: 'LineString', coordinates: linea },
   )
 })
@@ -240,18 +253,18 @@ const ORILLA_AFRICANA = [
   { nombre: 'la orilla africana frente a Punta Carnero', punto: [-5.4055, 35.9267] },
 ]
 
-function anilloDeMarruecos() {
+function anilloDelPais(codigo) {
   const mundo = JSON.parse(readFileSync(require.resolve('world-atlas/countries-10m.json'), 'utf8'))
-  const marruecos = feature(mundo, mundo.objects.countries).features.find((pais) => pais.id === '504')
+  const pais = feature(mundo, mundo.objects.countries).features.find(({ id }) => id === codigo)
   const anillos =
-    marruecos.geometry.type === 'Polygon'
-      ? [marruecos.geometry.coordinates[0]]
-      : marruecos.geometry.coordinates.map(([exterior]) => exterior)
+    pais.geometry.type === 'Polygon'
+      ? [pais.geometry.coordinates[0]]
+      : pais.geometry.coordinates.map(([exterior]) => exterior)
   return anillos.reduce((uno, otro) => (otro.length > uno.length ? otro : uno)).slice(0, -1)
 }
 
 function manchaDelEstrecho(arco) {
-  const orilla = anilloDeMarruecos()
+  const orilla = anilloDelPais(MARRUECOS)
   const cortes = ORILLA_AFRICANA.map((cual) => ({ ...cual, ...verticeMasCercano(orilla, cual) }))
   const enfrente = arcoEntre(orilla, cortes[0].indice, cortes[1].indice)
   // Las dos orillas se recorren en sentidos opuestos, así que la africana se da la vuelta para que
@@ -268,7 +281,7 @@ function manchaDelEstrecho(arco) {
 }
 
 // El fondo lo decide el Golfo más pequeño, no el más grande: a 30 km Rosas y San Jorge se leen como
-// costa resaltada y a 60 el de Vizcaya se come el Golfo de León (ADR-0012).
+// costa resaltada (ADR-0012).
 const FONDO = 40
 
 // Recortar contra la costa deja trozos de mar entre islotes y dentro de las rías; el mayor no llega
@@ -354,8 +367,8 @@ function sinMigas(mancha) {
   return { ...mancha, geometry: orientada({ type: 'MultiPolygon', coordinates: grandes }) }
 }
 
-// Dos manchas que comparten límite se tocan por el borde, y eso es lo correcto: el Golfo de Cádiz y
-// el Estrecho se dan la mano en la Punta de Tarifa. Lo que no puede haber es mar contado dos veces.
+// Dos manchas que comparten límite se tocan por el borde, y eso es lo correcto: el Golfo de Valencia
+// y el de San Jorge se dan la mano en el Cabo de Tortosa. Lo que no puede haber es mar contado dos veces.
 const SOLAPE = 0.01
 
 function comprobarManchas(manchas) {

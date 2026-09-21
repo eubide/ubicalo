@@ -71,8 +71,8 @@
   const margen = 12
   const radioSierra = 7
   const radioPico = 6
-  // El Cabo de la Nao y el de San Antonio están a cuatro píxeles: con el círculo de una Sierra se ven
-  // como uno solo.
+  // Estaca de Bares y el Cabo Ortegal están a siete píxeles: con el círculo de una Sierra se ven como
+  // uno solo.
   const radioCabo = 4
 
   const proyeccion = $derived(
@@ -81,7 +81,7 @@
         [margen, margen],
         [ancho - margen, alto - margen],
       ],
-      { type: 'FeatureCollection', features: contextoDeRelieve ? [contextoDeRelieve.contorno] : contornos },
+      { type: 'FeatureCollection', features: contextoDeRelieve ? [contextoDeRelieve.encuadre ?? contextoDeRelieve.contorno] : contornos },
     ),
   )
   const trazado = $derived(geoPath(proyeccion).pointRadius(radioSierra))
@@ -195,8 +195,8 @@
   let lienzo = $state<SVGSVGElement | null>(null)
   let vista = $state<Vista>({ escala: 1, x: 0, y: 0 })
 
-  // La marca del Cabo no crece con el mapa: si creciera, ampliar no separaría nunca el Cabo de la Nao
-  // del de San Antonio, porque su distancia y su radio se multiplicarían por lo mismo.
+  // La marca del Cabo no crece con el mapa: si creciera, ampliar no separaría nunca Estaca de Bares
+  // del Cabo Ortegal, porque su distancia y su radio se multiplicarían por lo mismo.
   const trazadoDeCabo = $derived(geoPath(proyeccion).pointRadius(radioCabo / vista.escala))
   let seleccionado = $state<string | null>(null)
   let bajoElPuntero = $state<string | null>(null)
@@ -267,7 +267,7 @@
     retomarGesto()
   }
 
-  // El pellizco solo existe con los dedos, y sin zoom el Cabo de la Nao y el de San Antonio, a cuatro
+  // El pellizco solo existe con los dedos, y sin zoom Estaca de Bares y el Cabo Ortegal, a siete
   // píxeles, no se pueden separar con el ratón.
   const PASO_DE_LA_RUEDA = 400
 
@@ -349,7 +349,7 @@
   }
 
   // Con ratón no hay paso de confirmación, así que la puntería tiene que verse antes de pulsar. Y hay
-  // que verla también en los puntos: el Cabo de la Nao y el de San Antonio están a cuatro píxeles.
+  // que verla también en los puntos: Estaca de Bares y el Cabo Ortegal están a siete píxeles.
   function apuntar(evento: MouseEvent) {
     if (tipoDePuntero === 'touch' || preguntado === null) return
     if (diana.length > 0 && !dianaSeToca) return
@@ -370,7 +370,7 @@
     if (cauce === null || (rotulados.includes(id) && !rotulados.includes(cauce))) pulsarElemento(id)
   }
 
-  // Los pulsadores se pisan entre ellos: el Cabo de la Nao y el de San Antonio están a cuatro
+  // Los pulsadores se pisan entre ellos: Estaca de Bares y el Cabo Ortegal están a siete
   // píxeles. Cuál de los círculos recibe el clic depende del orden de pintado, así que no decide él.
   function pulsarTocable(evento: MouseEvent, id: string) {
     evento.stopPropagation()

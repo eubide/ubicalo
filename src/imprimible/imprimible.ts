@@ -52,7 +52,7 @@ function crearProyeccion(alcance: Alcance): Proyeccion {
       [MARGEN, MARGEN],
       [ANCHO - MARGEN, ALTO - MARGEN],
     ],
-    { type: 'FeatureCollection', features: contexto ? [contexto.contorno] : contornos(alcance) },
+    { type: 'FeatureCollection', features: contexto ? [contexto.encuadre ?? contexto.contorno] : contornos(alcance) },
   )
 }
 
@@ -74,7 +74,7 @@ function banda({ y }: Posicion): number {
 
 const PASADAS = 8
 
-// Dos números pegados no se leen, y el Cabo de la Nao y el de San Antonio están a cuatro píxeles.
+// Dos números pegados no se leen, y Estaca de Bares y el Cabo Ortegal están a siete píxeles.
 export function separar(posiciones: Posicion[], minima: number): Posicion[] {
   const sueltas = posiciones.map((posicion) => ({ ...posicion }))
   for (let pasada = 0; pasada < PASADAS; pasada += 1) {

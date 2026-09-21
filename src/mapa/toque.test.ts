@@ -2,7 +2,7 @@ import { geoConicConformalSpain } from 'd3-composite-projections'
 import type { Feature, FeatureCollection, LineString, Point } from 'geojson'
 import { describe, expect, it } from 'vitest'
 import riosGeo from '../datos/rios.json'
-import { contornos, siluetaDeEspana } from '../catalogo/catalogo'
+import { contextoDe, contornos } from '../catalogo/catalogo'
 import { tocableMasCercano, trazoMasCercano, type Trazo } from './toque'
 
 // La misma proyección y el mismo encuadre que usa el mapa, para tocar donde tocaría el dedo.
@@ -58,13 +58,12 @@ function desplazado({ x, y }: { x: number; y: number }, dx: number, dy: number) 
 
 const RADIO_DEL_DEDO = 14
 
-// El mapa de Costas encuadra la silueta de España, no los propios Elementos.
 const proyeccionDeCostas = geoConicConformalSpain().fitExtent(
   [
     [MARGEN, MARGEN],
     [ANCHO - MARGEN, ALTO - MARGEN],
   ],
-  siluetaDeEspana(),
+  contextoDe('todo-costas')!.encuadre!,
 )
 
 const formasDeCosta = [...contornos('cabos'), ...contornos('golfos')]
@@ -147,7 +146,7 @@ describe('Qué río tocó el dedo', () => {
 })
 
 // En Costas ya no queda ninguna línea: los seis Golfos y el Estrecho son manchas y su toque lo
-// resuelve el SVG, no la cercanía. Lo único que sigue pasando por aquí son los trece Cabos.
+// resuelve el SVG, no la cercanía. Lo único que sigue pasando por aquí son los dieciocho Cabos.
 describe('Qué Elemento de Costas tocó el dedo', () => {
   const RADIO_DE_LA_MARCA = 4
 
@@ -158,18 +157,18 @@ describe('Qué Elemento de Costas tocó el dedo', () => {
     expect(formasDeCosta.filter(({ geometry }) => geometry.type === 'LineString')).toEqual([])
   })
 
-  it('cada uno de los 13 Cabos responde a su propia marca', () => {
+  it('cada uno de los 18 Cabos responde a su propia marca', () => {
     const fallados = cabos.map(({ id }) => [id, cabo(id)] as const).filter(([id, punto]) => quien(punto) !== id)
 
-    expect(cabos).toHaveLength(13)
+    expect(cabos).toHaveLength(18)
     expect(fallados.map(([id]) => id)).toEqual([])
   })
 
-  it('el Cabo de la Nao y el de San Antonio, a cuatro píxeles, responden cada uno por el suyo', () => {
-    expect(quien(cabo('cabo-de-la-nao'))).toBe('cabo-de-la-nao')
-    expect(quien(cabo('cabo-de-san-antonio'))).toBe('cabo-de-san-antonio')
+  it('Estaca de Bares y el Cabo Ortegal, a siete píxeles, responden cada uno por el suyo', () => {
     expect(quien(cabo('punta-de-estaca-de-bares'))).toBe('punta-de-estaca-de-bares')
     expect(quien(cabo('cabo-ortegal'))).toBe('cabo-ortegal')
+    expect(quien(cabo('cabo-tourinan'))).toBe('cabo-tourinan')
+    expect(quien(cabo('cabo-de-finisterre'))).toBe('cabo-de-finisterre')
   })
 
   it('lejos de todo no responde nadie', () => {

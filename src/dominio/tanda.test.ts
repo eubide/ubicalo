@@ -258,7 +258,7 @@ describe('Orden de los nuevos entre Tandas', () => {
         .map(({ elemento }) => elemento.clase)
 
     expect(new Set(primeros('hidrografia', 3))).toEqual(new Set(['vertiente']))
-    expect(new Set(primeros('costas', 13))).toEqual(new Set(['cabo']))
+    expect(new Set(primeros('costas', 18))).toEqual(new Set(['cabo']))
     expect(new Set(primeros('relieve', 11))).toEqual(new Set(['cordillera']))
   })
 

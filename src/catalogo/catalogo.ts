@@ -49,6 +49,8 @@ export const etiquetaDeClase: Record<ClaseDelMapa, string> = {
 
 export interface ContextoGeografico {
   contorno: Feature<Geometry>
+  // Lo que el mapa encuadra cuando no basta con el contorno, porque hay Elementos fuera de él.
+  encuadre?: Feature<Geometry>
   tenues: Feature<Geometry>[]
   rios: Feature<Geometry>[]
 }
@@ -134,12 +136,12 @@ const BASTA_ESCRIBIR: Record<string, string> = {
   'Depresión del Guadalquivir': 'Guadalquivir',
   'Depresión del Ebro': 'Ebro',
   "Turó de l'Home": 'Turó',
-  'Golfo de Vizcaya': 'Vizcaya',
-  'Golfo de Cádiz': 'Cádiz',
   'Golfo de Almería': 'Almería',
+  'Golfo de Mazarrón': 'Mazarrón',
   'Golfo de Valencia': 'Valencia',
   'Golfo de San Jorge': 'San Jorge',
   'Golfo de Rosas': 'Rosas',
+  'Golfo de León': 'León',
   'Estrecho de Gibraltar': 'Gibraltar',
   'Punta de Estaca de Bares': 'Estaca de Bares',
 }

@@ -744,8 +744,8 @@ describe('Catálogo de Cabos', () => {
   const cabos = catalogo('cabos')
   const elementoDe = (id: string) => cabos.find((candidato) => candidato.id === id)!
 
-  it('entrega los 13 Cabos y ninguna otra Clase', () => {
-    expect(cabos).toHaveLength(13)
+  it('entrega los 18 Cabos y ninguna otra Clase', () => {
+    expect(cabos).toHaveLength(18)
     expect(cabos.every(({ clase }) => clase === 'cabo')).toBe(true)
   })
 
@@ -760,13 +760,13 @@ describe('Catálogo de Cabos', () => {
   it('el mapa de Cabos solo tiene puntos', () => {
     const formas = contornos('cabos')
 
-    expect(formas).toHaveLength(13)
+    expect(formas).toHaveLength(18)
     expect(formas.every(({ geometry }) => geometry.type === 'Point')).toBe(true)
-    expect(catalogoDelMapa('cabos')).toHaveLength(13)
+    expect(catalogoDelMapa('cabos')).toHaveLength(18)
   })
 
   it('los Vecinos son los Cabos más cercanos por la costa, no los del mismo Tramo', () => {
-    expect(elementoDe('cabo-de-la-nao').vecinos).toContain('cabo-de-san-antonio')
+    expect(elementoDe('cabo-de-finisterre').vecinos).toContain('cabo-tourinan')
     expect(elementoDe('cabo-ortegal').vecinos).toContain('punta-de-estaca-de-bares')
     // La Costa de la Luz solo tiene dos Cabos: por Tramo nunca habría dado tres Distractores.
     expect(elementoDe('cabo-de-trafalgar').vecinos).toHaveLength(3)
@@ -801,7 +801,7 @@ describe('Catálogo de Golfos', () => {
 
   it('los Vecinos son los Golfos más cercanos, que es lo único que da tres Distractores con siete', () => {
     expect(elementoDe('golfo-de-san-jorge').vecinos).toContain('golfo-de-rosas')
-    expect(elementoDe('estrecho-de-gibraltar').vecinos).toContain('golfo-de-cadiz')
+    expect(elementoDe('golfo-de-rosas').vecinos).toContain('golfo-de-leon')
     expect(golfos.every(({ vecinos }) => vecinos.length === 3)).toBe(true)
   })
 
@@ -813,18 +813,18 @@ describe('Catálogo de Golfos', () => {
 describe('Catálogo de Todo en Costas', () => {
   const todo = catalogo('todo-costas')
 
-  it('entrega los 20 Elementos de la costa y ningún Tramo', () => {
+  it('entrega los 25 Elementos de la costa y ningún Tramo', () => {
     const deClase = (clase: string) => todo.filter((pieza) => pieza.clase === clase)
 
-    expect(todo).toHaveLength(20)
+    expect(todo).toHaveLength(25)
     expect(deClase('tramo-de-costa')).toEqual([])
-    expect(deClase('cabo')).toHaveLength(13)
+    expect(deClase('cabo')).toHaveLength(18)
     expect(deClase('golfo')).toHaveLength(6)
     expect(deClase('estrecho')).toHaveLength(1)
   })
 
   // Costas es la única Familia plana: lo único que le hacía de jerarquía era el Tramo.
-  it('los veinte se ven desde el principio, porque no hay ningún nivel que desbloquear', () => {
+  it('los veinticinco se ven desde el principio, porque no hay ningún nivel que desbloquear', () => {
     expect(todo.every(({ desbloqueaCon }) => desbloqueaCon?.length === 0)).toBe(true)
   })
 
@@ -835,16 +835,16 @@ describe('Catálogo de Todo en Costas', () => {
   it('los Cabos van antes que los Golfos, que es el orden en que la Tanda presenta los nuevos', () => {
     const clases = todo.map(({ clase }) => (clase === 'cabo' ? 'cabo' : 'agua'))
 
-    expect(clases.indexOf('agua')).toBe(13)
-    expect(clases.lastIndexOf('cabo')).toBe(12)
+    expect(clases.indexOf('agua')).toBe(18)
+    expect(clases.lastIndexOf('cabo')).toBe(17)
   })
 
-  it('los veinte se tocan como manchas y puntos, sin una sola línea', () => {
+  it('los veinticinco se tocan como manchas y puntos, sin una sola línea', () => {
     const formas = contornos('todo-costas')
 
-    expect(formas).toHaveLength(20)
+    expect(formas).toHaveLength(25)
     expect(formas.filter(({ geometry }) => geometry.type === 'MultiPolygon')).toHaveLength(7)
-    expect(formas.filter(({ geometry }) => geometry.type === 'Point')).toHaveLength(13)
+    expect(formas.filter(({ geometry }) => geometry.type === 'Point')).toHaveLength(18)
     expect(formas.filter(({ geometry }) => geometry.type === 'LineString')).toEqual([])
   })
 })
@@ -861,11 +861,11 @@ describe('Las manchas de mar de los Golfos', () => {
     expect(manchas.map(({ id }) => String(id)).sort()).toEqual([
       'estrecho-de-gibraltar',
       'golfo-de-almeria',
-      'golfo-de-cadiz',
+      'golfo-de-leon',
+      'golfo-de-mazarron',
       'golfo-de-rosas',
       'golfo-de-san-jorge',
       'golfo-de-valencia',
-      'golfo-de-vizcaya',
     ])
     expect(formas.filter(({ geometry }) => geometry.type === 'LineString')).toEqual([])
   })
@@ -879,7 +879,7 @@ describe('Las manchas de mar de los Golfos', () => {
     expect(booleanPointInPolygon(cabos.find(({ id }) => id === 'punta-de-tarifa')!.geometry as Point, manchaDe('estrecho-de-gibraltar') as never)).toBe(true)
   })
 
-  it('ninguna mancha pisa tierra, ni española ni de los cuatro países vecinos', () => {
+  it('ninguna mancha pisa tierra, ni española ni de los cinco vecinos', () => {
     const tierra = [siluetaDeEspana(), ...(paises as FeatureCollection).features]
 
     for (const mancha of manchas) {
@@ -894,8 +894,8 @@ describe('Las manchas de mar de los Golfos', () => {
     }
   })
 
-  // Los que comparten límite se tocan por el borde, que es lo que toca: el Golfo de Cádiz y el
-  // Estrecho se dan la mano en la Punta de Tarifa. Lo que no puede haber es mar contado dos veces.
+  // Los que comparten límite se tocan por el borde, que es lo que toca: el Golfo de Valencia y el de
+  // San Jorge se dan la mano en el Cabo de Tortosa. Lo que no puede haber es mar contado dos veces.
   it('ningún par de manchas se reparte el mismo mar', () => {
     for (const [i, una] of manchas.entries()) {
       for (const otra of manchas.slice(i + 1)) {
@@ -933,10 +933,10 @@ describe('Las manchas de mar de los Golfos', () => {
     expect(intrusos).toEqual([])
   })
 
-  it('el Cabo de la Nao queda fuera del Golfo de Valencia, que no cierra', () => {
-    const laNao = cabos.find(({ id }) => id === 'cabo-de-la-nao')!
+  it('el Cabo de Begur queda fuera del Golfo de Rosas, que no cierra', () => {
+    const begur = cabos.find(({ id }) => id === 'cabo-de-begur')!
 
-    expect(booleanPointInPolygon(laNao.geometry as Point, manchaDe('golfo-de-valencia') as never)).toBe(false)
+    expect(booleanPointInPolygon(begur.geometry as Point, manchaDe('golfo-de-rosas') as never)).toBe(false)
   })
 
   it('ninguna mancha se queda en nada al cortar sus extremos', () => {
@@ -945,7 +945,6 @@ describe('Las manchas de mar de los Golfos', () => {
     )
 
     expect(Object.values(areas).every((km2) => km2 > 500)).toBe(true)
-    expect(areas['golfo-de-vizcaya']).toBeGreaterThan(areas['golfo-de-valencia'])
   })
 })
 
@@ -959,9 +958,9 @@ describe('Lo que basta escribir en las costas', () => {
   })
 
   it('a los Golfos, al Estrecho y a Estaca de Bares les sobra el sustantivo', () => {
-    expect(elementoDe('golfo-de-vizcaya').alias).toEqual(['Vizcaya'])
-    expect(elementoDe('golfo-de-cadiz').alias).toEqual(['Cádiz'])
     expect(elementoDe('golfo-de-almeria').alias).toEqual(['Almería'])
+    expect(elementoDe('golfo-de-mazarron').alias).toEqual(['Mazarrón'])
+    expect(elementoDe('golfo-de-leon').alias).toEqual(['León'])
     expect(elementoDe('golfo-de-valencia').alias).toEqual(['Valencia'])
     expect(elementoDe('golfo-de-san-jorge').alias).toEqual(['Sant Jordi', 'San Jorge'])
     expect(elementoDe('golfo-de-rosas').alias).toEqual(['Roses', 'Rosas'])
@@ -973,15 +972,20 @@ describe('Lo que basta escribir en las costas', () => {
     const sinAlias = costas.filter(({ alias }) => alias.length === 0).map(({ id }) => id)
 
     expect(sinAlias.sort()).toEqual([
+      'cabo-da-roca',
       'cabo-de-ajo',
+      'cabo-de-begur',
       'cabo-de-creus',
       'cabo-de-gata',
       'cabo-de-la-nao',
       'cabo-de-palos',
       'cabo-de-penas',
-      'cabo-de-san-antonio',
+      'cabo-de-san-vicente',
+      'cabo-de-tortosa',
       'cabo-de-trafalgar',
       'cabo-ortegal',
+      'cabo-tourinan',
+      'punta-de-europa',
       'punta-de-tarifa',
     ])
   })
@@ -992,29 +996,27 @@ describe('Lo que basta escribir en las costas', () => {
     expect(conAlias).toEqual({
       'cabo-machichaco': ['Matxitxako'],
       'cabo-de-finisterre': ['Fisterra'],
-      'golfo-de-vizcaya': ['Vizcaya'],
-      'golfo-de-cadiz': ['Cádiz'],
       'golfo-de-almeria': ['Almería'],
+      'golfo-de-mazarron': ['Mazarrón'],
       'golfo-de-valencia': ['Valencia'],
       'golfo-de-san-jorge': ['Sant Jordi', 'San Jorge'],
       'golfo-de-rosas': ['Roses', 'Rosas'],
+      'golfo-de-leon': ['León'],
       'estrecho-de-gibraltar': ['Gibraltar'],
       'punta-de-estaca-de-bares': ['Estaca de Bares'],
     })
   })
 
-  it('solo los tres pares que se pisan en el mapa llevan frase de desambiguación', () => {
+  it('solo los dos pares que se pisan en el mapa llevan frase de desambiguación', () => {
     const conFrase = costas.filter(({ desambiguacion }) => desambiguacion).map(({ id }) => id)
 
     expect(conFrase.sort()).toEqual([
       'cabo-de-creus',
-      'cabo-de-la-nao',
-      'cabo-de-san-antonio',
       'estrecho-de-gibraltar',
       'golfo-de-rosas',
       'punta-de-tarifa',
     ])
-    expect(elementoDe('cabo-de-la-nao').desambiguacion).toContain('Cabo de San Antonio')
+    expect(elementoDe('cabo-de-creus').desambiguacion).toContain('Golfo de Rosas')
   })
 })
 
