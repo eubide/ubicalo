@@ -275,6 +275,14 @@ describe('Se responde con lo que distingue al Elemento', () => {
     expect(acierta(sierraDeGata, 'sierragata')).toBe(true)
   })
 
+  it('el conector gallego y portugués tampoco: "Cabo Roca" vale por "Cabo da Roca"', () => {
+    const cabo: Elemento = { id: 'cr', nombre: 'Cabo da Roca', nombreMostrado: 'Cabo da Roca', alias: [], vecinos: [] }
+
+    expect(acierta(cabo, 'Cabo Roca')).toBe(true)
+    expect(acierta(cabo, 'Cabo de Roca')).toBe(true)
+    expect(acierta(cabo, 'Cabo do Roca')).toBe(true)
+  })
+
   it('los artículos tampoco: "Palmas" vale por "Las Palmas"', () => {
     const lasPalmas: Elemento = { id: 'lp', nombre: 'Las Palmas', nombreMostrado: 'Las Palmas', alias: [], vecinos: [] }
 
