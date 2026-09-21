@@ -5,8 +5,8 @@ import { feature } from 'topojson-client'
 const require = createRequire(import.meta.url)
 const mundo = JSON.parse(readFileSync(require.resolve('world-atlas/countries-10m.json'), 'utf8'))
 
-// ISO 3166-1 numérico: Portugal, Francia, Andorra y Marruecos.
-const PAISES = new Set(['620', '250', '020', '504'])
+// ISO 3166-1 numérico: Portugal, Francia, Andorra, Marruecos y Gibraltar.
+const PAISES = new Set(['620', '250', '020', '504', '292'])
 
 const paises = feature(mundo, mundo.objects.countries)
 const contexto = {
