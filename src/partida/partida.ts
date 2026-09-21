@@ -360,7 +360,7 @@ function reanudar(partida: Partida, ahora: number): Partida {
 
 // Se caen de los dos lados de la comparación, y con ellas los espacios: «Sierra de Gata»,
 // «Sierra Gata» y «sierragata» son la misma respuesta.
-const PALABRAS_QUE_NO_DISTINGUEN = ['el', 'la', 'los', 'las', 'de', 'del', 'y', 'e', 'al', 'l']
+const PALABRAS_QUE_NO_DISTINGUEN = ['el', 'la', 'los', 'las', 'de', 'del', 'da', 'do', 'y', 'e', 'al', 'l']
 
 type Forma = (texto: string) => string
 

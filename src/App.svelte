@@ -281,6 +281,13 @@
     preguntaElegida ? (esIdDeAltura(preguntaElegida) ? picoDeAltura(preguntaElegida) : preguntaElegida) : null,
   )
 
+  // Lo que el alumno tiene que escribir: en Todo, la forma que ha elegido; al Nombrar, la señalada.
+  const foco = $derived.by(() => {
+    if (correccion) return null
+    if (esTodo) return formaDeLaPreguntaElegida
+    return escribeNombre && diana.length === 1 ? diana[0] : null
+  })
+
   const DURACION_RESPUESTA_CORRECTA = 3_000
   const DURACION_DESTELLO = 600
   let destello = $state<string | null>(null)
@@ -667,6 +674,7 @@
       alElegir={esTodo ? elegirPreguntaEnElMapa : elegir}
       {nombreDe}
       {textoDeTentativa}
+      {foco}
     />
 
     {#if correccion}

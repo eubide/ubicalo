@@ -285,6 +285,7 @@
     {fallados}
     preguntado={corregidos ? null : (elegida ?? 'ninguna')}
     {nombres}
+    foco={elegida}
     alElegir={elegir}
     nombreDe={claseDe}
   />
