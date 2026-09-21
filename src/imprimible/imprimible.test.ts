@@ -34,8 +34,8 @@ describe('separar', () => {
   it('aparta dos números que caen en el mismo sitio', () => {
     const [uno, otro] = separar(
       [
-        { id: 'nao', x: 500, y: 300 },
-        { id: 'san-antonio', x: 500, y: 300 },
+        { id: 'estaca', x: 500, y: 300 },
+        { id: 'ortegal', x: 500, y: 300 },
       ],
       20,
     )
@@ -83,10 +83,10 @@ describe('hojasDe', () => {
     }
   })
 
-  it('pone los veinte Elementos de Costas en la misma hoja', () => {
+  it('pone los veinticinco Elementos de Costas en la misma hoja', () => {
     const [hoja] = hojasDe('costas')
 
-    expect(hoja.numerados).toHaveLength(20)
+    expect(hoja.numerados).toHaveLength(25)
   })
 
   it('cuelga la Altura del Pico en vez de darle número propio', () => {

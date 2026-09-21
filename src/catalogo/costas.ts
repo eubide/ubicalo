@@ -78,7 +78,7 @@ function elementoDeCosta(contorno: Feature<Geometry>): Elemento {
 }
 
 // Costas es la única Familia plana: lo único que le hacía de jerarquía era el Tramo de costa, que no
-// tenía canon y se fue con él. Los veinte se ven desde el principio.
+// tenía canon y se fue con él. Todos se ven desde el principio.
 export function catalogoDeCostas(alcance: AlcanceDeCostas): Elemento[] {
   const elementos = CONTORNOS_DEL_MAPA[alcance].map(elementoDeCosta)
   return alcance === 'todo-costas' ? elementos.map((elemento) => ({ ...elemento, desbloqueaCon: [] })) : elementos
@@ -93,8 +93,16 @@ export function contornosDeCostas(alcance: AlcanceDeCostas): Feature<Geometry>[]
 }
 
 // Sin relieve de fondo, que taparía las manchas, y sin el reparto de la tierra en zonas, que se probó
-// y competía con el agua. Los ríos sí, en tenue: el delta del Ebro y la desembocadura del Guadiana
-// son límites de Golfo, así que orientan en vez de estorbar.
+// y competía con el agua. Los ríos sí, en tenue: el delta del Ebro separa dos Golfos, así que orientan
+// en vez de estorbar. El encuadre suma la costa a la silueta porque el Golfo de León baña Francia.
 export function contextoDeCostas(contorno: Feature<Geometry>): ContextoGeografico {
-  return { contorno, tenues: [], rios }
+  const encuadre: Feature<Geometry> = {
+    type: 'Feature',
+    properties: {},
+    geometry: {
+      type: 'GeometryCollection',
+      geometries: [contorno.geometry, ...laCostaEntera.map(({ geometry }) => geometry)],
+    },
+  }
+  return { contorno, encuadre, tenues: [], rios }
 }
