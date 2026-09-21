@@ -208,7 +208,6 @@
       {:else}
         <p class="titulo">{sobreDiez(nota)} sobre 10 · {nota.aciertos} de {nota.total}</p>
       {/if}
-      <p class="deUbicalo">Sobre los {nota.total} de Ubícalo; tu profesor puede preguntar otros.</p>
       <div class="acciones">
         {#if hayTanda}
           <button type="button" class="principal" onclick={alEmpezarTanda}>Tanda con lo fallado</button>
@@ -318,6 +317,7 @@
       </ul>
     </section>
   {/if}
+  <p class="deUbicalo">Sobre los {corregidos.length} de Ubícalo; tu profesor puede preguntar otros.</p>
 {/if}
 
 <style>
@@ -331,10 +331,15 @@
     margin: 0 0 0.25rem;
   }
 
-  .instruccion,
-  .deUbicalo {
+  .instruccion {
     margin: 0 0 0.5rem;
     color: #4b5563;
+  }
+
+  .deUbicalo {
+    margin: 1.5rem 0 0;
+    font-size: 0.8125rem;
+    color: #6b7280;
   }
 
   form {
