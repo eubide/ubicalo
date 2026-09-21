@@ -161,7 +161,7 @@ describe('Resumen de una Familia', () => {
     expect(dominio.resumen('hidrografia')).toEqual({ sabidos: 0, flojos: 0, sinVer: 44, total: 44 })
     expect(dominio.resumen('politico')).toEqual({ sabidos: 0, flojos: 0, sinVer: 71, total: 71 })
     expect(dominio.resumen('relieve').total).toBe(44)
-    expect(dominio.resumen('costas').total).toBe(25)
+    expect(dominio.resumen('costas').total).toBe(34)
   })
 
   it('cuenta los Sabidos y los Flojos de esa Familia, y no los de otra', () => {
@@ -173,7 +173,7 @@ describe('Resumen de una Familia', () => {
     dominio.anotar('todo-costas', 'cabo-de-gata', { caso: 'acierto' })
 
     expect(dominio.resumen('hidrografia')).toEqual({ sabidos: 2, flojos: 1, sinVer: 41, total: 44 })
-    expect(dominio.resumen('costas')).toEqual({ sabidos: 1, flojos: 0, sinVer: 24, total: 25 })
+    expect(dominio.resumen('costas')).toEqual({ sabidos: 1, flojos: 0, sinVer: 33, total: 34 })
   })
 
   it('en Político suma Comunidades y Provincias aunque compartan ids', () => {
@@ -392,7 +392,7 @@ describe('Lo guardado de Costas sobrevive al reparto en Cabos y Golfos', () => {
     const dominio = crearDominio(almacenEnMemoria(), hoy)
 
     expect(dominio.entradas('cabos')).toEqual({})
-    expect(dominio.resumen('costas')).toEqual({ sabidos: 0, flojos: 0, sinVer: 25, total: 25 })
+    expect(dominio.resumen('costas')).toEqual({ sabidos: 0, flojos: 0, sinVer: 34, total: 34 })
   })
 
   it('traducir lo guardado no depende de cuántas veces se lea ni de volver a escribirlo', () => {

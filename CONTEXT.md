@@ -92,7 +92,15 @@ _Evitar_: punta, saliente, promontorio
 
 **Golfo**:
 Mar que se mete en la tierra; en el mapa es la mancha de agua que hay delante del arco de costa que lo baña, entre los dos puntos que lo cierran. Es lo contrario de un Cabo y se dibuja al revés: el Cabo es tierra y es un punto, el Golfo es mar y es una mancha.
-_Evitar_: bahía, ensenada, entrante
+_Evitar_: ensenada, entrante
+
+**Bahía**:
+Mar que se mete en la tierra con una boca más estrecha que la de un Golfo: la de Santander y la de Cádiz. Se juega con los Golfos y, como ellos, es una mancha de agua, pero no es una banda de mar: la de Cádiz la cierra la recta de su boca, y la de Santander, que cerrada así se queda en nada, es un disco de mar en su boca. La Bahía de Cádiz no es el Golfo de Cádiz, que la hoja oficial no pide.
+_Evitar_: ensenada, rada
+
+**Ría**:
+Valle de río que el mar ha inundado: las cuatro gallegas de la hoja oficial, Villaviciosa y Bilbao. En el mapa es el agua entre la costa y la recta de su boca; la de Villaviciosa no cabe en la silueta, y la de Bilbao cerrada por su boca se queda en nada, así que las dos son un disco de mar en su desembocadura. Tiene su propio Alcance.
+_Evitar_: estuario, fiordo
 
 **Estrecho**:
 El de Gibraltar, único de su Clase: el paso entre el Atlántico y el Mediterráneo. En el mapa es el agua entre las dos orillas, la de Cádiz desde Punta Camarinal y la africana de enfrente. La Punta de Tarifa no lo abre: es su parte más angosta. Se juega con los Golfos sin ser uno.
@@ -283,7 +291,8 @@ _Evitar_: índice, orden, etiqueta
 - Una **Pista** contiene el **Elemento** correcto y tres **Distractores**, preferentemente **Vecinos**
 - Cada **Vertiente** recoge varios **Ríos principales** y **Ríos propios**; cada **Río principal** recoge varios **Afluentes**
 - Un **Afluente** desemboca en un **Río principal** o en otro **Afluente**, pero siempre se pregunta por el **Río principal** de su cuenca
-- La Familia **Costas** son veinticinco **Elementos** sueltos de dos **Clases**, dieciocho **Cabos** y siete **Golfos**, sin nada que los agrupe
+- La Familia **Costas** son treinta y cuatro **Elementos** sueltos, dieciocho **Cabos**, diez **Golfos** contando las dos **Bahías** y el **Estrecho**, y seis **Rías**, sin nada que los agrupe
+- Una **Ría** o una **Bahía** es el agua que la recta de su boca cierra contra la costa
 - Un **Golfo** es la mancha de mar que hay delante de la costa, entre los dos puntos que lo cierran, y cada uno de esos dos puntos es un **Cabo** o un límite declarado a mano
 - El alumno tiene como mucho una **Familia elegida**, y el **Dominio** la guarda junto a lo que recuerda de cada **Elemento**
 - Cada **Elemento** está en el **Dominio** sin ver, **Flojo** o **Sabido**
@@ -304,7 +313,7 @@ _Evitar_: índice, orden, etiqueta
 - El río que el alumno se saltó al copiar la lista se rellena con el Tiétar por su posición; queda marcado en el dato como añadido nuestro hasta que el profesor confirme cuál era.
 - "Vertiente" es el nivel de arriba de los ríos, no un Alcance suelto: con tres **Elementos** no da para una **Partida**, así que solo se juega dentro de **Todo**.
 - El listado de cabos y golfos llama "vertientes" a sus tres grupos, pero reparten la costa de otra manera que las tres **Vertientes** de Hidrografía. La palabra se queda en Hidrografía, y la costa no se reparte en nada.
-- **Costas es la única Familia sin jerarquía.** Sus veinticinco **Elementos** se distinguen por **Clase**: dieciocho **Cabos** y siete **Golfos**. Hubo cinco tramos de costa que hacían de nivel de arriba, y se quitaron porque no tienen canon, porque preguntarlos era examinar de un reparto que nos inventamos, y porque sobre el mapa tapaban las manchas de agua en vez de orientar.
+- **Costas es la única Familia sin jerarquía.** Sus treinta y cuatro **Elementos** se distinguen por **Clase**: dieciocho **Cabos**, siete **Golfos**, dos **Bahías**, el **Estrecho** y seis **Rías**. Hubo cinco tramos de costa que hacían de nivel de arriba, y se quitaron porque no tienen canon, porque preguntarlos era examinar de un reparto que nos inventamos, y porque sobre el mapa tapaban las manchas de agua en vez de orientar.
 - Las **Puntas** de Estaca de Bares, Tarifa y Europa no son una Clase: conservan su **Nombre oficial** y se juegan como **Cabos**, porque el examen no las distingue y el Nomenclátor del IGN tampoco.
 - El canon de Costas es la hoja oficial del profesor, no un listado: entra lo que rotula y sale lo que no, aunque caiga fuera de España. «Bahía Cádiz» es la bahía y no el Golfo de Cádiz, y lo que hay junto a la Nao es una isla dibujada, no el Cabo de San Antonio.
 - El **Estrecho** de Gibraltar sí es una Clase, aunque tenga un solo **Elemento**: el Nomenclátor lo agrupa con los golfos, y llamarlo golfo sería enseñar algo falso.

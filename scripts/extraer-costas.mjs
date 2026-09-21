@@ -60,6 +60,18 @@ const LIMITES = {
   'punta-del-montgo': { nombre: 'la punta del Montgó', punto: [3.171, 42.1214] },
   cerbere: { nombre: 'la frontera en Cerbère', punto: [3.1667, 42.4431] },
   'cabo-sicie': { nombre: 'el cabo Sicié, junto a Tolón', punto: [5.8625, 43.0503] },
+  'punta-de-louro': { nombre: 'la Punta de Louro', punto: [-9.0833, 42.7501] },
+  'punta-de-aguieira-en-muros': { nombre: 'la Punta de Aguieira, en Muros', punto: [-8.9745, 42.7445] },
+  'punta-falcoeiro': { nombre: 'la Punta Falcoeiro', punto: [-9.0427, 42.5175] },
+  'punta-de-aguieira-en-o-grove': { nombre: 'la Punta de Aguieira, en O Grove', punto: [-8.9411, 42.4651] },
+  'punta-de-cabicastro': { nombre: 'la Punta de Cabicastro', punto: [-8.8388, 42.3845] },
+  'punta-couso': { nombre: 'la Punta Couso', punto: [-8.8541, 42.3093] },
+  'cabo-home': { nombre: 'el Cabo Home', punto: [-8.8739, 42.2543] },
+  'cabo-silleiro': { nombre: 'el Cabo Silleiro', punto: [-8.9005, 42.1123] },
+  'punta-candor': { nombre: 'la Punta Candor', punto: [-6.3949, 36.6359] },
+  'punta-de-san-felipe': { nombre: 'la Punta de San Felipe', punto: [-6.2796, 36.5431] },
+  'encanizadas-norte': { nombre: 'la orilla norte de las Encañizadas', punto: [-0.753, 37.7887] },
+  'encanizadas-sur': { nombre: 'la orilla sur de las Encañizadas', punto: [-0.7575, 37.7806] },
 }
 
 // El trozo de costa entre los dos límites de cada uno, que es un Cabo del listado o una entrada de
@@ -78,6 +90,24 @@ const ARCOS = [
   { id: 'golfo-de-san-jorge', nombre: 'Golfo de San Jorge', clase: 'golfo', entre: ['cabo-de-tortosa', 'cabo-de-salou'], alias: ['Sant Jordi'] },
   { id: 'golfo-de-rosas', nombre: 'Golfo de Rosas', clase: 'golfo', entre: ['cabo-de-creus', 'punta-del-montgo'], alias: ['Roses'], desambiguacion: 'El Cabo de Creus no es el golfo: es el cabo que lo cierra por el norte' },
   { id: 'golfo-de-leon', nombre: 'Golfo de León', clase: 'golfo', entre: ['cerbere', 'cabo-sicie'], costa: 'francia', cabos: ['cabo-de-creus'] },
+]
+
+// Un Entrante es mar casi cerrado por la tierra: ría, bahía o laguna. La banda de 40 km de los Golfos
+// se lo comería entero y se saldría a mar abierto, así que su agua es la que queda entre la costa y la
+// recta que cruza su boca. Los límites de la boca salen del Nomenclátor, salvo las Encañizadas, que
+// son vértices de la propia silueta. La Ría de Villaviciosa no entra en la silueta, y la de Bilbao y
+// la Bahía de Santander cerradas por su boca se quedan en migas: las tres son un disco de mar en su
+// desembocadura, que en Santander es la península de la Magdalena.
+const ENTRANTES = [
+  { id: 'ria-de-muros-y-noia', nombre: 'Ría de Muros y Noia', clase: 'ria', boca: ['punta-de-louro', 'punta-de-aguieira-en-muros'], alias: ['Muros e Noia'] },
+  { id: 'ria-de-arousa', nombre: 'Ría de Arousa', clase: 'ria', boca: ['punta-falcoeiro', 'punta-de-aguieira-en-o-grove'], alias: ['Arosa'] },
+  { id: 'ria-de-pontevedra', nombre: 'Ría de Pontevedra', clase: 'ria', boca: ['punta-de-cabicastro', 'punta-couso'] },
+  { id: 'ria-de-vigo', nombre: 'Ría de Vigo', clase: 'ria', boca: ['cabo-home', 'cabo-silleiro'] },
+  { id: 'ria-de-villaviciosa', nombre: 'Ría de Villaviciosa', clase: 'ria', desembocadura: [-5.3849, 43.5447] },
+  { id: 'ria-de-bilbao', nombre: 'Ría de Bilbao', clase: 'ria', desembocadura: [-3.0746, 43.3688] },
+  { id: 'bahia-de-santander', nombre: 'Bahía de Santander', clase: 'bahia', desembocadura: [-3.7685, 43.4693] },
+  { id: 'bahia-de-cadiz', nombre: 'Bahía de Cádiz', clase: 'bahia', boca: ['punta-candor', 'punta-de-san-felipe'] },
+  { id: 'mar-menor', nombre: 'Mar Menor', clase: 'golfo', boca: ['encanizadas-norte', 'encanizadas-sur'] },
 ]
 
 const require = createRequire(import.meta.url)
@@ -387,16 +417,40 @@ function comprobarManchas(manchas) {
   }
 }
 
+// Lo bastante para que el disco se vea como agua a escala nacional, donde un kilómetro es
+// medio píxel.
+const RADIO_DEL_DISCO = 8
+
+function manchaDelEntrante({ id, nombre, clase, alias, boca, desembocadura }) {
+  let agua
+  if (desembocadura) {
+    agua = buffer({ type: 'Point', coordinates: desembocadura }, RADIO_DEL_DISCO, { units: 'kilometers', steps: 12 })
+  } else {
+    const cortes = boca.map((cual) => ({ ...limite(cual), ...verticeMasCercano(anillo, limite(cual)) }))
+    const orilla = arcoEntre(anillo, cortes[0].indice, cortes[1].indice)
+    agua = enFeature({ type: 'Polygon', coordinates: [[...orilla, orilla[0]]] })
+    console.log(`${nombre}: ${orilla.length} vértices de orilla entre ${cortes[0].nombre} y ${cortes[1].nombre}`)
+  }
+  for (const suelo of tierra) {
+    agua = quitar(agua, suelo)
+    if (!agua) throw new Error(`${id} se queda sin agua al recortar contra la tierra`)
+  }
+  return { ...agua, id, properties: { nombre, clase, cabos: [], ...(alias && { alias }) } }
+}
+
 const golfos = arcos.filter(({ properties }) => properties.clase === 'golfo')
 const elEstrecho = arcos.find(({ properties }) => properties.clase === 'estrecho')
-const manchas = sinSolapes([...golfos.map(manchaDe), manchaDelEstrecho(elEstrecho)]).map(sinMigas)
+// Los Entrantes van delante porque su agua es suya entera: el Golfo que la tenga al lado cede la
+// parte que se meta en la boca.
+const entrantes = ENTRANTES.map(manchaDelEntrante)
+const manchas = sinSolapes([...entrantes, ...golfos.map(manchaDe), manchaDelEstrecho(elEstrecho)]).map(sinMigas)
 comprobarManchas(manchas)
 for (const mancha of manchas) {
   console.log(`${mancha.properties.nombre}: ${(areaDe(mancha) / 1e6).toFixed(0)} km² de mar`)
 }
 
 const enManchas = new Map(manchas.map((mancha) => [mancha.id, mancha]))
-const costa = arcos.map((arco) => enManchas.get(arco.id) ?? arco)
+const costa = [...arcos, ...entrantes].map((forma) => enManchas.get(forma.id) ?? forma)
 
 mkdirSync('src/datos', { recursive: true })
 escribir('costas', [...cabos, ...costa])

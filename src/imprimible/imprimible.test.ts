@@ -83,10 +83,10 @@ describe('hojasDe', () => {
     }
   })
 
-  it('pone los veinticinco Elementos de Costas en la misma hoja', () => {
+  it('pone los treinta y cuatro Elementos de Costas en la misma hoja', () => {
     const [hoja] = hojasDe('costas')
 
-    expect(hoja.numerados).toHaveLength(25)
+    expect(hoja.numerados).toHaveLength(34)
   })
 
   it('cuelga la Altura del Pico en vez de darle número propio', () => {

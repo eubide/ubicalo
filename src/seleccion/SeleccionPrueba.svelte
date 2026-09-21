@@ -67,7 +67,7 @@
     politico: 'comunidades y provincias',
     relieve: 'montañas',
     hidrografia: 'ríos',
-    costas: 'cabos y golfos',
+    costas: 'cabos, golfos y rías',
   }
 
   function deQueEstaHecha({ flojos, sabidos, nuevos }: RecuentoDeTanda): string {

@@ -7,7 +7,7 @@ Con eso la Familia gana seis Cabos y dos Golfos y pierde un Cabo y dos Golfos:
 - **Entran** Touriñán, Tortosa y Begur, que están en el Nomenclátor; Cabo da Roca, Cabo de San Vicente y Punta de Europa, que no lo están porque caen fuera de España; y los Golfos de Mazarrón y de León.
 - **Salen** el Golfo de Vizcaya, el Golfo de Cádiz y el Cabo de San Antonio. La hoja no rotula el primero; en Cádiz rotula la bahía, que es otro accidente; y lo que parecía una abreviatura junto a la Nao es el dibujo de una isla.
 
-La hoja trae además seis rías, dos bahías y el Mar Menor. Entran en el canon, pero no caben en la mancha de 40 km del ADR-0012, que se comería la ría entera y se saldría a mar abierto, así que llegan con su propia construcción, que se decide aparte.
+La hoja trae además seis rías, dos bahías y el Mar Menor. No caben en la mancha de 40 km del ADR-0012, que se comería la ría entera y se saldría a mar abierto, así que su agua es la que **la recta de su boca cierra contra la costa**. Los dos extremos de la boca salen del Nomenclátor, salvo en el Mar Menor, que se cierra en las Encañizadas con dos vértices de la propia silueta. Donde la silueta no da agua, porque la ría no está dibujada, como Villaviciosa, o porque cerrada se queda en migas, como Bilbao y Santander, el Elemento es un disco de mar de 8 km en su desembocadura.
 
 ## Opciones consideradas
 
@@ -24,4 +24,8 @@ La hoja trae además seis rías, dos bahías y el Mar Menor. Entran en el canon,
 - **Gibraltar se dibuja como tierra vecina**, en gris junto a Portugal, Francia, Andorra y Marruecos. Sin eso la Punta de Europa quedaba sobre un hueco blanco.
 - **La pareja de Cabos más apretada pasa a ser Estaca de Bares y el Cabo Ortegal**, a siete píxeles. La Nao y San Antonio, a cuatro, eran la referencia de la marca del Cabo y de la separación de Números en la Hoja; los dos umbrales siguen valiendo.
 - **Lo guardado del Golfo de Vizcaya, del de Cádiz y del Cabo de San Antonio se descarta al leerse**, como cualquier id que ya no está en el catálogo.
-- La Familia pasa a tener 25 Elementos: 18 Cabos y 7 Golfos, contando el Estrecho.
+- **Ría y Bahía son dos Clases nuevas.** La Ría tiene su propio Alcance, Rías; las Bahías se juegan en Golfos. El Mar Menor es laguna, pero la hoja lo pone junto a los golfos y se juega como Golfo.
+- **Los Vecinos de un agua son las tres aguas más cercanas, sea cual sea su Clase**: con dos Bahías, filtrar por Clase no daba tres Distractores.
+- **Las Rías, las Bahías y el Mar Menor van delante en el reparto del mar**, así que el Golfo de Mazarrón cede lo que su banda metía en el Mar Menor.
+- En la Hoja, Rías y Bahías llevan la misma trama que los Golfos: en papel cuenta el Número, no la Clase.
+- La Familia pasa a tener 34 Elementos: 18 Cabos, 10 Golfos contando las dos Bahías y el Estrecho, y 6 Rías.

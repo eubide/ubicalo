@@ -4,14 +4,16 @@ import costasGeo from '../datos/costas.json'
 import riosGeo from '../datos/rios.json'
 import type { ContextoGeografico, Elemento } from './catalogo'
 
-export type AlcanceDeCostas = 'cabos' | 'golfos' | 'todo-costas'
+export type AlcanceDeCostas = 'cabos' | 'golfos' | 'rias' | 'todo-costas'
 
-export type ClaseDeCosta = 'cabo' | 'golfo' | 'estrecho'
+export type ClaseDeCosta = 'cabo' | 'golfo' | 'bahia' | 'estrecho' | 'ria'
 
 export const etiquetaDeClaseDeCosta: Record<ClaseDeCosta, string> = {
   cabo: 'Cabo',
   golfo: 'Golfo',
+  bahia: 'Bahía',
   estrecho: 'Estrecho',
+  ria: 'Ría',
 }
 
 export interface PropiedadesDeCosta {
@@ -26,9 +28,11 @@ export interface PropiedadesDeCosta {
 
 const costas = (costasGeo as FeatureCollection).features
 const cabos = costas.filter((forma) => propiedadesDeCosta(forma).clase === 'cabo')
-const golfos = costas.filter((forma) => ['golfo', 'estrecho'].includes(propiedadesDeCosta(forma).clase))
-// Los Cabos van delante de los Golfos, y ese orden es el que la Tanda usa para traer los nuevos.
-const laCostaEntera = [...cabos, ...golfos]
+const golfos = costas.filter((forma) => ['golfo', 'bahia', 'estrecho'].includes(propiedadesDeCosta(forma).clase))
+const rias = costas.filter((forma) => propiedadesDeCosta(forma).clase === 'ria')
+const agua = [...golfos, ...rias]
+// Primero los Cabos, luego los Golfos y al final las Rías: es el orden en que la Tanda trae los nuevos.
+const laCostaEntera = [...cabos, ...golfos, ...rias]
 const rios = (riosGeo as FeatureCollection).features
 
 export function propiedadesDeCosta(contorno: Feature<Geometry>): PropiedadesDeCosta {
@@ -38,6 +42,7 @@ export function propiedadesDeCosta(contorno: Feature<Geometry>): PropiedadesDeCo
 const CONTORNOS_DEL_MAPA: Record<AlcanceDeCostas, Feature<Geometry>[]> = {
   cabos,
   golfos,
+  rias,
   'todo-costas': laCostaEntera,
 }
 
@@ -47,9 +52,10 @@ export function esDeCostas(alcance: string): alcance is AlcanceDeCostas {
 
 const VECINOS_POR_CERCANIA = 3
 
-// Los Vecinos son los más cercanos de su propia Clase, como en el relieve.
+// Los Vecinos de un Cabo son los Cabos más cercanos; los de un agua, las aguas más cercanas sin mirar
+// la Clase, porque dos Bahías no dan tres Distractores.
 function vecinosDe(id: string, { clase }: PropiedadesDeCosta): string[] {
-  const familia = clase === 'cabo' ? cabos : golfos
+  const familia = clase === 'cabo' ? cabos : agua
   const suyo = familia.find((forma) => String(forma.id) === id)!
   const centro = geoCentroid(suyo)
   return familia
