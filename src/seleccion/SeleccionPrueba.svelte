@@ -189,9 +189,11 @@
         {@render botonDeSimulacro()}
       {/if}
     </div>
+    <p class="juicio">En la tanda y en el simulacro la tilde y la errata cuentan como fallo, igual que en tu examen.</p>
     <details class="practica" bind:open={practicaAbierta}>
       <summary>Práctica libre</summary>
       {#if practicaAbierta}
+        <p class="juicio">Aquí no: se te perdonan la tilde y la errata.</p>
         {@render tarjeta(familiaElegida, alcancesDe(familiaElegida))}
       {/if}
     </details>
@@ -413,6 +415,13 @@
 
   .flojo {
     background: var(--flojo);
+  }
+
+  .juicio {
+    margin: 0.75rem 0 0;
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    color: #4b5563;
   }
 
   .practica summary {
