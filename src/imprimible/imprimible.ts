@@ -3,6 +3,7 @@ import { geoConicConformalSpain } from 'd3-composite-projections'
 import type { Feature, Geometry, Polygon } from 'geojson'
 import { catalogo, contextoDe, contornos, type Alcance, type Elemento } from '../catalogo/catalogo'
 import { esDeCostas } from '../catalogo/costas'
+import { CENTRO_DE_LA_PENINSULA, enFilaMarAdentro, gruposApinados } from '../mapa/guias'
 import { esIdDeAltura, formaDe } from '../catalogo/relieve'
 import { alcancesDeExamen } from '../dominio/dominio'
 import type { Familia } from '../prueba/prueba'
@@ -111,44 +112,10 @@ function desvioDelPunto(y: number): number {
 }
 
 // En la costa se apiñan formas a pocos píxeles, como las Rías gallegas o las Puntas del Estrecho. Cada
-// grupo pone sus números en fila mar adentro, lejos del centro de la Península, en el mismo orden que
-// sus formas sobre la costa para que las guías no se crucen, como en la hoja del profesor.
+// grupo pone sus números en fila mar adentro, como en la hoja del profesor.
 const APINADO = 24
 const FONDO_DE_LA_FILA = 44
 const PASO_DE_LA_FILA = 26
-const CENTRO_DE_LA_PENINSULA: [number, number] = [-3.7, 40.2]
-
-function gruposApinados(anclas: Posicion[]): Posicion[][] {
-  const grupos: Posicion[][] = []
-  const vistas = new Set<string>()
-  for (const semilla of anclas) {
-    if (vistas.has(semilla.id)) continue
-    const grupo = [semilla]
-    vistas.add(semilla.id)
-    for (let i = 0; i < grupo.length; i += 1) {
-      for (const otra of anclas) {
-        if (vistas.has(otra.id) || Math.hypot(otra.x - grupo[i].x, otra.y - grupo[i].y) >= APINADO) continue
-        vistas.add(otra.id)
-        grupo.push(otra)
-      }
-    }
-    if (grupo.length > 1) grupos.push(grupo)
-  }
-  return grupos
-}
-
-function enFilaMarAdentro(grupo: Posicion[], [cx, cy]: [number, number]): Posicion[] {
-  const mx = grupo.reduce((suma, { x }) => suma + x, 0) / grupo.length
-  const my = grupo.reduce((suma, { y }) => suma + y, 0) / grupo.length
-  const largo = Math.hypot(mx - cx, my - cy) || 1
-  const [dx, dy] = [(mx - cx) / largo, (my - cy) / largo]
-  const [px, py] = [-dy, dx]
-  const ordenados = [...grupo].sort((una, otra) => una.x * px + una.y * py - (otra.x * px + otra.y * py))
-  return ordenados.map(({ id }, i) => {
-    const desplazamiento = (i - (ordenados.length - 1) / 2) * PASO_DE_LA_FILA
-    return { id, x: mx + dx * FONDO_DE_LA_FILA + px * desplazamiento, y: my + dy * FONDO_DE_LA_FILA + py * desplazamiento }
-  })
-}
 
 function dentroDeLaHoja({ x, y }: Posicion): { x: number; y: number } {
   return {
@@ -186,8 +153,8 @@ function numeradosDe(alcance: Alcance): Numerado[] {
   const orden = numerar(anclas)
   const centro = proyeccionDe(alcance)(CENTRO_DE_LA_PENINSULA)!
   const enFila = new Map(
-    (esDeCostas(alcance) ? gruposApinados(anclas) : [])
-      .flatMap((grupo) => enFilaMarAdentro(grupo, centro))
+    (esDeCostas(alcance) ? gruposApinados(anclas, APINADO) : [])
+      .flatMap((grupo) => enFilaMarAdentro(grupo, centro, { fondo: FONDO_DE_LA_FILA, paso: PASO_DE_LA_FILA }))
       .map((posicion) => [posicion.id, posicion]),
   )
   const conGuia = new Set(enFila.keys())
