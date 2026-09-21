@@ -2,7 +2,7 @@
   import type { Feature, FeatureCollection, Geometry, LineString, Polygon } from 'geojson'
   import { geoCentroid, geoPath } from 'd3-geo'
   import { geoConicConformalSpain } from 'd3-composite-projections'
-  import type { ClaseDelMapa, ContextoGeografico } from '../catalogo/catalogo'
+  import { etiquetaDeClase, type ClaseDelMapa, type ContextoGeografico } from '../catalogo/catalogo'
   import { nombreDePapel, PAPELES, propiedadesDe, type Papel } from '../catalogo/relieve'
   import { abierta, ETIQUETA_DE_SENAL, senalDe, type EstadoDelMapa, type Senal } from './senales'
   import { tocableMasCercano, trazoMasCercano, type Trazo } from './toque'
@@ -138,7 +138,7 @@
   const CLASES_DE_RIO: ClaseDelMapa[] = ['rio-principal', 'rio-propio', 'afluente']
 
   // Una mancha del relieve toma su color del Papel; las de agua y las de costa, el de su Clase.
-  const MANCHAS_CON_COLOR_PROPIO: ClaseDelMapa[] = ['vertiente', 'golfo', 'estrecho']
+  const MANCHAS_CON_COLOR_PROPIO: ClaseDelMapa[] = ['vertiente', 'golfo', 'bahia', 'estrecho', 'ria']
 
   function claseDibujada(contorno: Feature<Geometry>): ClaseDelMapa | '' {
     const clase = claseDe(contorno)
@@ -148,6 +148,13 @@
   function hayClase(clase: ClaseDelMapa): boolean {
     return contornos.some((contorno) => claseDe(contorno) === clase)
   }
+
+  const CLASES_DE_AGUA: ClaseDelMapa[] = ['golfo', 'bahia', 'ria', 'estrecho']
+  const aguasEnElMapa = $derived.by(() => {
+    const nombres = CLASES_DE_AGUA.filter(hayClase).map((clase) => etiquetaDeClase[clase].toLowerCase())
+    const texto = nombres.length > 1 ? `${nombres.slice(0, -1).join(', ')} o ${nombres.at(-1)}` : (nombres[0] ?? '')
+    return texto.charAt(0).toUpperCase() + texto.slice(1)
+  })
 
   const radioDelDedo = 14
 
@@ -596,8 +603,8 @@
       {#if hayClase('cabo')}
         <li><svg viewBox="0 0 20 14" aria-hidden="true"><circle class="cabo" cx="10" cy="7" r="4" /></svg> Cabo</li>
       {/if}
-      {#if hayClase('golfo') || hayClase('estrecho')}
-        <li><svg viewBox="0 0 20 14" aria-hidden="true"><path class="golfo" d="M1,3C5,3 6,10 10,10S16,4 19,4V13H1Z" /></svg> Golfo o estrecho</li>
+      {#if aguasEnElMapa.length > 0}
+        <li><svg viewBox="0 0 20 14" aria-hidden="true"><path class="golfo" d="M1,3C5,3 6,10 10,10S16,4 19,4V13H1Z" /></svg> {aguasEnElMapa}</li>
       {/if}
     </ul>
   {/if}
@@ -697,7 +704,9 @@
   /* El Golfo se dibuja sobre el mar y no sobre tierra, así que tiñe más que la Vertiente para
      separarse del fondo en vez de confundirse con él. */
   .elementos path.golfo,
+  .elementos path.bahia,
   .elementos path.estrecho,
+  .elementos path.ria,
   .leyenda .golfo {
     fill: #b9d7ea;
     stroke: #3c7fb1;

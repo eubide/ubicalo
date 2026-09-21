@@ -784,9 +784,10 @@ describe('Catálogo de Golfos', () => {
   const golfos = catalogo('golfos')
   const elementoDe = (id: string) => golfos.find((candidato) => candidato.id === id)!
 
-  it('entrega los 6 Golfos y el Estrecho', () => {
-    expect(golfos).toHaveLength(7)
-    expect(golfos.filter(({ clase }) => clase === 'golfo')).toHaveLength(6)
+  it('entrega los 7 Golfos, las 2 Bahías y el Estrecho', () => {
+    expect(golfos).toHaveLength(10)
+    expect(golfos.filter(({ clase }) => clase === 'golfo')).toHaveLength(7)
+    expect(golfos.filter(({ clase }) => clase === 'bahia')).toHaveLength(2)
     expect(golfos.filter(({ clase }) => clase === 'estrecho').map(({ nombre }) => nombre)).toEqual([
       'Estrecho de Gibraltar',
     ])
@@ -795,7 +796,7 @@ describe('Catálogo de Golfos', () => {
   it('el mapa de Golfos solo tiene manchas', () => {
     const formas = contornos('golfos')
 
-    expect(formas).toHaveLength(7)
+    expect(formas).toHaveLength(10)
     expect(formas.every(({ geometry }) => geometry.type === 'MultiPolygon')).toBe(true)
   })
 
@@ -810,21 +811,46 @@ describe('Catálogo de Golfos', () => {
   })
 })
 
+describe('Catálogo de Rías', () => {
+  const rias = catalogo('rias')
+
+  it('entrega las 6 Rías y ninguna otra Clase', () => {
+    expect(rias.map(({ id }) => id)).toEqual([
+      'ria-de-muros-y-noia',
+      'ria-de-arousa',
+      'ria-de-pontevedra',
+      'ria-de-vigo',
+      'ria-de-villaviciosa',
+      'ria-de-bilbao',
+    ])
+    expect(rias.every(({ clase }) => clase === 'ria')).toBe(true)
+  })
+
+  it('los Vecinos son las aguas más cercanas aunque no sean Rías', () => {
+    const bilbao = rias.find(({ id }) => id === 'ria-de-bilbao')!
+
+    expect(bilbao.vecinos).toContain('bahia-de-santander')
+    expect(rias.every(({ vecinos }) => vecinos.length === 3)).toBe(true)
+  })
+})
+
 describe('Catálogo de Todo en Costas', () => {
   const todo = catalogo('todo-costas')
 
-  it('entrega los 25 Elementos de la costa y ningún Tramo', () => {
+  it('entrega los 34 Elementos de la costa y ningún Tramo', () => {
     const deClase = (clase: string) => todo.filter((pieza) => pieza.clase === clase)
 
-    expect(todo).toHaveLength(25)
+    expect(todo).toHaveLength(34)
     expect(deClase('tramo-de-costa')).toEqual([])
     expect(deClase('cabo')).toHaveLength(18)
-    expect(deClase('golfo')).toHaveLength(6)
+    expect(deClase('golfo')).toHaveLength(7)
+    expect(deClase('bahia')).toHaveLength(2)
     expect(deClase('estrecho')).toHaveLength(1)
+    expect(deClase('ria')).toHaveLength(6)
   })
 
   // Costas es la única Familia plana: lo único que le hacía de jerarquía era el Tramo.
-  it('los veinticinco se ven desde el principio, porque no hay ningún nivel que desbloquear', () => {
+  it('todos se ven desde el principio, porque no hay ningún nivel que desbloquear', () => {
     expect(todo.every(({ desbloqueaCon }) => desbloqueaCon?.length === 0)).toBe(true)
   })
 
@@ -832,33 +858,37 @@ describe('Catálogo de Todo en Costas', () => {
     expect([...catalogo('cabos'), ...catalogo('golfos'), ...todo].every(({ tramo }) => tramo === undefined)).toBe(true)
   })
 
-  it('los Cabos van antes que los Golfos, que es el orden en que la Tanda presenta los nuevos', () => {
-    const clases = todo.map(({ clase }) => (clase === 'cabo' ? 'cabo' : 'agua'))
+  it('los Cabos van antes que los Golfos y las Rías al final, que es el orden en que la Tanda presenta los nuevos', () => {
+    const clases = todo.map(({ clase }) => (clase === 'cabo' || clase === 'ria' ? clase : 'agua'))
 
     expect(clases.indexOf('agua')).toBe(18)
     expect(clases.lastIndexOf('cabo')).toBe(17)
+    expect(clases.indexOf('ria')).toBe(28)
+    expect(clases.lastIndexOf('agua')).toBe(27)
   })
 
-  it('los veinticinco se tocan como manchas y puntos, sin una sola línea', () => {
+  it('todos se tocan como manchas y puntos, sin una sola línea', () => {
     const formas = contornos('todo-costas')
 
-    expect(formas).toHaveLength(25)
-    expect(formas.filter(({ geometry }) => geometry.type === 'MultiPolygon')).toHaveLength(7)
+    expect(formas).toHaveLength(34)
+    expect(formas.filter(({ geometry }) => geometry.type === 'MultiPolygon')).toHaveLength(16)
     expect(formas.filter(({ geometry }) => geometry.type === 'Point')).toHaveLength(18)
     expect(formas.filter(({ geometry }) => geometry.type === 'LineString')).toEqual([])
   })
 })
 
 describe('Las manchas de mar de los Golfos', () => {
-  const formas = [...contornos('cabos'), ...contornos('golfos')]
+  const formas = contornos('todo-costas')
   const manchas = formas.filter(({ geometry }) => geometry.type === 'MultiPolygon')
   const cabos = formas.filter(({ geometry }) => geometry.type === 'Point')
   const manchaDe = (id: string) => manchas.find((mancha) => String(mancha.id) === id)!
   const partesDe = (mancha: Feature<Geometry>) => (mancha.geometry as MultiPolygon).coordinates
   const enKm2 = (anillos: Position[][]) => areaDe({ type: 'Polygon', coordinates: anillos }) / 1e6
 
-  it('los seis Golfos y el Estrecho son manchas, y en Costas ya no queda ninguna línea', () => {
+  it('los Golfos, las Bahías, el Estrecho y las Rías son manchas, y en Costas ya no queda ninguna línea', () => {
     expect(manchas.map(({ id }) => String(id)).sort()).toEqual([
+      'bahia-de-cadiz',
+      'bahia-de-santander',
       'estrecho-de-gibraltar',
       'golfo-de-almeria',
       'golfo-de-leon',
@@ -866,6 +896,13 @@ describe('Las manchas de mar de los Golfos', () => {
       'golfo-de-rosas',
       'golfo-de-san-jorge',
       'golfo-de-valencia',
+      'mar-menor',
+      'ria-de-arousa',
+      'ria-de-bilbao',
+      'ria-de-muros-y-noia',
+      'ria-de-pontevedra',
+      'ria-de-vigo',
+      'ria-de-villaviciosa',
     ])
     expect(formas.filter(({ geometry }) => geometry.type === 'LineString')).toEqual([])
   })
@@ -939,17 +976,26 @@ describe('Las manchas de mar de los Golfos', () => {
     expect(booleanPointInPolygon(begur.geometry as Point, manchaDe('golfo-de-rosas') as never)).toBe(false)
   })
 
-  it('ninguna mancha se queda en nada al cortar sus extremos', () => {
-    const areas = Object.fromEntries(
-      manchas.map((mancha) => [String(mancha.id), Math.round(partesDe(mancha).reduce((total, parte) => total + enKm2(parte), 0))]),
-    )
+  const kmDe = (mancha: Feature<Geometry>) => Math.round(partesDe(mancha).reduce((total, parte) => total + enKm2(parte), 0))
+  // El Mar Menor se juega como Golfo, pero es laguna y lo cierra su boca como a las Rías.
+  const esBanda = (mancha: Feature<Geometry>) =>
+    ['golfo', 'estrecho'].includes((mancha.properties as { clase: string }).clase) && mancha.id !== 'mar-menor'
 
-    expect(Object.values(areas).every((km2) => km2 > 500)).toBe(true)
+  it('ninguna mancha se queda en nada al cortar sus extremos', () => {
+    expect(manchas.filter(esBanda).filter((mancha) => kmDe(mancha) <= 500).map(({ id }) => id)).toEqual([])
+  })
+
+  it('las Rías, las Bahías y el Mar Menor conservan su agua entera', () => {
+    const cerradas = manchas.filter((mancha) => !esBanda(mancha))
+
+    expect(cerradas).toHaveLength(9)
+    expect(cerradas.filter((mancha) => kmDe(mancha) < 40).map(({ id }) => id)).toEqual([])
+    expect(kmDe(manchaDe('mar-menor'))).toBeGreaterThan(120)
   })
 })
 
 describe('Lo que basta escribir en las costas', () => {
-  const costas = [...catalogo('cabos'), ...catalogo('golfos')]
+  const costas = catalogo('todo-costas')
   const elementoDe = (id: string) => costas.find((candidato) => candidato.id === id)!
 
   it('acepta la grafía del Nomenclátor y la catalana como Alias', () => {
@@ -985,6 +1031,7 @@ describe('Lo que basta escribir en las costas', () => {
       'cabo-de-trafalgar',
       'cabo-ortegal',
       'cabo-tourinan',
+      'mar-menor',
       'punta-de-europa',
       'punta-de-tarifa',
     ])
@@ -1002,8 +1049,16 @@ describe('Lo que basta escribir en las costas', () => {
       'golfo-de-san-jorge': ['Sant Jordi', 'San Jorge'],
       'golfo-de-rosas': ['Roses', 'Rosas'],
       'golfo-de-leon': ['León'],
+      'bahia-de-santander': ['Santander'],
+      'bahia-de-cadiz': ['Cádiz'],
       'estrecho-de-gibraltar': ['Gibraltar'],
       'punta-de-estaca-de-bares': ['Estaca de Bares'],
+      'ria-de-muros-y-noia': ['Muros e Noia', 'Muros y Noia'],
+      'ria-de-arousa': ['Arosa', 'Arousa'],
+      'ria-de-pontevedra': ['Pontevedra'],
+      'ria-de-vigo': ['Vigo'],
+      'ria-de-villaviciosa': ['Villaviciosa'],
+      'ria-de-bilbao': ['Bilbao'],
     })
   })
 

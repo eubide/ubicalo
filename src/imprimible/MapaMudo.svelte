@@ -135,7 +135,9 @@
   .mancha.cordillera,
   .mancha.vertiente,
   .mancha.golfo,
-  .mancha.estrecho {
+  .mancha.bahia,
+  .mancha.estrecho,
+  .mancha.ria {
     fill: #e6e6e6;
   }
 

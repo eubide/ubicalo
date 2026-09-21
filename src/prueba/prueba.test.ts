@@ -35,8 +35,9 @@ describe('Alcance', () => {
       'pertenencia-rios': 24,
       'todo-rios': 44,
       cabos: 18,
-      golfos: 7,
-      'todo-costas': 25,
+      golfos: 10,
+      rias: 6,
+      'todo-costas': 34,
     })
   })
 
