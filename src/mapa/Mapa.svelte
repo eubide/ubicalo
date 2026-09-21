@@ -6,6 +6,7 @@
   import { nombreDePapel, PAPELES, propiedadesDe, type Papel } from '../catalogo/relieve'
   import { abierta, ETIQUETA_DE_SENAL, senalDe, type EstadoDelMapa, type Senal } from './senales'
   import { tocableMasCercano, trazoMasCercano, type Trazo } from './toque'
+  import { CENTRO_DE_LA_PENINSULA, enFilaMarAdentro, gruposApinados, type Ancla } from './guias'
   import RecuadroCeutaMelilla from './RecuadroCeutaMelilla.svelte'
 
   export interface Rotulo {
@@ -39,6 +40,8 @@
     nombreDe: (id: string) => string
     // Lo que la barra de confirmación puede decir de una Tentativa sin resolver la pregunta.
     textoDeTentativa?: (id: string) => string
+    // El elemento que se está escribiendo: el mapa lo amplía mientras dura.
+    foco?: string | null
   }
 
   let {
@@ -64,6 +67,7 @@
     alElegir,
     nombreDe,
     textoDeTentativa = nombreDe,
+    foco = null,
   }: Props = $props()
 
   const ancho = 960
@@ -156,12 +160,20 @@
 
   const radioDelDedo = 14
 
-  const puntosTocables = $derived<Trazo[]>(
-    conPulsador.flatMap(({ contorno, centro }) => {
+  // El pulsador de un Cabo tapa la mancha pequeña que tenga al lado, como el de Ajo a la Bahía de
+  // Santander: el centro de esas manchas compite con los Cabos por cercanía.
+  const puntosTocables = $derived<Trazo[]>([
+    ...conPulsador.flatMap(({ contorno, centro }) => {
       const punto = proyeccion(centro)
       return punto ? [{ id: String(contorno.id), puntos: [{ x: punto[0], y: punto[1] }] }] : []
     }),
-  )
+    ...manchas
+      .filter((contorno) => pequeño(String(contorno.id)))
+      .map((contorno) => {
+        const [x, y] = centroDelRotulo(contorno)
+        return { id: String(contorno.id), puntos: [{ x, y }] }
+      }),
+  ])
 
   const trazos = $derived<Trazo[]>(
     cauces.map((cauce) => ({
@@ -278,6 +290,7 @@
 
   function alRodar(evento: WheelEvent) {
     evento.preventDefault()
+    animando = false
     const punto = enCoordenadasDelMapa(evento)
     const escala = acotar(vista.escala * Math.exp(-evento.deltaY / PASO_DE_LA_RUEDA), 1, escalaMaxima)
     const origenX = (punto.x - vista.x) / vista.escala
@@ -297,6 +310,7 @@
     if (!dedos.has(evento.pointerId)) return
     dedos.set(evento.pointerId, enCoordenadasDelMapa(evento))
     if (!gesto || dedos.size !== 2) return
+    animando = false
     const { distancia, centro } = medirGesto()
     const escala = acotar((gesto.vista.escala * distancia) / gesto.distancia, 1, escalaMaxima)
     const origenX = (gesto.centro.x - gesto.vista.x) / gesto.vista.escala
@@ -321,6 +335,7 @@
       evento.timeStamp - previo.instante < pausaDobleToque &&
       Math.hypot(evento.clientX - previo.x, evento.clientY - previo.y) < holguraDobleToque
     if (esDoble) {
+      animando = true
       vista = { escala: 1, x: 0, y: 0 }
       seleccionado = previo.seleccionPrevia
       dobleToque = true
@@ -364,6 +379,17 @@
   function tocarCauce(evento: MouseEvent) {
     const id = cauceBajoElPuntero(evento)
     if (id !== null) pulsarElemento(id)
+    else if (!(evento.target as Element).closest('.elementos path, .pulsador')) verTodo()
+  }
+
+  // Tocar el fondo es la salida de un zoom que no ha servido: se suelta lo señalado y el mapa vuelve
+  // entero, aunque lo que se esté escribiendo siga abierto.
+  let focoSoltado = $state<string | null>(null)
+
+  function verTodo() {
+    if (huboGesto || dobleToque) return
+    seleccionado = null
+    focoSoltado = foco
   }
 
   // Los cauces se dibujan sobre las manchas, así que un toque sobre un río que cruza una vertiente
@@ -421,13 +447,104 @@
     }),
   )
 
+  // En la costa, un nombre que cae entre formas apiñadas se va mar adentro con una guía hasta la suya,
+  // como en la hoja del profesor. Los grupos salen de todas las formas y no solo de las nombradas, para
+  // que un nombre no cambie de sitio cuando aparece el de su vecina.
+  const CLASES_DE_COSTA: ClaseDelMapa[] = ['cabo', ...CLASES_DE_AGUA]
+  const APINADO = 24
+  const FONDO_DE_LA_FILA = 40
+  const ANCHO_SIN_NOMBRE = 80
+
+  const anclas = $derived<Ancla[]>(
+    contornos
+      .filter((contorno) => !enElRecuadro.includes(String(contorno.id)))
+      .map((contorno) => {
+        const [x, y] = centroDelRotulo(contorno)
+        return { id: String(contorno.id), x, y }
+      }),
+  )
+  const esCosta = $derived(contornos.length > 0 && contornos.every((contorno) => CLASES_DE_COSTA.includes(claseDe(contorno))))
+
+  const nombresEnFila = $derived.by(() => {
+    if (!esCosta) return new Map<string, { x: number; y: number; ancla: Ancla; anclaje: 'start' | 'middle' | 'end' }>()
+    // Todo se mide en píxeles de pantalla: al ampliar, lo que estaba apiñado se separa y deja de ir en fila.
+    const tamaño = (tamañoRotulo * 0.85) / vista.escala
+    const fondo = FONDO_DE_LA_FILA / vista.escala
+    const textoDe = (id: string) => nombres.find((nombre) => nombre.id === id)?.texto
+    const anchoDe = (id: string) => {
+      const texto = textoDe(id)
+      return (texto ? texto.length * tamaño * 0.55 : ANCHO_SIN_NOMBRE / vista.escala)
+    }
+    const [cx, cy] = proyeccion(CENTRO_DE_LA_PENINSULA) ?? [ancho / 2, alto / 2]
+    const enFila = new Map<string, { x: number; y: number; ancla: Ancla; anclaje: 'start' | 'middle' | 'end' }>()
+    for (const grupo of gruposApinados(anclas, APINADO / vista.escala)) {
+      const fila = enFilaMarAdentro(grupo, [cx, cy], { fondo, paso: tamaño * 1.6, anchoDe, alto: tamaño * 1.4 })
+      for (const posicion of fila) {
+        const ancla = grupo.find(({ id }) => id === posicion.id)!
+        const haciaX = posicion.x - ancla.x
+        const anclaje = haciaX < -fondo / 3 ? 'end' : haciaX > fondo / 3 ? 'start' : 'middle'
+        enFila.set(posicion.id, { x: posicion.x, y: posicion.y, ancla, anclaje })
+      }
+    }
+    return enFila
+  })
+
+  // El elemento que se está escribiendo se amplía hasta verlo bien, y al cerrarlo el mapa vuelve entero.
+  // Solo lo pequeño: los puntos y las manchas de menos de 300 km², que son las Rías, las Bahías y el Mar
+  // Menor. Un Golfo o una Provincia ya se ven sin ampliar.
+  const AREA_PEQUEÑA = 85
+  const LADO_DEL_FOCO = 0.35
+  const ESCALA_DEL_FOCO_EN_UN_PUNTO = 5
+  const ESCALA_MAXIMA_DEL_FOCO = 6
+  let animando = $state(false)
+  let enfocado = false
+
+  function pequeño(id: string | null): Feature<Geometry> | undefined {
+    const contorno = id === null ? undefined : contornos.find((forma) => String(forma.id) === id)
+    if (!contorno || enElRecuadro.includes(id!)) return undefined
+    return contorno.geometry.type === 'Point' || trazado.area(contorno) < AREA_PEQUEÑA ? contorno : undefined
+  }
+
+  $effect(() => {
+    // Lo señalado y aún sin confirmar ya es el foco: ampliar es lo que deja comprobarlo.
+    const contorno = pequeño(seleccionado ?? (foco === focoSoltado ? null : foco))
+    if (!contorno) {
+      if (!enfocado) return
+      enfocado = false
+      animando = true
+      vista = { escala: 1, x: 0, y: 0 }
+      return
+    }
+    const [[x0, y0], [x1, y1]] = trazado.bounds(contorno)
+    const lado = Math.max(x1 - x0, y1 - y0)
+    const escala =
+      contorno.geometry.type === 'Point'
+        ? ESCALA_DEL_FOCO_EN_UN_PUNTO
+        : acotar((Math.min(ancho, alto) * LADO_DEL_FOCO) / Math.max(lado, 1), 1, ESCALA_MAXIMA_DEL_FOCO)
+    const [cx, cy] = [(x0 + x1) / 2, (y0 + y1) / 2]
+    enfocado = true
+    animando = true
+    vista = {
+      escala,
+      x: acotar(ancho / 2 - cx * escala, ancho * (1 - escala), 0),
+      y: acotar(alto / 2 - cy * escala, alto * (1 - escala), 0),
+    }
+  })
+
   function pulsarElemento(id: string) {
     if (diana.length > 0 && !dianaSeToca) return
+    focoSoltado = null
     if (rotulados.length > 0) {
       if (rotulados.includes(id) && !huboGesto && !dobleToque) alElegir(id)
       return
     }
     if (tipoDePuntero !== 'touch') {
+      // Con ratón no hay paso de confirmación, salvo en lo pequeño: el primer clic lo amplía y el
+      // segundo, ya viéndolo bien, lo elige.
+      if (pequeño(id) && seleccionado !== id) {
+        seleccionado = id
+        return
+      }
       seleccionado = null
       alElegir(id)
     } else if (!huboGesto && !dobleToque && preguntado !== null) {
@@ -458,7 +575,12 @@
     onmouseleave={() => (bajoElPuntero = null)}
     onclick={tocarCauce}
   >
-    <g transform="translate({vista.x} {vista.y}) scale({vista.escala})">
+    <g
+      class="vista"
+      class:animando
+      style:transform="translate({vista.x}px, {vista.y}px) scale({vista.escala})"
+      ontransitionend={() => (animando = false)}
+    >
       <g class="contexto">
         {#each contexto.features as pais (pais.id)}
           <path d={trazado(pais)} />
@@ -529,11 +651,19 @@
       {/each}
       {#each nombres as nombre (nombre.id)}
         {@const contorno = contornos.find((candidato) => String(candidato.id) === nombre.id)}
+        {@const enFila = nombresEnFila.get(nombre.id)}
         {#if contorno && !enElRecuadro.includes(nombre.id)}
-          {@const [x, y] = centroDelRotulo(contorno)}
-          <text class="rotulo" {x} {y} text-anchor="middle" font-size={(tamañoRotulo * 0.85) / vista.escala}>
-            {nombre.texto}
-          </text>
+          {#if enFila}
+            <line class="guia" x1={enFila.ancla.x} y1={enFila.ancla.y} x2={enFila.x} y2={enFila.y} />
+            <text class="rotulo" x={enFila.x} y={enFila.y} text-anchor={enFila.anclaje} dominant-baseline="central" font-size={(tamañoRotulo * 0.85) / vista.escala}>
+              {nombre.texto}
+            </text>
+          {:else}
+            {@const [x, y] = centroDelRotulo(contorno)}
+            <text class="rotulo" {x} {y} text-anchor="middle" font-size={(tamañoRotulo * 0.85) / vista.escala}>
+              {nombre.texto}
+            </text>
+          {/if}
         {/if}
       {/each}
       {#each alturas as altura (altura.id)}
@@ -709,6 +839,16 @@
     fill: #b9d7ea;
     stroke: #3c7fb1;
     stroke-width: 0.8;
+  }
+
+  .vista.animando {
+    transition: transform 300ms ease;
+  }
+
+  .guia {
+    stroke: #1f4f70;
+    stroke-width: 0.8;
+    vector-effect: non-scaling-stroke;
   }
 
   .elementos path.cabo,
