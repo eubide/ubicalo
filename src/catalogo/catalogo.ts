@@ -93,6 +93,12 @@ type Nombres = Pick<Elemento, 'nombre' | 'nombreMostrado' | 'alias'>
 
 const CIUDADES_AUTONOMAS = ['Ceuta', 'Melilla', 'Ciudad Autónoma de Ceuta', 'Ciudad Autónoma de Melilla']
 
+// Solo las capas del IGN traen `name`, así que un Cabo o un Golfo nunca lo cumple por accidente.
+export function esCiudadAutonoma(contorno: Feature<Geometry>): boolean {
+  const { name } = (contorno.properties ?? {}) as { name?: string }
+  return name !== undefined && CIUDADES_AUTONOMAS.includes(name)
+}
+
 const GIBRALTAR_COMUNIDADES = '20'
 const GIBRALTAR_PROVINCIAS = '54'
 

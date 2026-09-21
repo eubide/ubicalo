@@ -2,11 +2,11 @@
   import type { Feature, FeatureCollection, Geometry, LineString, Polygon } from 'geojson'
   import { geoCentroid, geoPath } from 'd3-geo'
   import { geoConicConformalSpain } from 'd3-composite-projections'
-  import type { ClaseDelMapa, ContextoGeografico } from '../catalogo/catalogo'
+  import { esCiudadAutonoma, type ClaseDelMapa, type ContextoGeografico } from '../catalogo/catalogo'
   import { nombreDePapel, PAPELES, propiedadesDe, type Papel } from '../catalogo/relieve'
   import { abierta, ETIQUETA_DE_SENAL, senalDe, type EstadoDelMapa, type Senal } from './senales'
   import { tocableMasCercano, trazoMasCercano, type Trazo } from './toque'
-  import RecuadroCeutaMelilla, { esCeutaOMelilla } from './RecuadroCeutaMelilla.svelte'
+  import RecuadroCeutaMelilla from './RecuadroCeutaMelilla.svelte'
 
   export interface Rotulo {
     id: string
@@ -94,9 +94,7 @@
   const tamañoRotulo = $derived((tamañoRotuloEnPixeles * ancho) / Math.max(anchoEnPantalla, 1))
 
   const ceutaYMelilla = $derived(
-    contornos
-      .map((contorno) => ({ contorno, centro: geoCentroid(contorno) }))
-      .filter(({ centro }) => esCeutaOMelilla(centro)),
+    contornos.filter(esCiudadAutonoma).map((contorno) => ({ contorno, centro: geoCentroid(contorno) })),
   )
   const puntos = $derived(
     contornos
