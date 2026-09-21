@@ -32,6 +32,15 @@
   const enElRecuadro = $derived(numerados.filter(({ enRecuadro }) => enRecuadro))
   const sobreElMapa = $derived(numerados.filter(({ enRecuadro }) => !enRecuadro))
 
+  // La guía se queda a un radio de la cifra para no tacharla.
+  const HUECO_DE_LA_CIFRA = 11
+
+  function finDeLaGuia({ x, y, ancla }: Numerado): [number, number] {
+    const largo = Math.hypot(x - ancla!.x, y - ancla!.y) || 1
+    const queda = Math.max(largo - HUECO_DE_LA_CIFRA, 0) / largo
+    return [ancla!.x + (x - ancla!.x) * queda, ancla!.y + (y - ancla!.y) * queda]
+  }
+
   function claseDe(contorno: Feature<Geometry>): ClaseDelMapa | '' {
     return (contorno.properties as { clase?: ClaseDelMapa })?.clase ?? ''
   }
@@ -83,6 +92,12 @@
       alto={altoRecuadro}
     />
   {/if}
+  {#each sobreElMapa as numerado (numerado.numero)}
+    {#if numerado.ancla}
+      {@const [x2, y2] = finDeLaGuia(numerado)}
+      <line class="guia" x1={numerado.ancla.x} y1={numerado.ancla.y} {x2} {y2} />
+    {/if}
+  {/each}
   {#each sobreElMapa as { numero, x, y } (numero)}
     <text class="numero" {x} {y} text-anchor="middle" dominant-baseline="central">{numero}</text>
   {/each}
@@ -171,6 +186,11 @@
   .marcos {
     fill: none;
     stroke: #767676;
+    stroke-width: 0.8;
+  }
+
+  .guia {
+    stroke: #000000;
     stroke-width: 0.8;
   }
 

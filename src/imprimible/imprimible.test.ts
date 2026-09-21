@@ -89,6 +89,46 @@ describe('hojasDe', () => {
     expect(hoja.numerados).toHaveLength(34)
   })
 
+  describe('en Costas, lo que se apiña lleva su número mar adentro con una guía', () => {
+    const [hoja] = hojasDe('costas')
+    const de = (id: string) => hoja.numerados.find(({ elemento }) => elemento.id === id)!
+    const largoDeLaGuia = ({ x, y, ancla }: (typeof hoja.numerados)[number]) =>
+      ancla ? Math.hypot(x - ancla.x, y - ancla.y) : 0
+
+    it('las Puntas del Estrecho y las Rías gallegas llevan guía', () => {
+      const conGuia = ['punta-de-tarifa', 'punta-de-europa', 'ria-de-arousa', 'ria-de-pontevedra', 'ria-de-vigo']
+
+      expect(conGuia.filter((id) => de(id).ancla === null)).toEqual([])
+    })
+
+    it('un Cabo sin nadie cerca se queda con su número al lado y sin guía', () => {
+      expect(de('cabo-da-roca').ancla).toBeNull()
+    })
+
+    it('la guía aparta el número lo bastante para que no tape la costa', () => {
+      const cortas = hoja.numerados.filter(({ ancla }) => ancla).filter((numerado) => largoDeLaGuia(numerado) < 24)
+
+      expect(cortas.map(({ elemento }) => elemento.id)).toEqual([])
+    })
+
+    it('ningún par de números se pisa', () => {
+      const pisados = hoja.numerados.flatMap((uno, i) =>
+        hoja.numerados
+          .slice(i + 1)
+          .filter((otro) => Math.hypot(otro.x - uno.x, otro.y - uno.y) < 19)
+          .map((otro) => `${uno.numero}-${otro.numero}`),
+      )
+
+      expect(pisados).toEqual([])
+    })
+  })
+
+  it('fuera de Costas ningún número lleva guía', () => {
+    const otras = [...hojasDe('politico'), ...hojasDe('relieve'), ...hojasDe('hidrografia')]
+
+    expect(otras.flatMap(({ numerados }) => numerados).filter(({ ancla }) => ancla !== null)).toEqual([])
+  })
+
   it('cuelga la Altura del Pico en vez de darle número propio', () => {
     const [hoja] = hojasDe('relieve')
     const conAltura = hoja.numerados.filter((numerado) => numerado.conAltura)
