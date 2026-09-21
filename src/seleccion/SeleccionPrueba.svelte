@@ -154,11 +154,16 @@
         <button type="button" class="enlace" onclick={() => (cambiando = true)}>Cambiar</button>
       </p>
       <p class="cifra">Te sabes {resumen.sabidos} de {resumen.total}</p>
-      <div class="barra" role="img" aria-label="{resumen.sabidos} te sabes, {resumen.flojos} flojos y {resumen.sinVer} por ver">
+      <div class="barra" aria-hidden="true">
         <span class="sabido" style:flex-grow={resumen.sabidos}></span>
         <span class="flojo" style:flex-grow={resumen.flojos}></span>
         <span class="sinVer" style:flex-grow={resumen.sinVer}></span>
       </div>
+      <ul class="leyenda">
+        <li class="sabido">{resumen.sabidos} te sabes</li>
+        <li class="flojo">{resumen.flojos} flojos</li>
+        <li class="sinVer">{resumen.sinVer} por ver</li>
+      </ul>
       {#if simulacro.ultimaNota}<p class="ultimaNota">Último simulacro: {simulacro.ultimaNota}</p>{/if}
     </section>
     {#snippet botonDeTanda()}
@@ -409,12 +414,49 @@
     background: #e5e7eb;
   }
 
-  .sabido {
+  .barra .sabido {
     background: var(--familia);
   }
 
-  .flojo {
+  .barra .flojo {
     background: var(--flojo);
+  }
+
+  .leyenda {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin: 0.375rem 0 0;
+    padding: 0;
+    list-style: none;
+    font-size: 0.8125rem;
+    color: #4b5563;
+  }
+
+  .leyenda li {
+    display: flex;
+    align-items: center;
+    gap: 0.3125rem;
+  }
+
+  .leyenda li::before {
+    content: '';
+    width: 0.625rem;
+    height: 0.625rem;
+    border-radius: 0.1875rem;
+    background: var(--marca);
+  }
+
+  .leyenda .sabido {
+    --marca: var(--familia);
+  }
+
+  .leyenda .flojo {
+    --marca: var(--flojo);
+  }
+
+  .leyenda .sinVer {
+    --marca: #e5e7eb;
   }
 
   .juicio {
@@ -450,7 +492,7 @@
     padding: 0;
   }
 
-  li + li {
+  .familia li + li {
     margin-top: 0.75rem;
     padding-top: 0.75rem;
     border-top: 1px solid #f0f0ee;
