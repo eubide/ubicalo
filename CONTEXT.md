@@ -264,6 +264,14 @@ _Evitar_: puntuación, calificación, score
 Lo primero de una Tanda que trae nuevos: se enseñan rotulados sobre el mapa, con el mecanismo del Repaso, y no se pregunta nada hasta que el alumno los descarta. Presentar un Elemento lo deja en Flojo.
 _Evitar_: tutorial, introducción, lección
 
+**Hoja**:
+El mapa mudo de un Alcance en papel A4, con cada Elemento marcado por su Número y una lista del 1 al N con una línea en blanco para escribir a mano. Es lo único de la aplicación que no se parece al examen sino que lo es. La Familia elegida se imprime en una Hoja por cada Alcance que examina su Simulacro, y ninguna guarda nada: no es una Partida.
+_Evitar_: ficha, PDF, impresión, lámina
+
+**Número**:
+Lo que lleva una forma en la Hoja en lugar de su Rótulo, porque sobre un Cabo de ocho píxeles no cabe un nombre a mano. Sale de dónde cae la forma en el papel, leyendo de arriba abajo y de izquierda a derecha, y no del orden del catálogo, que en Provincias es casi alfabético y delataría la respuesta. Una Altura no tiene Número: va como segundo hueco de la línea de su Pico.
+_Evitar_: índice, orden, etiqueta
+
 ## Relaciones
 
 - Una **Familia** agrupa varios **Alcances**, y un **Alcance** agrupa muchos **Elementos**; cada **Elemento** tiene un **Nombre oficial** y cero o más **Alias**
@@ -282,6 +290,7 @@ _Evitar_: tutorial, introducción, lección
 - Un **Fallo** juzgado con **Juicio estricto** lleva su tipo: tilde, errata u otro
 - Una **Tanda** sale del **Dominio**: repasa lo **Flojo** y lo **Sabido** otro día, y trae **Elementos** nuevos
 - Un **Simulacro** mide la **Familia elegida** entera y deja en el **Dominio** lo acertado como **Sabido** y lo demás como **Flojo**; la **Tanda** siguiente trabaja lo que destapa
+- Una **Familia elegida** se imprime en una **Hoja** por cada **Alcance** que examina su **Simulacro**, y cada **Elemento** de esa **Hoja** lleva un **Número** en lugar de su **Rótulo**
 
 ## Ambigüedades resueltas
 

@@ -138,4 +138,6 @@ Nunca compactes a mitad de una fase.
 - [x] Tramo 1, Simulacro y tandas: spec #80 → tickets #82–#87 → PRs #89–#94. Un ticket por rama desde `main`, revisión en dos ejes con dos subagentes por ticket y prueba de humo en el navegador antes de cada PR
 - [ ] Probar el Tramo 1 en un móvil real: escribir en el Simulacro a 375 px, el conmutador de Comunidades y Provincias, Ceuta y Melilla en su recuadro, y descartar los Rótulos de una presentación tocando puntos de ocho píxeles
 - [x] Bloque Golfos como manchas de mar: el Golfo deja de ser el arco de costa que lo baña y Costas se queda sin jerarquía → ADR-0012 → spec #96 → tickets #97–#101, todos en `main`. Un prototipo desechable decidió el fondo de la banda y descartó dejar los Tramos de fondo
+- [x] Bloque Mapa mudo imprimible: la Hoja en papel A4 con sus Números, que el ADR-0011 tenía aplazada a una señal no observable → ADR-0013. Sin spec ni tickets: salió de una revisión del tramo del 20 de septiembre
+- [ ] Probar la Hoja en papel de verdad: que los Números del País Vasco se lean impresos, que el mapa de Costas no desaproveche media hoja, y que la lista dé sitio para escribir a boli
 - [ ] Siguiente bloque: despliegue (dominio y Terraform)
